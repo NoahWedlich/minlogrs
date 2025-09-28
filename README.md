@@ -1,2 +1,2 @@
-# MinlogRust
+# minlogrs
 A reimplementation of the Minlog Proof Assistant in Rust
