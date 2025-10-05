@@ -2,11 +2,14 @@
 /*
 Example wrapper enum:
 
-wrapper_enum! {
+lib::wrapper_enum! {
     @default { DefaultType }
     pub trait BodyTrait: Debug {
-        pub fn method1(params...) -> ReturnType;
-        pub fn method2(params...) -> ReturnType;
+        pub fn method1(params...) -> ReturnType {
+            // default implementation
+        }
+        
+        pub fn method2(params...) -> ReturnType
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,8 +58,10 @@ macro_rules! wrapper_enum {
         $body_trait_vis:vis trait $body_trait:ident $(: $( $trait_bound:ident ),* )? {
             $(
                 $method_vis:vis fn $method_name:ident
-                    (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )?
-            );* $(;)?
+                    (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? $({
+                        $( $default_impl: tt )*
+                    })?
+            )*
         }
         
         $(#[$enum_derives:meta])*
@@ -69,7 +74,9 @@ macro_rules! wrapper_enum {
         // Define the body trait
         $body_trait_vis trait $body_trait: $( $( $trait_bound + )* )? {
             $(
-                $method_vis fn $method_name (&self, $( $param_name : $param_type ),* ) $( -> $return_type )?;
+                lib::wrapper_enum!{@trait_method $method_vis fn $method_name
+                    (&self $( ,$param_name : $param_type )* ) $( -> $return_type )? 
+                    | { $( lib::wrapper_enum!(@default_impl_body $( $default_impl )* ) )? } }
             )*
         }
         
@@ -89,6 +96,24 @@ macro_rules! wrapper_enum {
                 | { $( $variant_name ( $( $variant_type )? ) )* }
                 | { } }
         }
+    };
+    
+    (@trait_method $method_vis:vis fn $method_name:ident
+        (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { } ) => {
+            
+            $method_vis fn $method_name (&self, $( $param_name : $param_type ),* ) $( -> $return_type )?;
+    };
+    
+    (@trait_method $method_vis:vis fn $method_name:ident
+        (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { $( $default_impl:tt )* } ) => {
+            
+            $method_vis fn $method_name (&self, $( $param_name : $param_type ),* ) $( -> $return_type )? {
+                $( $default_impl )*
+            }
+    };
+    
+    (@default_impl_body $( $default_impl:tt )* ) => {
+        $( $default_impl )*
     };
     
     (@body_type $variant_type:ty, $( $default_type:ty )? ) => {
