@@ -484,10 +484,8 @@ macro_rules! pretty_print_tokens {
 
 #[macro_export]
 macro_rules! pretty_print_object {
-    // Base case: empty object list
     ($printer:expr, ) => {};
     
-    // Object with detailed formatting
     ($printer:expr, $object:ident $($rest:tt)*) => {
         {
             if $object.requires_parens(true) {
