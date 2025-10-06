@@ -3,6 +3,8 @@ use std::{cell::RefCell, rc::Rc, fmt::Debug};
 use crate::utils::indirect_ref::{IRef, RefGroup, RefGroupable};
 
 use crate::core::types::type_variable::TypeVariable;
+use crate::core::types::arrow_type::ArrowType;
+use crate::core::types::star_type::StarType;
 
 crate::wrapper_enum! {
     
@@ -40,14 +42,14 @@ crate::wrapper_enum! {
     
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum MinlogType {
-        NullType(),
-        Atomic(),
-        Existential(),
-        Proposition(),
-        Variable(|variable| TypeVariable),
-        Algebra(|algebra|),
-        Arrow(|arrow|),
-        Star(|star|)
+        NullType(|null|),
+        Atomic(|atomic|),
+        Existential(|existential|),
+        Proposition(|proposition|),
+        Variable(||variable|| TypeVariable),
+        Algebra(||algebra||),
+        Arrow(||arrow|| ArrowType),
+        Star(||star|| StarType)
     }
     
 }
