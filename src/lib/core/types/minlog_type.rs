@@ -2,6 +2,8 @@
 use std::{cell::RefCell, rc::Rc, fmt::Debug};
 use crate::utils::indirect_ref::{IRef, RefGroup, RefGroupable};
 
+use crate::core::types::type_variable::TypeVariable;
+
 crate::wrapper_enum! {
     
     @default { EmptyTypeBody }
@@ -42,7 +44,7 @@ crate::wrapper_enum! {
         Atomic(),
         Existential(),
         Proposition(),
-        Variable(|variable|),
+        Variable(|variable| TypeVariable),
         Algebra(|algebra|),
         Arrow(|arrow|),
         Star(|star|)

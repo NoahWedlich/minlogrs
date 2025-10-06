@@ -111,13 +111,15 @@ impl<T: RefGroupable> std::fmt::Display for RefGroup<T> where T: std::fmt::Displ
     }
 }
 
+pub type IRefGroup<T> = Rc<RefCell<RefGroup<T>>>;
+
 pub struct IRef<T: RefGroupable> {
-    group: Rc<RefCell<RefGroup<T>>>,
+    group: IRefGroup<T>,
     index: usize
 }
 
 impl<T: RefGroupable> IRef<T> {
-    pub fn new(element: Rc<T>, group: Rc<RefCell<RefGroup<T>>>) -> Self {
+    pub fn new(element: Rc<T>, group: IRefGroup<T>) -> Self {
         let index = group.borrow_mut().add(&element);
         Self {
             group,
@@ -141,7 +143,7 @@ impl<T: RefGroupable> IRef<T> {
         self.group.borrow().redirect(self.index, &new_element);
     }
     
-    pub fn shallow_copy_to(&self, other: &Rc<RefCell<RefGroup<T>>>) -> Option<IRef<T>> {
+    pub fn shallow_copy_to(&self, other: &IRefGroup<T>) -> Option<IRef<T>> {
         if self.group.borrow().index() == other.borrow().index() {
             return None;
         }
@@ -150,7 +152,7 @@ impl<T: RefGroupable> IRef<T> {
         Some(copied.clone())
     }
     
-    pub fn copy_to(&self, other: &Rc<RefCell<RefGroup<T>>>) -> IRef<T> {
+    pub fn copy_to(&self, other: &IRefGroup<T>) -> IRef<T> {
         let copied = self.shallow_copy_to(other);
         
         if copied.is_none() {
