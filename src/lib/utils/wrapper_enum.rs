@@ -15,8 +15,8 @@ $crate::wrapper_enum! {
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum MyEnum {
-        Variant1(|name1| Type1),
-        Variant2(|name2|),
+        Variant1(||name1|| Type1),
+        Variant2(|name2>|),
         Variant3()
         ...
     }
@@ -49,8 +49,13 @@ $crate::wrapper_enum! {
                 // ...
             }
         }
+        
+        // For each variant with a body name |name| or ||name||, generate a test:
+        pub fn is_name1(&self) -> bool {
+            matches!(self, MyEnum::Variant1(_))
+        }
 
-        // For each variant with a body name, generate an accessor:
+        // For each variant with a body name ||name||, generate an accessor:
         pub fn to_name1(&self) -> Option<&Type1> {
             match self {
                 MyEnum::Variant1(inner) => Some(inner),
@@ -77,7 +82,7 @@ macro_rules! wrapper_enum {
         $(#[$enum_derives:meta])*
         $enum_vis:vis enum $enum_name:ident {
             $(
-                $variant_name:ident ( $( |$variant_body:ident| )? $($variant_type:ty )? )
+                $variant_name:ident ( $( |$variant_test:ident| )? $(||$variant_access:ident|| )? $($variant_type:ty )? )
             ),* $(,)?
         }
     ) => {
@@ -107,9 +112,14 @@ macro_rules! wrapper_enum {
                 | { $( $variant_name ( $( $variant_type )? ) )* }
                 | { } }
                 
-            // Generate accessors for each variant
+            // Generate test methods for each variant with a body name
+            $crate::wrapper_enum!{@gen_test $enum_name
+                | { $( $variant_name ( $( |$variant_test| )? $( ||$variant_access|| )? ) )* }
+                | { } }
+                
+            // Generate accessors for each variant with a body name
             $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
-                | { $( $variant_name ( $( |$variant_body| )? $( $variant_type )? ) )* }
+                | { $( $variant_name ( $( ||$variant_access|| )? $( $variant_type )? ) )* }
                 | { } }
         }
     };
@@ -210,15 +220,63 @@ macro_rules! wrapper_enum {
             }
     };
     
+    (@gen_test $enum_name:ident
+        | { $variant_name:ident ( |$variant_test:ident| $( ||$variant_access:ident|| )? )
+            $( $rest:ident ( $( |$rest_test:ident| )? $( ||$rest_access:ident|| )? ) )* }
+        | { $( $tests:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_test $enum_name
+                | { $( $rest ( $( |$rest_test| )? $( ||$rest_access|| )? ) )* }
+                | { $( $tests )*
+                    paste::paste! {
+                        pub fn [< is_ $variant_test >](&self) -> bool {
+                            matches!(self, $enum_name::$variant_name(_))
+                        }
+                    }
+                } }
+    };
+    
+    (@gen_test $enum_name:ident
+        | { $variant_name:ident ( ||$variant_access:ident|| )
+            $( $rest:ident ( $( |$rest_test:ident| )? $( ||$rest_access:ident|| )? ) )* }
+        | { $( $tests:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_test $enum_name
+                | { $( $rest ( $( |$rest_test| )? $( ||$rest_access|| )? ) )* }
+                | { $( $tests )*
+                    paste::paste! {
+                        pub fn [< is_ $variant_access >](&self) -> bool {
+                            matches!(self, $enum_name::$variant_name(_))
+                        }
+                    }
+                } }
+    };
+    
+    (@gen_test $enum_name:ident
+        | { $variant_name:ident ( ) $( $rest:ident ( $( |$rest_test:ident| )? $( ||$rest_access:ident|| )? ) )* }
+        | { $( $tests:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_test $enum_name
+                | { $( $rest ( $( |$rest_test| )? $( ||$rest_access|| )? ) )* }
+                | { $( $tests )* } }
+    };
+    
+    (@gen_test $enum_name:ident
+        | {}
+        | { $( $tests:tt )* }) => {
+            
+            $( $tests )*
+    };
+    
     (@gen_accessor $enum_name:ident $( $default_type:ty )?
-        | { $variant_name:ident ( |$variant_body:ident| $( $variant_type:ty )? ) $( $rest:ident ( $( |$rest_body:ident| )? $( $rest_type:ty )? ) )* }
+        | { $variant_name:ident ( ||$variant_access:ident|| $( $variant_type:ty )? ) $( $rest:ident ( $( ||$rest_body:ident|| )? $( $rest_type:ty )? ) )* }
         | { $( $accessors:tt )* }) => {
             
             $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
-                | { $( $rest ( $( |$rest_body| )? $( $rest_type )? ) )* }
+                | { $( $rest ( $( ||$rest_body|| )? $( $rest_type )? ) )* }
                 | { $( $accessors )*
                     paste::paste! {
-                        pub fn [< to_ $variant_body >](&self) -> Option<&$crate::wrapper_enum!{@body_type $( $variant_type )?, $( $default_type )?}> {
+                        pub fn [< to_ $variant_access >](&self) -> Option<&$crate::wrapper_enum!{@body_type $( $variant_type )?, $( $default_type )?}> {
                             match self {
                                 $enum_name::$variant_name(inner) => Some(inner),
                                 _ => None,
@@ -229,11 +287,11 @@ macro_rules! wrapper_enum {
     };
     
     (@gen_accessor $enum_name:ident $( $default_type:ty )?
-        | { $variant_name:ident ( $( $variant_type:ty )? ) $( $rest:ident ( $( |$rest_body:ident| )? $( $rest_type:ty )? ) )* }
+        | { $variant_name:ident ( $( $variant_type:ty )? ) $( $rest:ident ( $( ||$rest_body:ident|| )? $( $rest_type:ty )? ) )* }
         | { $( $accessors:tt )* }) => {
             
             $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
-                | { $( $rest ( $( |$rest_body| )? $( $rest_type )? ) )* }
+                | { $( $rest ( $( ||$rest_body|| )? $( $rest_type )? ) )* }
                 | { $( $accessors )* } }
     };
     
