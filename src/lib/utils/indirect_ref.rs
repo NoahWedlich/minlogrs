@@ -20,7 +20,9 @@ pub trait RefGroupable: Sized + Eq {
     fn add_group(&self, group: &RefGroup<Self>);
     fn del_group(&self, group: &RefGroup<Self>);
 
-    fn copy_if_needed(&self, group: &Rc<RefCell<RefGroup<Self>>>, children: &mut Vec<IRef<Self>>) -> Option<Rc<Self>>;
+    fn copy_if_needed(&self, _group: &Rc<RefCell<RefGroup<Self>>>, _children: &mut Vec<IRef<Self>>) -> Option<IRef<Self>> {
+        None
+    }
 }
 
 type CellRc<T> = RefCell<Rc<T>>;
@@ -127,6 +129,14 @@ impl<T: RefGroupable> IRef<T> {
         }
     }
     
+    pub fn group(&self) -> IRefGroup<T> {
+        self.group.clone()
+    }
+    
+    pub fn index(&self) -> usize {
+        self.index
+    }
+    
     pub fn get(&self) -> &T {
         unsafe { (*self.group.borrow().members[self.index].as_ptr()).as_ref() }
     }
@@ -139,8 +149,15 @@ impl<T: RefGroupable> IRef<T> {
         self.index
     }
     
-    pub fn redirect(&self, new_element: Rc<T>) {
-        self.group.borrow().redirect(self.index, &new_element);
+    pub fn redirect(&self, new_element: IRef<T>) {
+        if self.group.borrow().index() != new_element.group.borrow().index() {
+            panic!(
+                "Cannot redirect IRef in group {} to IRef in different group {}",
+                self.group.borrow().index(), new_element.group.borrow().index()
+            );
+        }
+        
+        self.group.borrow().redirect(self.index, new_element.get_shared());
     }
     
     pub fn shallow_copy_to(&self, other: &IRefGroup<T>) -> Option<IRef<T>> {
@@ -171,8 +188,8 @@ impl<T: RefGroupable> IRef<T> {
             
             let copied = item.get_shared()
                 .copy_if_needed(other, &mut to_copy)
-                .unwrap_or(item.get_shared().clone());
-            
+                .unwrap_or(item.clone());
+
             item.redirect(copied.clone());
         }
         

@@ -33,7 +33,7 @@ crate::wrapper_enum! {
         fn del_group(&Self, _group: &RefGroup<MinlogType>) {}
         
         fn copy_if_needed(&Self, _group: &Rc<RefCell<RefGroup<MinlogType>>>,
-            _elements: &mut Vec<IRef<MinlogType>>) -> Option<Rc<MinlogType>> {
+            _elements: &mut Vec<IRef<MinlogType>>) -> Option<IRef<MinlogType>> {
             None
         }
     }
@@ -137,7 +137,8 @@ impl RefGroupable for MinlogType {
         self.del_group(_group);
     }
     
-    fn copy_if_needed(&self, _group: &Rc<RefCell<RefGroup<Self>>>, _elements: &mut Vec<IRef<Self>>) -> Option<Rc<Self>> {
+    fn copy_if_needed(&self, _group: &Rc<RefCell<RefGroup<Self>>>,
+        _elements: &mut Vec<IRef<Self>>) -> Option<IRef<Self>> {
         self.copy_if_needed(_group, _elements)
     }
 }
