@@ -1,8 +1,9 @@
 
+
 /*
 Example wrapper enum:
 
-lib::wrapper_enum! {
+$crate::wrapper_enum! {
     @default { DefaultType }
     pub trait BodyTrait: Debug {
         pub fn method1(params...) -> ReturnType {
@@ -14,8 +15,9 @@ lib::wrapper_enum! {
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum MyEnum {
-        Variant1(Type1),
-        Variant2(),
+        Variant1(|name1| Type1),
+        Variant2(|name2|),
+        Variant3()
         ...
     }
 } Expands to: {
@@ -40,11 +42,19 @@ lib::wrapper_enum! {
         }
         
         // For each method in BodyTrait, generate a forwarding method:
-        pub fn method1(&self, params...) -> ReturnType {
+        pub fn method1(params...) -> ReturnType {
             match self {
                 MyEnum::Variant1(inner) => inner.method1(params...),
                 MyEnum::Variant2(inner) => inner.method1(params...),
                 // ...
+            }
+        }
+
+        // For each variant with a body name, generate an accessor:
+        pub fn to_name1(&self) -> Option<&Type1> {
+            match self {
+                MyEnum::Variant1(inner) => Some(inner),
+                _ => None,
             }
         }
     }
@@ -58,7 +68,7 @@ macro_rules! wrapper_enum {
         $body_trait_vis:vis trait $body_trait:ident $(: $( $trait_bound:ident ),* )? {
             $(
                 $method_vis:vis fn $method_name:ident
-                    (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? $({
+                    ($self_decl:ty $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? $({
                         $( $default_impl: tt )*
                     })?
             )*
@@ -67,47 +77,53 @@ macro_rules! wrapper_enum {
         $(#[$enum_derives:meta])*
         $enum_vis:vis enum $enum_name:ident {
             $(
-                $variant_name:ident ( $( $variant_type:ty )? )
+                $variant_name:ident ( $( |$variant_body:ident| )? $($variant_type:ty )? )
             ),* $(,)?
         }
     ) => {
         // Define the body trait
         $body_trait_vis trait $body_trait: $( $( $trait_bound + )* )? {
             $(
-                lib::wrapper_enum!{@trait_method $method_vis fn $method_name
-                    (&self $( ,$param_name : $param_type )* ) $( -> $return_type )? 
-                    | { $( lib::wrapper_enum!(@default_impl_body $( $default_impl )* ) )? } }
+                $crate::wrapper_enum!{@trait_method $method_vis fn $method_name
+                    ($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )? 
+                    | { $( $crate::wrapper_enum!{@default_impl_body $( $default_impl )* } )? } }
             )*
         }
         
         // Define the enum with appropriate where clauses
-        lib::wrapper_enum!{@gen_enum $(#[$enum_derives])* $enum_vis $enum_name $body_trait $( $default_type )? 
+        $crate::wrapper_enum!{@gen_enum $(#[$enum_derives])* $enum_vis $enum_name $body_trait $( $default_type )? 
             | { $( $variant_name ( $( $variant_type )? ) )* } | {} | {} }
             
         // Implement the body trait for each explicit variant type
         impl $enum_name {
+            // Count the number of variants
             pub fn variant_count() -> usize {
-                lib::wrapper_enum!(@count $( $variant_name )* )
+                $crate::wrapper_enum!(@count $( $variant_name )* )
             }
             
             // Generate forwarding methods
-            lib::wrapper_enum!{@gen_forwards $enum_name
-                | { $( $method_name(&self $( ,$param_name : $param_type )* ) $( -> $return_type )? )|* }
+            $crate::wrapper_enum!{@gen_forwards $enum_name
+                | { $( $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )? )|* |}
                 | { $( $variant_name ( $( $variant_type )? ) )* }
+                | { } }
+                
+            // Generate accessors for each variant
+            $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
+                | { $( $variant_name ( $( |$variant_body| )? $( $variant_type )? ) )* }
                 | { } }
         }
     };
     
     (@trait_method $method_vis:vis fn $method_name:ident
-        (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { } ) => {
+        ($self_decl:ty $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { } ) => {
             
-            $method_vis fn $method_name (&self, $( $param_name : $param_type ),* ) $( -> $return_type )?;
+            $method_vis fn $method_name (self: $self_decl, $( $param_name : $param_type ),* ) $( -> $return_type )?;
     };
     
     (@trait_method $method_vis:vis fn $method_name:ident
-        (&self $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { $( $default_impl:tt )* } ) => {
+        ($self_decl:ty $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? | { $( $default_impl:tt )* } ) => {
             
-            $method_vis fn $method_name (&self, $( $param_name : $param_type ),* ) $( -> $return_type )? {
+            $method_vis fn $method_name (self: $self_decl, $( $param_name : $param_type ),* ) $( -> $return_type )? {
                 $( $default_impl )*
             }
     };
@@ -129,10 +145,10 @@ macro_rules! wrapper_enum {
         | { $( $bounds:tt )* }
         | { $( $variants:tt )* }) => {
             
-            lib::wrapper_enum!{@gen_enum $(#[$enum_derives])* $enum_vis $enum_name $body_trait $( $default_type )?
+            $crate::wrapper_enum!{@gen_enum $(#[$enum_derives])* $enum_vis $enum_name $body_trait $( $default_type )?
                 | { $( $rest ( $( $rest_type )? ) )* }
-                | { $( $bounds )* lib::wrapper_enum!{@body_type $( $type )?, $( $default_type )?}: $body_trait, }
-                | { $( $variants )* $variant_name( lib::wrapper_enum!{@body_type $( $type )?, $( $default_type )?} ), } }
+                | { $( $bounds )* $crate::wrapper_enum!{@body_type $( $type )?, $( $default_type )?}: $body_trait, }
+                | { $( $variants )* $variant_name( $crate::wrapper_enum!{@body_type $( $type )?, $( $default_type )?} ), } }
     };
     
     (@gen_enum $(#[$enum_derives:meta])* $enum_vis:vis $enum_name:ident $body_trait:ident $default_type:ty
@@ -150,50 +166,84 @@ macro_rules! wrapper_enum {
     };
     
     (@gen_forwards $enum_name:ident
-        | { $method_name:ident(&self $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
-            | $( $rest_method:ident(&self $( ,$rest_param:ident : $rest_param_type:ty )* ) $( -> $rest_return:ty )? )|* }
+        | { $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+            | $( $rest_method:ident($self_decl_rest:ty $( ,$rest_param:ident : $rest_param_type:ty )* ) $( -> $rest_return:ty )? )|* $(|)? }
         | { $( $variant_name:ident ( $( $variant_type:ty )? ) )* }
         | { $( $methods:tt )* }) => {
             
-            lib::wrapper_enum!{@gen_forwards $enum_name
-                | { $( $rest_method(&self $( ,$rest_param : $rest_param_type )* ) $( -> $rest_return )? )|* | }
+            $crate::wrapper_enum!{@gen_forwards $enum_name
+                | { $( $rest_method($self_decl_rest $( ,$rest_param : $rest_param_type )* ) $( -> $rest_return )? )|* | }
                 | { $( $variant_name ( $( $variant_type )? ) )* }
                 | {
                     $( $methods )*
-                    lib::wrapper_enum!{@gen_forward $enum_name $method_name(&self $( ,$param_name : $param_type )* ) $( -> $return_type )?
+                    $crate::wrapper_enum!{@gen_forward $enum_name $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
                         | { $( $variant_name ( $( $variant_type )? ) )* }
                         | { } }
                 } }
     };
     
     (@gen_forwards $enum_name:ident
-        | { | }
+        | { $(|)? }
         | { $( $variant_name:ident ( $( $variant_type:ty )? ) )* }
         | { $( $methods:tt )* }) => {
             
             $( $methods )*
     };
     
-    (@gen_forward $enum_name:ident $method_name:ident(&self $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+    (@gen_forward $enum_name:ident $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
         | { $variant_name:ident ( $( $variant_type:ty )? ) $( $rest:ident ( $( $rest_type:ty )? ) )* }
         | { $( $matches:tt )* }) => {
             
-            lib::wrapper_enum!{@gen_forward $enum_name $method_name(&self $( ,$param_name : $param_type )* ) $( -> $return_type )?
+            $crate::wrapper_enum!{@gen_forward $enum_name $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
                 | { $( $rest ( $( $rest_type )? ) )* }
                 | { $( $matches )* $enum_name::$variant_name(inner) => inner.$method_name( $( $param_name ),* ), } }
     };
     
-    (@gen_forward $enum_name:ident $method_name:ident(&self $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+    (@gen_forward $enum_name:ident $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
         | {}
         | { $( $matches:tt )* }) => {
             
-            pub fn $method_name(&self, $( $param_name : $param_type ),* ) $( -> $return_type )? {
+            pub fn $method_name(self: $self_decl, $( $param_name : $param_type ),* ) $( -> $return_type )? {
                 match self {
                     $( $matches )*
                 }
             }
     };
     
+    (@gen_accessor $enum_name:ident $( $default_type:ty )?
+        | { $variant_name:ident ( |$variant_body:ident| $( $variant_type:ty )? ) $( $rest:ident ( $( |$rest_body:ident| )? $( $rest_type:ty )? ) )* }
+        | { $( $accessors:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
+                | { $( $rest ( $( |$rest_body| )? $( $rest_type )? ) )* }
+                | { $( $accessors )*
+                    paste::paste! {
+                        pub fn [< to_ $variant_body >](&self) -> Option<&$crate::wrapper_enum!{@body_type $( $variant_type )?, $( $default_type )?}> {
+                            match self {
+                                $enum_name::$variant_name(inner) => Some(inner),
+                                _ => None,
+                            }
+                        }
+                    }
+                } }
+    };
+    
+    (@gen_accessor $enum_name:ident $( $default_type:ty )?
+        | { $variant_name:ident ( $( $variant_type:ty )? ) $( $rest:ident ( $( |$rest_body:ident| )? $( $rest_type:ty )? ) )* }
+        | { $( $accessors:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
+                | { $( $rest ( $( |$rest_body| )? $( $rest_type )? ) )* }
+                | { $( $accessors )* } }
+    };
+    
+    (@gen_accessor $enum_name:ident $( $default_type:ty )?
+        | {}
+        | { $( $accessors:tt )* }) => {
+            
+            $( $accessors )*
+    };
+    
     (@count ) => { 0usize };
-    (@count $head:ident $( $tail:ident )* ) => { 1usize + lib::wrapper_enum!(@count $( $tail )*) };
+    (@count $head:ident $( $tail:ident )* ) => { 1usize + $crate::wrapper_enum!(@count $( $tail )*) };
 }
