@@ -12,8 +12,8 @@ pub struct StarType {
 impl StarType {
     pub fn create(left: IRef<MinlogType>, right: IRef<MinlogType>, group: &IRefGroup<MinlogType>) -> IRef<MinlogType> {
         let star = MinlogType::Star(StarType {
-            left,
-            right,
+            left: left.copy_to(group),
+            right: right.copy_to(group),
         });
 
         IRef::new(Rc::new(star), group.clone())

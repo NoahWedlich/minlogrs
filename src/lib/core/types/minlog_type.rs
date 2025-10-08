@@ -30,9 +30,9 @@ crate::wrapper_enum! {
             vec![]
         }
         
-        fn add_group(&Self, _group: &RefGroup<MinlogType>) {}
+        fn add_group(&Self, _wrapped: &MinlogType, _group: &RefGroup<MinlogType>) {}
         
-        fn del_group(&Self, _group: &RefGroup<MinlogType>) {}
+        fn del_group(&Self, _wrapped: &MinlogType, _group: &RefGroup<MinlogType>) {}
         
         fn copy_if_needed(&Self, _group: &Rc<RefCell<RefGroup<MinlogType>>>,
             _elements: &mut Vec<IRef<MinlogType>>) -> Option<IRef<MinlogType>> {
@@ -40,7 +40,7 @@ crate::wrapper_enum! {
         }
     }
     
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq)]
     pub enum MinlogType {
         NullType(|null|),
         Atomic(|atomic|),
@@ -54,7 +54,7 @@ crate::wrapper_enum! {
     
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct EmptyTypeBody;
 impl TypeBody for EmptyTypeBody {}
 
@@ -111,8 +111,8 @@ impl MinlogType {
         inner
     }
 
-    pub fn contains_type_variable(&self, var: &IRef<MinlogType>) -> bool {
-        var.is_variable() && MinlogType::get_type_variables(var).contains(var)
+    pub fn contains_type_variable(minlog_type: &IRef<MinlogType>, var: &IRef<MinlogType>) -> bool {
+        var.is_variable() && MinlogType::get_type_variables(minlog_type).contains(var)
     }
     
     pub fn get_algebra_types(minlog_type: &IRef<MinlogType>) -> Vec<IRef<MinlogType>> {
@@ -125,18 +125,18 @@ impl MinlogType {
         inner
     }
 
-    pub fn contains_algebra_type(&self, alg: &IRef<MinlogType>) -> bool {
-        alg.is_algebra() && MinlogType::get_algebra_types(alg).contains(alg)
+    pub fn contains_algebra_type(minlog_type: &IRef<MinlogType>, alg: &IRef<MinlogType>) -> bool {
+        alg.is_algebra() && MinlogType::get_algebra_types(minlog_type).contains(alg)
     }
 }
 
 impl RefGroupable for MinlogType {
     fn add_group(&self, _group: &RefGroup<Self>) {
-        self.add_group(_group);
+        self.add_group(self, _group);
     }
     
     fn del_group(&self, _group: &RefGroup<Self>) {
-        self.del_group(_group);
+        self.del_group(self, _group);
     }
     
     fn copy_if_needed(&self, _group: &Rc<RefCell<RefGroup<Self>>>,

@@ -1,6 +1,10 @@
+use core::panic;
 use std::sync::atomic::AtomicUsize;
-use std::cell::RefCell;
 use std::rc::Rc;
+use std::cell::{RefCell, UnsafeCell};
+use std::hash::{Hash, Hasher};
+use std::fmt::{Debug, Display, Formatter, Result};
+use std::ops::Deref;
 
 static GROUP_INDEX_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
@@ -33,19 +37,27 @@ pub struct RefGroup<T: RefGroupable> {
 }
 
 impl<T: RefGroupable> RefGroup<T> {
-    pub fn new() -> Self {
-        Self {
-            members: Vec::new(),
-            index: GroupIndex::new()
-        }
+    pub fn new() -> IRefGroup<T> {
+        Rc::new(RefCell::new(Self {
+            members: vec![],
+            index: GroupIndex::new(),
+        }))
     }
     
     pub fn index(&self) -> usize {
         self.index.index
     }
     
-    pub fn contains(&self, element: &Rc<T>) -> bool {
-        self.members.iter().any(|e| e.borrow().as_ref().eq(element.as_ref()))
+    pub fn get_from_index(&self, index: usize) -> Option<Rc<T>> {
+        if index >= self.members.len() {
+            return None;
+        }
+        
+        Some(self.members[index].borrow().clone())
+    }
+    
+    pub fn get(&self, element: &T) -> Option<usize> {
+        self.members.iter().position(|e| e.borrow().as_ref().eq(element))
     }
     
     pub fn get(&self, element: &Rc<T>) -> Option<usize> {
@@ -54,8 +66,8 @@ impl<T: RefGroupable> RefGroup<T> {
     
     pub fn add(&mut self, element: &Rc<T>) -> usize {
         if !self.contains(element) {
-            element.add_group(self);
             self.members.push(RefCell::new(element.clone()));
+            element.add_group(self);
         }
         
         self.get(element).unwrap()
@@ -115,54 +127,114 @@ impl<T: RefGroupable> std::fmt::Display for RefGroup<T> where T: std::fmt::Displ
 
 pub type IRefGroup<T> = Rc<RefCell<RefGroup<T>>>;
 
-pub struct IRef<T: RefGroupable> {
-    group: IRefGroup<T>,
-    index: usize
+pub enum IRef<T: RefGroupable> {
+    Indirect(IRefGroup<T>, usize),
+    Direct(UnsafeCell<Rc<T>>),
 }
 
 impl<T: RefGroupable> IRef<T> {
     pub fn new(element: Rc<T>, group: IRefGroup<T>) -> Self {
-        let index = group.borrow_mut().add(&element);
-        Self {
-            group,
-            index
+        let index = unsafe { group.as_ptr().as_mut().unwrap().add(&element) };
+        Self::Indirect(group, index)
+    }
+    
+    pub fn from_group(group: IRefGroup<T>, index: usize) -> Self {
+        if index >= group.borrow().members.len() {
+            panic!("Index {} out of bounds for group of size {}", index, group.borrow().members.len());
+        }
+        Self::Indirect(group, index)
+    }
+    
+    pub fn new_decoupled(element: Rc<T>) -> Self {
+        Self::Direct(UnsafeCell::new(element))
+    }
+    
+    pub fn is_decoupled(&self) -> bool {
+        matches!(self, IRef::Direct(_))
+    }
+    
+    pub fn decouple(&mut self) {
+        if let IRef::Indirect(group, index) = self {
+            let element = group.borrow().members[*index].borrow().clone();
+            *self = IRef::Direct(UnsafeCell::new(element));
         }
     }
     
-    pub fn group(&self) -> IRefGroup<T> {
-        self.group.clone()
+    pub fn group(&self) -> Option<IRefGroup<T>> {
+        match self {
+            IRef::Indirect(group, _) => Some(group.clone()),
+            IRef::Direct(_) => None,
+        }
     }
     
-    pub fn index(&self) -> usize {
-        self.index
+    pub fn same_group(&self, other: &Self) -> bool {
+        match (self, other) {
+            (IRef::Indirect(g1, _), IRef::Indirect(g2, _)) => g1.borrow().index() == g2.borrow().index(),
+            (IRef::Direct(_), IRef::Direct(_)) => true,
+            _ => false,
+        }
     }
     
     pub fn get(&self) -> &T {
-        unsafe { (*self.group.borrow().members[self.index].as_ptr()).as_ref() }
+        match self {
+            IRef::Indirect(group, index) => unsafe {
+                (*group.borrow().members[*index].as_ptr()).as_ref()
+            },
+            IRef::Direct(cell) => unsafe {
+                cell.get().as_ref().unwrap()
+            }
+        }
     }
     
     pub fn get_shared(&self) -> &Rc<T> {
-        unsafe { &*self.group.borrow().members[self.index].as_ptr() }
-    }
-    
-    pub fn get_index(&self) -> usize {
-        self.index
+        match self {
+            IRef::Indirect(group, index) => unsafe {
+                &*group.borrow().members[*index].as_ptr()
+            },
+            IRef::Direct(cell) => unsafe {
+                &*cell.get()
+            },
+        }
     }
     
     pub fn redirect(&self, new_element: IRef<T>) {
-        if self.group.borrow().index() != new_element.group.borrow().index() {
-            panic!(
-                "Cannot redirect IRef in group {} to IRef in different group {}",
-                self.group.borrow().index(), new_element.group.borrow().index()
-            );
+        match self {
+            IRef::Indirect(group, index) => {
+                match new_element {
+                    IRef::Indirect(new_group, new_index) => {
+                        if group.borrow().index() != new_group.borrow().index() {
+                            panic!(
+                                "Cannot redirect IRef in group {} to IRef in different group {}",
+                                group.borrow().index(), new_group.borrow().index()
+                            );
+                        }
+                        
+                        group.borrow().redirect(*index, unsafe {
+                            &*new_group.borrow().members[new_index].as_ptr()
+                        });
+                    }
+                    IRef::Direct(_) => {
+                        panic!(
+                            "Cannot redirect IRef in group {} to decoupled IRef",
+                            group.borrow().index()
+                        );
+                    }
+                }
+            }
+            IRef::Direct(element) => {
+                let _ = std::mem::replace(unsafe { &mut *element.get() }, new_element.get_shared().clone());
+            }
         }
-        
-        self.group.borrow().redirect(self.index, new_element.get_shared());
     }
     
     pub fn shallow_copy_to(&self, other: &IRefGroup<T>) -> Option<IRef<T>> {
-        if self.group.borrow().index() == other.borrow().index() {
-            return None;
+        match self {
+            IRef::Indirect(group, _) => {
+                if group.borrow().index() == other.borrow().index() {
+                    return None;
+                }
+            }
+            IRef::Direct(_) => {}
         }
         
         let copied = &IRef::new(self.get_shared().clone(), other.clone());
@@ -179,10 +251,10 @@ impl<T: RefGroupable> IRef<T> {
         let mut to_copy = vec![copied.clone().unwrap()];
         
         while let Some(item) = to_copy.pop() {
-            if item.group.borrow().index() != other.borrow().index() {
+            if !self.same_group(&item) {
                 panic!(
                     "copy_if_needed violated contract: returned item in group {} but expected group {}",
-                    item.group.borrow().index(), other.borrow().index()
+                    item.group().unwrap().borrow().index(), other.borrow().index()
                 );
             }
             
@@ -205,16 +277,16 @@ impl<T: RefGroupable> AsRef<T> for IRef<T> {
 
 impl<T: RefGroupable> Clone for IRef<T> {
     fn clone(&self) -> Self {
-        Self {
-            group: self.group.clone(),
-            index: self.index
+        match self {
+            IRef::Indirect(group, index) => IRef::Indirect(group.clone(), *index),
+            IRef::Direct(cell) => IRef::Direct(UnsafeCell::new(unsafe { (*cell.get()).clone() })),
         }
     }
 }
 
 impl<T: RefGroupable> PartialEq for IRef<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.group.eq(&other.group) && self.index == other.index
+        self.as_ref().eq(other.as_ref())
     }
 }
 
@@ -226,10 +298,12 @@ impl<T: RefGroupable + std::hash::Hash> std::hash::Hash for IRef<T> {
     }
 }
 
-impl<T: RefGroupable + std::fmt::Debug> std::fmt::Debug for IRef<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let group = self.group.borrow();
-        write!(f, "IRef<{}[{}]>({:?})", group.index(), self.index, self.get())
+impl<T: RefGroupable + Debug> Debug for IRef<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            IRef::Indirect(group, index) => write!(f, "IRef<{}[{}]>({:?})", group.borrow().index(), index, self.get()),
+            IRef::Direct(cell) => write!(f, "IRef<Decoupled>({:?})", unsafe { &*cell.get() }),
+        }
     }
 }
 

@@ -12,14 +12,18 @@ pub struct ArrowType {
 impl ArrowType {
     pub fn create(arguments: Vec<IRef<MinlogType>>, value: IRef<MinlogType>, group: &IRefGroup<MinlogType>) -> IRef<MinlogType> {
         let arrow = MinlogType::Arrow(ArrowType {
-            arguments,
-            value,
+            arguments: arguments.iter().map(|arg| arg.copy_to(group)).collect(),
+            value: value.copy_to(group),
         });
 
         ArrowType::collapse(&IRef::new(Rc::new(arrow), group.clone()))
     }
     
     pub fn collapse(minlog_type: &IRef<MinlogType>) -> IRef<MinlogType> {
+        if minlog_type.is_decoupled() {
+            panic!("Cannot collapse decoupled type.");
+        }
+        
         if minlog_type.is_arrow() && minlog_type.to_arrow().unwrap().value().is_arrow() {
             let mut arrow = minlog_type.to_arrow().unwrap();
             let mut arguments = arrow.arguments().clone();
@@ -30,7 +34,8 @@ impl ArrowType {
                 arrow = inner_arrow;
             }
             
-            let new_arrow = ArrowType::create(arguments, arrow.value().clone(), &minlog_type.group());
+            let new_arrow = ArrowType::create(arguments, arrow.value().clone(),
+                &minlog_type.group().unwrap());
             minlog_type.redirect(new_arrow);
         }
         
@@ -38,6 +43,10 @@ impl ArrowType {
     }
     
     pub fn remove_nulls(minlog_type: &IRef<MinlogType>) -> IRef<MinlogType> {
+        if minlog_type.is_decoupled() {
+            panic!("Cannot remove nulls from decoupled type.");
+        }
+        
         if minlog_type.is_arrow() {
             ArrowType::collapse(minlog_type);
             
@@ -50,7 +59,8 @@ impl ArrowType {
                 }).cloned().collect();
                 
             if arguments.len() != arrow.arguments().len() {
-                let new_arrow = ArrowType::create(arguments, arrow.value().clone(), &minlog_type.group());
+                let new_arrow = ArrowType::create(arguments, arrow.value().clone(),
+                    &minlog_type.group().unwrap());
                 minlog_type.redirect(new_arrow);
             }
         }
