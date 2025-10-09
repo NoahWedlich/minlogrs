@@ -8,9 +8,21 @@ pub trait PrettyPrintable {
 
     fn requires_parens(&self, _detail: bool) -> bool { false }
     
-    fn open_paren(&self) -> &'static str { "{" }
+    fn open_paren(&self) -> String { "{".to_string() }
     
-    fn close_paren(&self) -> &'static str { "}" }
+    fn close_paren(&self) -> String { "}".to_string() }
+}
+
+impl PrettyPrintable for String {
+    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
+        printer.add_string(self.clone());
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool { false }
+
+    fn open_paren(&self) -> String { "\"".to_string() }
+
+    fn close_paren(&self) -> String { "\"".to_string() }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -19,9 +31,9 @@ pub enum BreakType {
     INCONSISTENT,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Token<'a> {
-    String{content: &'a str},
+#[derive(Clone, Debug)]
+pub enum Token {
+    String{content: String},
     Break{spaces: u8, offset: u8},
     Begin{indent: u8, break_type: BreakType},
     End,
@@ -41,14 +53,14 @@ struct PrintFrame {
     break_type: PrintBreak
 }
 
-pub struct PrettyPrinter<'a> {
+pub struct PrettyPrinter {
     line_width: u8,
     space_left: u8,
     
     left_index: u16,
     right_index: u16,
 
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
     sizes: Vec<i16>,
 
     left_total: u16,
@@ -60,8 +72,8 @@ pub struct PrettyPrinter<'a> {
     output: String,
 }
 
-impl<'a> PrettyPrinter<'a> {
-    pub fn new(line_width: u8) -> PrettyPrinter<'a> {
+impl PrettyPrinter {
+    pub fn new(line_width: u8) -> PrettyPrinter {
         PrettyPrinter {
             line_width: line_width,
             space_left: line_width,
@@ -97,8 +109,8 @@ impl<'a> PrettyPrinter<'a> {
     pub fn print(&mut self, object: &impl PrettyPrintable, detail: bool) {
         println!("{}", self.render(object, detail));
     }
-
-    pub fn add_string(&mut self, string: &'a str) {
+    
+    pub fn add_string(&mut self, string: String) {
         self.add_token(Token::String{content: string});
     }
 
@@ -140,9 +152,9 @@ impl<'a> PrettyPrinter<'a> {
         self.print_stack.clear();
         self.output.clear();
     }
-    
-    pub fn add_token(&mut self, token: Token<'a>) {
-        match token {
+
+    pub fn add_token(&mut self, token: Token) {
+        match token.clone() {
             Token::String{content} => {
                 if self.scan_queue.is_empty() {
                     self.process_token(&token, content.len() as u8);
@@ -208,7 +220,7 @@ impl<'a> PrettyPrinter<'a> {
         }
     }
     
-    fn process_token(&mut self, token: &Token<'a>, length: u8) {
+    fn process_token(&mut self, token: &Token, length: u8) {
         match token {
             Token::String{content} => {
                 if length > self.space_left {
@@ -314,18 +326,18 @@ impl<'a> PrettyPrinter<'a> {
     }
     
     fn advance_left(&mut self) {
-        let token: Token<'a> = self.tokens[self.left_index as usize];
-        let size: i16 = self.sizes[self.left_index as usize];
+        let token = &self.tokens[self.left_index as usize].clone();
+        let size = self.sizes[self.left_index as usize];
         
         if size >= 0 {
             self.process_token(&token, size as u8);
-            
+
             match token {
                 Token::String{content} => {
                     self.left_total += content.len() as u16;
                 },
                 Token::Break{spaces, offset: _} => {
-                    self.left_total += spaces as u16;
+                    self.left_total += *spaces as u16;
                 },
                 _ => {}
             }
@@ -469,7 +481,7 @@ macro_rules! pretty_print_tokens {
     
     ($printer:expr, $string:literal $($rest:tt)*) => {
         {
-            $printer.add_token($crate::utils::pretty_printer::Token::String{content: $string});
+            $printer.add_token($crate::utils::pretty_printer::Token::String{content: $string.to_owned()});
             $crate::pretty_print_tokens!($printer, $($rest)*)
         }
     };
