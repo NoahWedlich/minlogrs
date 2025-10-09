@@ -2,20 +2,50 @@
 use std::{rc::Rc, fmt::Debug};
 use crate::utils::pretty_printer::{PrettyPrintable, PrettyPrinter};
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct EmptyTypeBody {}
+use crate::core::types::type_variable::TypeVariable;
 
-impl PrettyPrintable for EmptyTypeBody {
-    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
-        crate::pretty_print!(printer, "()");
+#[derive(Debug, PartialEq, Eq)]
+pub enum TypeConstant {
+    NullType,
+    Atomic,
+    Existential,
+    Proposition,
+}
+
+impl TypeConstant {
+    pub fn create_null() -> Rc<MinlogType> {
+        Rc::new(MinlogType::NullType(TypeConstant::NullType))
+    }
+    
+    pub fn create_atomic() -> Rc<MinlogType> {
+        Rc::new(MinlogType::Atomic(TypeConstant::Atomic))
+    }
+    
+    pub fn create_existential() -> Rc<MinlogType> {
+        Rc::new(MinlogType::Existential(TypeConstant::Existential))
+    }
+    
+    pub fn create_proposition() -> Rc<MinlogType> {
+        Rc::new(MinlogType::Proposition(TypeConstant::Proposition))
     }
 }
 
-impl TypeBody for EmptyTypeBody {}
+impl PrettyPrintable for TypeConstant {
+    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
+        match self {
+            TypeConstant::NullType => crate::pretty_print!(printer, "Null"),
+            TypeConstant::Atomic => crate::pretty_print!(printer, "Atomic"),
+            TypeConstant::Existential => crate::pretty_print!(printer, "Existential"),
+            TypeConstant::Proposition => crate::pretty_print!(printer, "Proposition"),
+        };
+    }
+}
+
+impl TypeBody for TypeConstant {}
 
 crate::wrapper_enum! {
     
-    @default { EmptyTypeBody }
+    @default { TypeConstant }
     pub trait TypeBody: PrettyPrintable {
         fn is_object_type(&Self) -> bool {
             false
@@ -55,9 +85,9 @@ crate::wrapper_enum! {
 
         fn requires_parens(&Self, _detail: bool) -> bool;
 
-        fn open_paren(&Self) -> &'static str;
+        fn open_paren(&Self) -> String;
 
-        fn close_paren(&Self) -> &'static str;
+        fn close_paren(&Self) -> String;
     }
     
 }
