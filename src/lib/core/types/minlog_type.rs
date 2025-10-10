@@ -4,6 +4,7 @@ use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
+use crate::core::types::arrow_type::ArrowType;
 
 crate::wrapper_enum! {
     
@@ -42,7 +43,7 @@ crate::wrapper_enum! {
         Proposition(|proposition|),
         Variable(||variable|| TypeVariable),
         Algebra(||algebra||),
-        Arrow(||arrow||),
+        Arrow(||arrow|| ArrowType),
         Star(||star||),
     }
     
