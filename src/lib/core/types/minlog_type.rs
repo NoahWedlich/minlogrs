@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-use crate::utils::pretty_printer::{PrettyPrintable, PrettyPrinter};
+use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
@@ -54,7 +54,7 @@ crate::wrapper_enum! {
     }
     
     impl PrettyPrintable {
-        fn pretty_print(&Self, printer: &mut PrettyPrinter, detail: bool);
+        fn to_pp_element(&Self, detail: bool) -> PPElement;
 
         fn requires_parens(&Self, _detail: bool) -> bool;
 

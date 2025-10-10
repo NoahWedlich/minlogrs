@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-use crate::utils::pretty_printer::{PrettyPrintable, PrettyPrinter};
+use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
 pub struct TypeVariable {
@@ -28,9 +28,12 @@ impl TypeBody for TypeVariable {
 }
 
 impl PrettyPrintable for TypeVariable {
-    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
-        let name = &self.name;
-        crate::pretty_print!(printer, name);
+    fn to_pp_element(&self, _detail: bool) -> PPElement {
+        PPElement::text(self.name.clone())
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool {
+        false
     }
 }
 

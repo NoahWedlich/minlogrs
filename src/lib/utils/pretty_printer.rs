@@ -1,538 +1,290 @@
-use core::panic;
-use std::collections::VecDeque;
 
-// A simple pretty-printer based on the algorithm described in "Pretty Printing" by Derek C. Oppen
 
 pub trait PrettyPrintable {
-    fn pretty_print(&self, printer: &mut PrettyPrinter, detail: bool);
-
-    fn requires_parens(&self, _detail: bool) -> bool { false }
+    fn to_pp_element(&self, detail: bool) -> PPElement;
     
-    fn open_paren(&self) -> String { "{".to_string() }
-    
-    fn close_paren(&self) -> String { "}".to_string() }
-}
-
-impl PrettyPrintable for String {
-    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
-        printer.add_string(self.clone());
-    }
-    
-    fn requires_parens(&self, _detail: bool) -> bool { false }
-
-    fn open_paren(&self) -> String { "\"".to_string() }
-
-    fn close_paren(&self) -> String { "\"".to_string() }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum BreakType {
-    CONSISTENT,
-    INCONSISTENT,
-}
-
-#[derive(Clone, Debug)]
-pub enum Token {
-    String{content: String},
-    Break{spaces: u8, offset: u8},
-    Begin{indent: u8, break_type: BreakType},
-    End,
-    EOF,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum PrintBreak {
-    FITS,
-    CONSISTENT,
-    INCONSISTENT,
-}
-
-#[derive(Clone, Copy, Debug)]
-struct PrintFrame {
-    offset: u8,
-    break_type: PrintBreak
-}
-
-pub struct PrettyPrinter {
-    line_width: u8,
-    space_left: u8,
-    
-    left_index: u16,
-    right_index: u16,
-
-    tokens: Vec<Token>,
-    sizes: Vec<i16>,
-
-    left_total: u16,
-    right_total: u16,
-    
-    scan_queue: VecDeque<u16>,
-    print_stack: Vec<PrintFrame>,
-
-    output: String,
-}
-
-impl PrettyPrinter {
-    pub fn new(line_width: u8) -> PrettyPrinter {
-        PrettyPrinter {
-            line_width: line_width,
-            space_left: line_width,
-            left_index: 0,
-            right_index: 0,
-            tokens: vec![Token::EOF; 3 * line_width as usize],
-            sizes: vec![0; 3 * line_width as usize],
-            left_total: 0,
-            right_total: 0,
-            scan_queue: VecDeque::with_capacity(3 * line_width as usize),
-            print_stack: Vec::with_capacity(64),
-            output: String::new(),
-        }
-    }
-    
-    pub fn render(&mut self, object: &impl PrettyPrintable, detail: bool) -> &str {
-        self.clear();
-        self.add_token(Token::Begin{indent: 0, break_type: BreakType::INCONSISTENT});
-        
-        if object.requires_parens(detail) {
-            self.add_token(Token::String{content: object.open_paren()});
-            object.pretty_print(self, detail);
-            self.add_token(Token::String{content: object.close_paren()});
+    fn to_enclosed_pp_element(&self, detail: bool) -> PPElement {
+        if self.requires_parens(detail) {
+            PPElement::group(vec![
+                PPElement::text(self.open_paren()),
+                self.to_pp_element(detail),
+                PPElement::text(self.close_paren())
+            ], BreakType::Consistent, 0)
         } else {
-            object.pretty_print(self, detail);
+            self.to_pp_element(detail)
+        }
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool {
+        true
+    }
+    
+    fn open_paren(&self) -> String {
+        "(".to_string()
+    }
+    
+    fn close_paren(&self) -> String {
+        ")".to_string()
+    }
+    
+    fn render(&self, detail: bool, max_width: usize) -> String {
+        let mut element = self.to_pp_element(detail);
+        element.layout(max_width, max_width, 0);
+        element.to_string()
+    }
+    
+    fn debug_string(&self) -> String {
+        self.render(true, 80)
+    }
+    
+    fn display_string(&self) -> String {
+        self.render(false, 80)
+    }
+}
+
+crate::wrapper_enum! {
+    
+    pub trait PPElementBody: Clone {
+        pub fn max_size(&Self) -> usize
+        pub fn layout(&mut Self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize)
+        
+        pub fn to_string(&Self) -> String
+    }
+
+    #[derive(Debug, Clone)]
+    pub enum PPElement {
+        Text(|text| TextElement),
+        Break(|break| BreakElement),
+        Group(|group| GroupElement),
+    }
+}
+
+impl PPElement {
+    pub fn text(text: String) -> PPElement {
+        PPElement::Text(TextElement { text })
+    }
+    
+    pub fn break_elem(space: usize, indent: usize, breaks: bool) -> PPElement {
+        PPElement::Break(BreakElement { space, indent, breaks })
+    }
+    
+    pub fn group(elements: Vec<PPElement>, break_type: BreakType, indent: usize) -> PPElement {
+        PPElement::Group(GroupElement { elements, break_type, indent })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TextElement {
+    text: String,
+}
+
+impl TextElement {
+    pub fn new(text: String) -> PPElement {
+        PPElement::Text(TextElement { text })
+    }
+}
+
+impl PPElementBody for TextElement {
+    fn max_size(&self) -> usize {
+        self.text.len()
+    }
+    
+    fn layout(&mut self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize) {
+        if self.text.len() <= width_left {
+            (max_width, width_left - self.text.len())
+        } else {
+            let splits_needed = (self.text.len() - width_left) / (max_width - indent);
+            let remainder = (self.text.len() - width_left) % max_width;
+            
+            let mut result = String::new();
+            let chars = self.text.chars().collect::<Vec<_>>();
+            
+            for i in 0..width_left {
+                result.push(chars[i]);
+            }
+            result.push('\n');
+            result.push_str(&" ".repeat(indent));
+            
+            for split in 0..splits_needed {
+                for i in 0..max_width {
+                    result.push(chars[width_left + split * max_width + i]);
+                }
+                result.push('\n');
+                result.push_str(&" ".repeat(indent));
+            }
+            
+            for i in 0..remainder {
+                result.push(chars[width_left + splits_needed * max_width + i]);
+            }
+            
+            self.text = result;
+            
+            (max_width, max_width - remainder)
+        }
+    }
+    
+    fn to_string(&self) -> String {
+        self.text.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BreakElement {
+    space: usize,
+    indent: usize,
+    breaks: bool,
+}
+
+impl BreakElement {
+    pub fn new(space: usize, indent: usize, breaks: bool) -> PPElement {
+        PPElement::Break(BreakElement { space, indent, breaks })
+    }
+}
+
+impl PPElementBody for BreakElement {
+    fn max_size(&self) -> usize {
+        self.space
+    }
+    
+    fn layout(&mut self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize) {
+        if self.breaks {
+            self.indent += indent;
+            (max_width, max_width - self.indent)
+        } else if self.space > width_left {
+            self.indent += indent;
+            self.breaks = true;
+            (max_width, max_width - self.indent)
+        } else {
+            (max_width, width_left - self.space)
+        }
+    }
+    
+    fn to_string(&self) -> String {
+        if self.breaks {
+            "\n".to_string() + &" ".repeat(self.indent)
+        } else {
+            " ".repeat(self.space)
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BreakType {
+    Consistent,
+    Flexible,
+}
+
+#[derive(Debug, Clone)]
+pub struct GroupElement {
+    elements: Vec<PPElement>,
+    break_type: BreakType,
+    indent: usize,
+}
+
+impl GroupElement {
+    pub fn new(elements: Vec<PPElement>, break_type: BreakType, indent: usize) -> PPElement {
+        PPElement::Group(GroupElement { elements, break_type, indent })
+    }
+}
+
+impl PPElementBody for GroupElement {
+    fn max_size(&self) -> usize {
+        self.elements.iter().map(|e| e.max_size()).sum()
+    }
+    
+    fn layout(&mut self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize) {
+        let any_breaks = self.max_size() > width_left;
+        if !any_breaks {
+            let mut current_width_left = width_left;
+            
+            for element in &mut self.elements {
+                let (_, new_width_left) = element.layout(max_width, current_width_left, indent + self.indent);
+                current_width_left = new_width_left;
+            }
+            
+            (max_width, current_width_left)
+        } else {
+            let mut sections = vec![];
+            
+            let mut current_section = vec![];
+            let mut current_break = None;
+            
+            for element in &self.elements {
+                match element {
+                    PPElement::Break(break_elem) => {
+                        if !current_section.is_empty() {
+                            sections.push((current_section, current_break));
+                            current_section = vec![];
+                        }
+                        current_break = Some(break_elem);
+                    }
+                    _ => {
+                        current_section.push(element);
+                    }
+                }
+            }
+            
+            if !current_section.is_empty() || current_break.is_some() {
+                sections.push((current_section, current_break));
+            }
+            
+            let mut new_elements = vec![];
+            
+            let mut current_width_left = width_left;
+            
+            for (section, break_elem_opt) in sections {
+                let mut new_indent = 0;
+                
+                if let Some(break_elem) = break_elem_opt {
+                    let mut break_elem = break_elem.clone();
+                    
+                    if let BreakType::Consistent = self.break_type {
+                        new_indent = break_elem.indent;
+                        current_width_left = width_left - break_elem.indent;
+                        break_elem.breaks = true;
+                    } else {
+                        let size = section.iter().map(|e| e.max_size()).sum::<usize>() + break_elem.space;
+                        if size > current_width_left && (size <= max_width - indent || 3*size > 4*current_width_left) {
+                            new_indent = break_elem.indent;
+                            current_width_left = max_width - break_elem.indent;
+                            break_elem.breaks = true;
+                        } else {
+                            current_width_left -= break_elem.space;
+                            break_elem.breaks = false;
+                        }
+                    }
+                    
+                    break_elem.layout(max_width, current_width_left, indent + self.indent);
+                    new_elements.push(PPElement::Break(break_elem));
+                }
+                
+                for elem in section {
+                    let mut elem = elem.clone();
+                    
+                    if max_width <= new_indent {
+                        new_indent = indent;
+                    }
+                    
+                    let (_, new_width_left_elem) = elem.layout(max_width - new_indent, current_width_left, indent + self.indent + new_indent);
+                    current_width_left = new_width_left_elem;
+                    new_elements.push(elem);
+                }
+            }
+            
+            self.elements = new_elements;
+            (max_width, current_width_left)
+        }
+    }
+    
+    fn to_string(&self) -> String {
+        let mut result = String::new();
+        
+        for element in &self.elements {
+            let inner_result = element.to_string();
+            let indented = inner_result.replace("\n", &("\n".to_string() + &" ".repeat(self.indent)));
+            result.push_str(&indented);
         }
         
-        self.add_token(Token::End);
-        self.add_token(Token::EOF);
-        self.finish()
+        result
     }
-    
-    pub fn print(&mut self, object: &impl PrettyPrintable, detail: bool) {
-        println!("{}", self.render(object, detail));
-    }
-    
-    pub fn add_string(&mut self, string: String) {
-        self.add_token(Token::String{content: string});
-    }
-
-    pub fn add_linebreak(&mut self, count: u8) {
-        for _ in 0..count {
-            self.add_token(Token::Break{spaces: self.line_width, offset: 0});
-        }
-    }
-
-    pub fn add_indent(&mut self, spaces: u8) {
-        self.add_token(Token::Break{spaces, offset: spaces});
-    }
-
-    pub fn add_break(&mut self, spaces: u8, offset: u8) {
-        self.add_token(Token::Break{spaces, offset});
-    }
-
-    pub fn begin(&mut self, indent: u8, break_type: BreakType) {
-        self.add_token(Token::Begin{indent, break_type});
-    }
-
-    pub fn end(&mut self) {
-        self.add_token(Token::End);
-    }
-
-    pub fn finish(&mut self) -> &str {
-        &self.output
-    }
-
-    pub fn clear(&mut self) {
-        self.space_left = self.line_width;
-        self.left_index = 0;
-        self.right_index = 0;
-        self.tokens = vec![Token::EOF; 3 * self.line_width as usize];
-        self.sizes = vec![0; 3 * self.line_width as usize];
-        self.left_total = 0;
-        self.right_total = 0;
-        self.scan_queue.clear();
-        self.print_stack.clear();
-        self.output.clear();
-    }
-
-    pub fn add_token(&mut self, token: Token) {
-        match token.clone() {
-            Token::String{content} => {
-                if self.scan_queue.is_empty() {
-                    self.process_token(&token, content.len() as u8);
-                } else {
-                    self.advance_right();
-                    self.tokens[self.right_index as usize] = token;
-                    self.sizes[self.right_index as usize] = content.len() as i16;
-                    self.right_total += content.len() as u16;
-                    self.check_stream();
-                }
-            },
-            Token::Break{spaces, offset: _} => {
-                if self.scan_queue.is_empty() {
-                    self.left_index = 0;
-                    self.right_index = 0;
-                    self.left_total = 1;
-                    self.right_total = 1;
-                } else {
-                    self.advance_right();
-                }
-                
-                self.check_queue(0);
-                self.scan_queue.push_back(self.right_index);
-                self.tokens[self.right_index as usize] = token;
-
-                self.sizes[self.right_index as usize] = -(self.right_total as i16);
-                self.right_total += spaces as u16;
-            },
-            Token::Begin{indent: _, break_type: _} => {
-                if self.scan_queue.is_empty() {
-                    self.left_index = 0;
-                    self.right_index = 0;
-                    self.left_total = 1;
-                    self.right_total = 1;
-                } else {
-                    self.advance_right();
-                }
-                
-                self.tokens[self.right_index as usize] = token;
-                self.sizes[self.right_index as usize] = -(self.right_total as i16);
-                self.scan_queue.push_back(self.right_index);
-            },
-            Token::End => {
-                if self.scan_queue.is_empty() {
-                    self.process_token(&token, 0);
-                } else {
-                    self.advance_right();
-                    self.tokens[self.right_index as usize] = token;
-                    self.sizes[self.right_index as usize] = -(self.right_total as i16);
-                    self.scan_queue.push_back(self.right_index);
-                }
-            },
-            Token::EOF => {
-                if !self.scan_queue.is_empty() {
-                    self.check_queue(0);
-                    self.advance_left();
-                }
-                
-                if !self.scan_queue.is_empty() {
-                    panic!("PrettyPrinter: scan queue left in an unfinished state at end of input: \n\t{:?}", self.scan_queue);
-                }
-            }
-        }
-    }
-    
-    fn process_token(&mut self, token: &Token, length: u8) {
-        match token {
-            Token::String{content} => {
-                if length > self.space_left {
-                    panic!("PrettyPrinter: string length exceeds line width");
-                }
-                self.space_left -= length;
-                self.output.push_str(content);
-            },
-            Token::Break{spaces, offset} => {
-                match self.print_stack.last() {
-                    Some(frame) => match frame.break_type {
-                        PrintBreak::FITS => {
-                            self.space_left -= spaces;
-                            self.output.push_str(&" ".repeat(*spaces as usize));
-                        },
-                        PrintBreak::CONSISTENT => {
-                            self.space_left = frame.offset - offset;
-                            self.output.push('\n');
-                            self.output.push_str(&" ".repeat((self.line_width - self.space_left) as usize));
-                        },
-                        PrintBreak::INCONSISTENT => {
-                            if length > self.space_left {
-                                self.space_left = frame.offset - offset;
-                                self.output.push('\n');
-                                self.output.push_str(&" ".repeat((self.line_width - self.space_left) as usize));
-                            } else {
-                                self.space_left -= spaces;
-                                self.output.push_str(&" ".repeat(*spaces as usize));
-                            }
-                        }
-                    },
-                    None => {
-                        panic!("PrettyPrinter: break token with no print stack");
-                    }
-                }
-            },
-            Token::Begin{indent, break_type} => {
-                if length > self.space_left {
-                    self.print_stack.push(PrintFrame{
-                        offset: self.space_left - indent,
-                        break_type: match break_type {
-                            BreakType::CONSISTENT => PrintBreak::CONSISTENT,
-                            BreakType::INCONSISTENT => PrintBreak::INCONSISTENT,
-                        }
-                    });
-                } else {
-                    self.print_stack.push(PrintFrame{
-                        offset: 0,
-                        break_type: PrintBreak::FITS
-                    });
-                }
-            },
-            Token::End => {
-                self.print_stack.pop();
-            },
-            Token::EOF => {
-                panic!("PrettyPrinter: unexpected EOF token in process_token");
-            }
-        }
-    }
-    
-    fn check_stream(&mut self) {
-        if self.right_total - self.left_total > self.space_left as u16 {
-            if !self.scan_queue.is_empty() {
-                if self.left_index == *self.scan_queue.front().unwrap() {
-                    self.sizes[self.scan_queue.pop_front().unwrap() as usize] = i16::MAX;
-                }
-                
-                self.advance_left();
-                
-                if self.left_index != self.right_index {
-                    self.check_stream();
-                }
-            }
-        }
-    }
-    
-    fn check_queue(&mut self, offset: u16) {
-        if !self.scan_queue.is_empty() {
-            let index: u16 = *self.scan_queue.back().unwrap();
-            
-            match self.tokens[index as usize] {
-                Token::Begin{indent: _, break_type: _} => {
-                    if offset > 0 {
-                        self.sizes[self.scan_queue.pop_back().unwrap() as usize] =
-                            self.sizes[index as usize] + self.right_total as i16;
-                        self.check_queue(offset - 1);
-                    }
-                },
-                Token::End => {
-                    self.sizes[self.scan_queue.pop_back().unwrap() as usize] = 1;
-                    self.check_queue(offset + 1);
-                },
-                _ => {
-                    self.sizes[self.scan_queue.pop_back().unwrap() as usize] =
-                        self.sizes[index as usize] + self.right_total as i16;
-                    if offset > 0 {
-                        self.check_queue(offset);
-                    }
-                }
-            }   
-        }
-    }
-    
-    fn advance_left(&mut self) {
-        let token = &self.tokens[self.left_index as usize].clone();
-        let size = self.sizes[self.left_index as usize];
-        
-        if size >= 0 {
-            self.process_token(&token, size as u8);
-
-            match token {
-                Token::String{content} => {
-                    self.left_total += content.len() as u16;
-                },
-                Token::Break{spaces, offset: _} => {
-                    self.left_total += *spaces as u16;
-                },
-                _ => {}
-            }
-            
-            if self.left_index != self.right_index {
-                self.left_index = (self.left_index + 1) % self.tokens.capacity() as u16;
-                self.advance_left();
-            }
-        }
-    }
-    
-    fn advance_right(&mut self) {
-        self.right_index = (self.right_index + 1) % self.tokens.capacity() as u16;
-        if self.right_index == self.left_index {
-            panic!("PrettyPrinter: token buffer overflow");
-        }
-    }
-}
-
-#[macro_export]
-macro_rules! pretty_print_tokens {
-    ($printer:expr, ) => {()};
-    
-    ($printer:expr, $object:ident $($rest:tt)*) => {
-        {
-            if $object.requires_parens(false) {
-                $printer.add_token($crate::utils::pretty_printer::Token::String{content: $object.open_paren()});
-                $object.pretty_print($printer, false);
-                $printer.add_token($crate::utils::pretty_printer::Token::String{content: $object.close_paren()});
-            } else {
-                $object.pretty_print($printer, false);
-            }
-                
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, # $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: u8::MAX, offset: 0});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: 0,
-                break_type: $crate::utils::pretty_printer::BreakType::INCONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <$indent:literal| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: $indent,
-                break_type: $crate::utils::pretty_printer::BreakType::INCONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <$indent:ident| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: $indent,
-                break_type: $crate::utils::pretty_printer::BreakType::INCONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <<| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: 0,
-                break_type: $crate::utils::pretty_printer::BreakType::CONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <<$indent:literal| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: $indent,
-                break_type: $crate::utils::pretty_printer::BreakType::CONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, <<$indent:ident| $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Begin{indent: $indent,
-                break_type: $crate::utils::pretty_printer::BreakType::CONSISTENT});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, |> $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::End);
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, |>> $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::End);
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, -- $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: 1, offset: 0});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, -$spaces:literal- $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: $spaces, offset: 0});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, -$spaces:ident- $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: $spaces, offset: 0});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, -$spaces:literal|$offset:literal- $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: $spaces, offset: $offset});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, -$spaces:ident|$offset:ident- $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::Break{spaces: $spaces, offset: $offset});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, $string:literal $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::String{content: $string.to_owned()});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, $string:ident $($rest:tt)*) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::String{content: $string});
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! pretty_print_object {
-    ($printer:expr, ) => {};
-    
-    ($printer:expr, $object:ident $($rest:tt)*) => {
-        {
-            if $object.requires_parens(true) {
-                $printer.add_token($crate::utils::pretty_printer::Token::String{content: $object.open_paren()});
-                $object.pretty_print($printer, true);
-                $printer.add_token($crate::utils::pretty_printer::Token::String{content: $object.close_paren()});
-            } else {
-                $object.pretty_print($printer, true);
-            }
-            
-            $crate::pretty_print_tokens!($printer, $($rest)*)
-        }
-    };
-    
-    ($printer:expr, $($rest:tt)*) => {
-        $crate::pretty_print_tokens!($printer, $($rest)*)
-    }
-}
-
-#[macro_export]
-macro_rules! pretty_print {
-    ($printer:expr, ) => {
-        {
-            $printer.add_token($crate::utils::pretty_printer::Token::EOF);
-            $printer.finish()
-        }
-    };
-    
-    ($printer:expr, $($item:tt)*) => {
-        {
-            $crate::pretty_print_tokens!($printer, <|);
-
-            $crate::pretty_print_object!($printer, $($item)*);
-
-            $crate::pretty_print_tokens!($printer, |>);
-        }
-    };
 }

@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-use crate::utils::pretty_printer::{PrettyPrintable, PrettyPrinter};
+use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
 #[derive(Debug, PartialEq, Eq)]
@@ -30,13 +30,17 @@ impl TypeConstant {
 }
 
 impl PrettyPrintable for TypeConstant {
-    fn pretty_print(&self, printer: &mut PrettyPrinter, _detail: bool) {
+    fn to_pp_element(&self, _detail: bool) -> PPElement {
         match self {
-            TypeConstant::NullType => crate::pretty_print!(printer, "Null"),
-            TypeConstant::Atomic => crate::pretty_print!(printer, "Atomic"),
-            TypeConstant::Existential => crate::pretty_print!(printer, "Existential"),
-            TypeConstant::Proposition => crate::pretty_print!(printer, "Proposition"),
-        };
+            TypeConstant::NullType => PPElement::text("null".to_string()),
+            TypeConstant::Atomic => PPElement::text("atomic".to_string()),
+            TypeConstant::Existential => PPElement::text("existential".to_string()),
+            TypeConstant::Proposition => PPElement::text("proposition".to_string()),
+        }
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool {
+        false
     }
 }
 
