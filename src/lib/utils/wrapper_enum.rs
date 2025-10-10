@@ -13,6 +13,10 @@ $crate::wrapper_enum! {
         pub fn method2(params...) -> ReturnType
     }
 
+    @pass_through {
+        // Any trait methods here are also added to BodyTrait
+    }
+
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum MyEnum {
         Variant1(||name1|| Type1),
@@ -34,7 +38,10 @@ $crate::wrapper_enum! {
 } Expands to: {
     pub trait BodyTrait: Debug + SomeTrait + AnotherTrait {
         fn method1(params...) -> ReturnType;
-        fn method2(params...) -> ReturnType;    
+        fn method2(params...) -> ReturnType;
+        ...
+        
+        // Any methods from @pass_through { ... } are also included
     }
     
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +59,15 @@ $crate::wrapper_enum! {
             2  // Computed at compile time
         }
         
+        // For each method in BodyTrait, generate a forwarding method:
+        fn method1(params...) -> ReturnType {
+            match self {
+                MyEnum::Variant1(inner) => inner.method1(params...),
+                MyEnum::Variant2(inner) => inner.method1(params...),
+                // ...
+            }
+        }
+        
         // For each variant with a body name |name| or ||name||, generate a test:
         pub fn is_name1(&self) -> bool {
             matches!(self, MyEnum::Variant1(_))
@@ -62,17 +78,6 @@ $crate::wrapper_enum! {
             match self {
                 MyEnum::Variant1(inner) => Some(inner),
                 _ => None,
-            }
-        }
-    }
-    
-    impl BodyTrait for MyEnum {
-        // For each method in BodyTrait, generate a forwarding method:
-        fn method1(params...) -> ReturnType {
-            match self {
-                MyEnum::Variant1(inner) => inner.method1(params...),
-                MyEnum::Variant2(inner) => inner.method1(params...),
-                // ...
             }
         }
     }
@@ -103,12 +108,18 @@ macro_rules! wrapper_enum {
         $( @default { $default_type:ty } )?
         $body_trait_vis:vis trait $body_trait:ident $(: $( $trait_bound:ident ),* )? {
             $(
-                fn $method_name:ident
+                $method_vis:vis fn $method_name:ident
                     ($self_decl:ty $( ,$param_name:ident : $param_type:ty )* $(,)? ) $( -> $return_type:ty )? $({
                         $( $default_impl: tt )*
                     })?
             )*
         }
+        
+        $(
+            @pass_through {
+                $( $pass_through_impl:tt )*
+            }
+        )?
         
         $(#[$enum_derives:meta])*
         $enum_vis:vis enum $enum_name:ident {
@@ -133,6 +144,12 @@ macro_rules! wrapper_enum {
                     ($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )? 
                     | { $( $crate::wrapper_enum!{@default_impl_body $( $default_impl )* } )? } }
             )*
+            
+            $(
+                $(
+                    $pass_through_impl
+                )*
+            )?
         }
         
         // Define the enum with appropriate where clauses
@@ -145,6 +162,12 @@ macro_rules! wrapper_enum {
             pub fn variant_count() -> usize {
                 $crate::wrapper_enum!(@count $( $variant_name )* )
             }
+            
+            // Generate forwarding methods
+            $crate::wrapper_enum!{@gen_forwards $enum_name
+                | { $( $method_vis $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )? )|* |}
+                | { $( $variant_name ( $( $variant_type )? ) )* }
+                | { } }
                 
             // Generate test methods for each variant with a body name
             $crate::wrapper_enum!{@gen_test $enum_name
@@ -154,15 +177,6 @@ macro_rules! wrapper_enum {
             // Generate accessors for each variant with a body name
             $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
                 | { $( $variant_name ( $( ||$variant_access|| )? $( $variant_type )? ) )* }
-                | { } }
-        }
-        
-        // Implement the body trait for the enum
-        impl $body_trait for $enum_name {
-            // Generate forwarding methods
-            $crate::wrapper_enum!{@gen_forwards $enum_name
-                | { $( $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )? )|* |}
-                | { $( $variant_name ( $( $variant_type )? ) )* }
                 | { } }
         }
         
@@ -258,17 +272,17 @@ macro_rules! wrapper_enum {
     };
     
     (@gen_forwards $enum_name:ident
-        | { $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
-            | $( $rest_method:ident($self_decl_rest:ty $( ,$rest_param:ident : $rest_param_type:ty )* ) $( -> $rest_return:ty )? )|* $(|)? }
+        | { $method_vis:vis $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+            | $( $rest_method_vis:vis $rest_method:ident($self_decl_rest:ty $( ,$rest_param:ident : $rest_param_type:ty )* ) $( -> $rest_return:ty )? )|* $(|)? }
         | { $( $variant_name:ident ( $( $variant_type:ty )? ) )* }
         | { $( $methods:tt )* }) => {
             
             $crate::wrapper_enum!{@gen_forwards $enum_name
-                | { $( $rest_method($self_decl_rest $( ,$rest_param : $rest_param_type )* ) $( -> $rest_return )? )|* | }
+                | { $( $rest_method_vis $rest_method($self_decl_rest $( ,$rest_param : $rest_param_type )* ) $( -> $rest_return )? )|* | }
                 | { $( $variant_name ( $( $variant_type )? ) )* }
                 | {
                     $( $methods )*
-                    $crate::wrapper_enum!{@gen_forward $enum_name $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
+                    $crate::wrapper_enum!{@gen_forward $enum_name $method_vis $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
                         | { $( $variant_name ( $( $variant_type )? ) )* }
                         | { } }
                 } }
@@ -282,20 +296,20 @@ macro_rules! wrapper_enum {
             $( $methods )*
     };
     
-    (@gen_forward $enum_name:ident $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+    (@gen_forward $enum_name:ident $method_vis:vis $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
         | { $variant_name:ident ( $( $variant_type:ty )? ) $( $rest:ident ( $( $rest_type:ty )? ) )* }
         | { $( $matches:tt )* }) => {
             
-            $crate::wrapper_enum!{@gen_forward $enum_name $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
+            $crate::wrapper_enum!{@gen_forward $enum_name $method_vis $method_name($self_decl $( ,$param_name : $param_type )* ) $( -> $return_type )?
                 | { $( $rest ( $( $rest_type )? ) )* }
                 | { $( $matches )* $enum_name::$variant_name(inner) => inner.$method_name( $( $param_name ),* ), } }
     };
     
-    (@gen_forward $enum_name:ident $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
+    (@gen_forward $enum_name:ident $method_vis:vis $method_name:ident($self_decl:ty $( ,$param_name:ident : $param_type:ty )* ) $( -> $return_type:ty )?
         | {}
         | { $( $matches:tt )* }) => {
             
-            fn $method_name(self: $self_decl, $( $param_name : $param_type ),* ) $( -> $return_type )? {
+            $method_vis fn $method_name(self: $self_decl, $( $param_name : $param_type ),* ) $( -> $return_type )? {
                 match self {
                     $( $matches )*
                 }
