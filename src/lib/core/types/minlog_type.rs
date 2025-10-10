@@ -9,25 +9,29 @@ crate::wrapper_enum! {
     
     @default { TypeConstant }
     pub trait TypeBody: PrettyPrintable {
-        fn is_object_type(&Self) -> bool {
+        pub fn is_object_type(&Self) -> bool {
             false
         }
         
-        fn arity(&Self) -> usize {
+        pub fn arity(&Self) -> usize {
             0
         }
         
-        fn level(&Self) -> usize {
+        pub fn level(&Self) -> usize {
             0
         }
         
-        fn inner_type_variables(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn inner_type_variables(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
         
-        fn inner_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn inner_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
+    }
+    
+    @pass_through {
+        fn remove_nulls(minlog_type: &Self) -> Option<Rc<MinlogType>>;
     }
     
     #[derive(PartialEq, Eq)]
@@ -40,6 +44,13 @@ crate::wrapper_enum! {
         Algebra(||algebra||),
         Arrow(||arrow||),
         Star(||star||),
+    }
+    
+    @forward {
+        pub fn remove_nulls(minlog_type: &Rc<MinlogType>) -> Option<Rc<MinlogType>> {
+            @match {minlog_type.as_ref()}
+            @method {remove_nulls()}
+        }
     }
     
     impl PrettyPrintable {

@@ -40,4 +40,13 @@ impl PrettyPrintable for TypeConstant {
     }
 }
 
-impl TypeBody for TypeConstant {}
+impl TypeBody for TypeConstant {
+    fn remove_nulls(minlog_type: &TypeConstant) -> Option<Rc<MinlogType>> {
+        match minlog_type {
+            TypeConstant::NullType => None,
+            TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
+            TypeConstant::Existential => Some(TypeConstant::create_existential()),
+            TypeConstant::Proposition => Some(TypeConstant::create_proposition()),
+        }
+    }
+}

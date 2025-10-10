@@ -21,6 +21,10 @@ impl TypeBody for TypeVariable {
     fn is_object_type(&self) -> bool {
         true
     }
+    
+    fn remove_nulls(minlog_type: &TypeVariable) -> Option<Rc<MinlogType>> {
+        Some(TypeVariable::create(minlog_type.name.clone()))
+    }
 }
 
 impl PrettyPrintable for TypeVariable {
