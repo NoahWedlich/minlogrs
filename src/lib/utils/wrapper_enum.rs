@@ -25,6 +25,15 @@ $crate::wrapper_enum! {
         ...
     }
     
+    @forward {
+        pub fn method_to_forward(params...) -> ReturnType {
+            @pre { ... } // optional code before matching
+            @match { expression_to_match }
+            @method { static_method_to_call(params...) }
+            @post { |$result| ... } // optional code after matching
+        }
+    }
+    
     impl SomeTrait {
         fn some_method_1(args...) -> ReturnType;
         fn some_method_2(args...) -> ReturnType;
@@ -80,6 +89,20 @@ $crate::wrapper_enum! {
                 _ => None,
             }
         }
+        
+        // For each method in @forward { ... }, generate a forwarding method:
+        pub fn method_to_forward(params...) -> ReturnType {
+            // optional code before matching
+            ...
+            let result = match expression_to_match {
+                MyEnum::Variant1(inner) => Type1::static_method_to_call(inner, params...),
+                MyEnum::Variant2(inner) => DefaultType::static_method_to_call(inner, params...),
+                ...
+            };
+            // optional code after matching
+            ...
+            result
+        }
     }
     
     impl SomeTrait for MyEnum {
@@ -127,6 +150,20 @@ macro_rules! wrapper_enum {
                 $variant_name:ident ( $( |$variant_test:ident| )? $(||$variant_access:ident|| )? $($variant_type:ty )? )
             ),* $(,)?
         }
+        
+        $(
+            @forward {
+                $(
+                    $forward_method_vis:vis fn $forward_method_name:ident
+                        ( $( $forward_param_name:ident : $forward_param_type:ty ),* $(,)? ) $( -> $forward_return_type:ty )? {
+                            $( @pre { $( $pre_code:tt )* } )?
+                            @match { $match_expr:expr }
+                            @method { $static_method_name:ident ( $( $static_param: expr ),* $(,)? ) }
+                            $( @post { |$result:ident| $( $post_code:tt )* } )?
+                        }
+                )*
+            }
+        )?
         
         $(
             impl $impl_trait:ident {
@@ -177,6 +214,18 @@ macro_rules! wrapper_enum {
             // Generate accessors for each variant with a body name
             $crate::wrapper_enum!{@gen_accessor $enum_name $( $default_type )?
                 | { $( $variant_name ( $( ||$variant_access|| )? $( $variant_type )? ) )* }
+                | { } }
+                
+            // Generate custom forwarding methods$crate::wrapper_enum!{@gen_custom_forwards $enum_name $( $default_type )?
+            $crate::wrapper_enum!{@gen_custom_forwards $enum_name $( $default_type )?
+                | { $( $( $forward_method_vis fn $forward_method_name
+                    ( $( $forward_param_name : $forward_param_type ),* ) $( -> $forward_return_type )? {
+                        $( @pre { $( $pre_code )* } )?
+                        @match { $match_expr }
+                        @method { $static_method_name ( $( $static_param ),* ) }
+                        $( @post { |$result| $( $post_code )* } )?
+                    } )* )? }
+                | { $( $variant_name ( $( $variant_type )? ) )* }
                 | { } }
         }
         
@@ -398,6 +447,92 @@ macro_rules! wrapper_enum {
             $( $accessors )*
     };
     
+    (@gen_custom_forwards $enum_name:ident $( $default_type:ty )?
+        | { $forward_method_vis:vis fn $forward_method_name:ident
+            ( $( $forward_param_name:ident : $forward_param_type:ty ),* $(,)? ) $( -> $forward_return_type:ty )? {
+                $( @pre { $( $pre_code:tt )* } )?
+                @match { $match_expr:expr }
+                @method { $static_method_name:ident ( $( $static_param: expr ),* $(,)? ) }
+                $( @post { |$result:ident| $( $post_code:tt )* } )?
+            } $( $rest:tt )* }
+        | { $( $variant_name:ident ( $( $variant_type:ty )? ) )* }
+        | { $( $methods:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_custom_forwards $enum_name $( $default_type )?
+                | { $( $rest )* }
+                | { $( $variant_name ( $( $variant_type )? ) )* }
+                | { $( $methods )*
+                    $crate::wrapper_enum!{@gen_custom_forward $enum_name $( $default_type )?
+                        | $forward_method_vis fn $forward_method_name
+                            ( $( $forward_param_name : $forward_param_type ),* ) $( -> $forward_return_type )? {
+                                $( @pre { $( $pre_code )* } )?
+                                @match { $match_expr }
+                                @method { $static_method_name ( $( $static_param ),* ) }
+                                $( @post { |$result| $( $post_code )* } )?
+                            }
+                        | { $( $variant_name ( $( $variant_type )? ) )* }
+                        | { } }
+                } }
+    };
+    
+    (@gen_custom_forwards $enum_name:ident $( $default_type:ty )?
+        | {}
+        | { $( $variant_name:ident ( $( $variant_type:ty )? ) )* }
+        | { $( $methods:tt )* }) => {
+            
+            $( $methods )*
+    };
+    
+    (@gen_custom_forward $enum_name:ident $( $default_type:ty )?
+        | $forward_method_vis:vis fn $forward_method_name:ident
+            ( $( $forward_param_name:ident : $forward_param_type:ty ),* $(,)? ) $( -> $forward_return_type:ty )? {
+                $( @pre { $( $pre_code:tt )* } )?
+                @match { $match_expr:expr }
+                @method { $static_method_name:ident ( $( $static_param: expr ),* $(,)? ) }
+                $( @post { |$result:ident| $( $post_code:tt )* } )?
+            }
+        | { $variant_name:ident ( $( $variant_type:ty )? )
+            $( $rest_variants:ident ( $( ||$rest_body:ident|| )? $( $rest_type:ty )? ) )* }
+        | { $( $matches:tt )* }) => {
+            
+            $crate::wrapper_enum!{@gen_custom_forward $enum_name $( $default_type )?
+                | $forward_method_vis fn $forward_method_name
+                    ( $( $forward_param_name : $forward_param_type ),* ) $( -> $forward_return_type )? {
+                        $( @pre { $( $pre_code )* } )?
+                        @match { $match_expr }
+                        @method { $static_method_name ( $( $static_param ),* ) }
+                        $( @post { |$result| $( $post_code )* } )?
+                    }
+                | { $( $rest_variants ( $( ||$rest_body|| )? $( $rest_type )? ) )* }
+                | { $( $matches )* $enum_name::$variant_name(inner) =>
+                    <$crate::wrapper_enum!{@body_type $( $variant_type )?, $( $default_type )?}>::$static_method_name(inner, $( $static_param ),*), } }
+    };
+    
+    (@gen_custom_forward $enum_name:ident $( $default_type:ty )?
+        | $forward_method_vis:vis fn $forward_method_name:ident
+            ( $( $forward_param_name:ident : $forward_param_type:ty ),* $(,)? ) $( -> $forward_return_type:ty )? {
+                $( @pre { $( $pre_code:tt )* } )?
+                @match { $match_expr:expr }
+                @method { $static_method_name:ident ( $( $static_param: expr ),* $(,)? ) }
+                $( @post { |$result:ident| $( $post_code:tt )* } )?
+            }
+        | {}
+        | { $( $matches:tt )* }) => {
+            
+            $forward_method_vis fn $forward_method_name( $( $forward_param_name : $forward_param_type ),* ) $( -> $forward_return_type )? {
+                $( $( $pre_code )* )?
+                let $crate::wrapper_enum!(@result_name $( $result )? | default) = match $match_expr {
+                    $( $matches )*
+                };
+                $( $( $post_code )* )?
+                $crate::wrapper_enum!(@result_name $( $result )? | default)
+            }
+    };
+    
+    (@result_name $result:ident | $( $default:ident )?) => { $result };
+
+    (@result_name | $default:ident) => { $default };
+
     (@count ) => { 0usize };
     (@count $head:ident $( $tail:ident )* ) => { 1usize + $crate::wrapper_enum!(@count $( $tail )*) };
 }
