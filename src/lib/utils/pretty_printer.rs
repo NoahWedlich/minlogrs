@@ -144,8 +144,8 @@ impl PrettyPrinter {
         self.space_left = self.line_width;
         self.left_index = 0;
         self.right_index = 0;
-        self.tokens.clear();
-        self.sizes.clear();
+        self.tokens = vec![Token::EOF; 3 * self.line_width as usize];
+        self.sizes = vec![0; 3 * self.line_width as usize];
         self.left_total = 0;
         self.right_total = 0;
         self.scan_queue.clear();
@@ -528,15 +528,11 @@ macro_rules! pretty_print {
     
     ($printer:expr, $($item:tt)*) => {
         {
-
             $crate::pretty_print_tokens!($printer, <|);
 
             $crate::pretty_print_object!($printer, $($item)*);
 
             $crate::pretty_print_tokens!($printer, |>);
-
-            $printer.add_token($crate::utils::pretty_printer::Token::EOF);
-            $printer.finish()
         }
     };
 }
