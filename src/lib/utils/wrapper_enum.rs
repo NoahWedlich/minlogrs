@@ -274,7 +274,7 @@ macro_rules! wrapper_enum {
                 | { $( $variants )* $variant_name( $crate::wrapper_enum!{@body_type $( $type )?, $( $default_type )?} ), } }
     };
     
-    (@gen_enum $(#[$enum_derives:meta])* $enum_vis:vis $enum_name:ident $body_trait:ident $default_type:ty
+    (@gen_enum $(#[$enum_derives:meta])* $enum_vis:vis $enum_name:ident $body_trait:ident $( $default_type:ty )?
         | {}
         | { $( $bounds:tt )* }
         | { $( $variants:tt )* }) => {
