@@ -4,6 +4,7 @@ use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::term_variable::TermVariable;
+use crate::core::terms::abstraction::Abstraction;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Totality {
@@ -66,7 +67,7 @@ crate::wrapper_enum! {
         Constructor(||constructor||),
         ProgramTerm(||program_term||),
         InternalConstant(||internal_constant||),
-        Abstraction(||abstraction||),
+        Abstraction(||abstraction|| Abstraction),
         Application(||application||),
         Pairing(||pairing||),
         Projection(||projection||),
