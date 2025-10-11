@@ -1,5 +1,5 @@
 
-
+use std::rc::Rc;
 pub trait PrettyPrintable {
     fn to_pp_element(&self, detail: bool) -> PPElement;
     
@@ -39,6 +39,24 @@ pub trait PrettyPrintable {
     
     fn display_string(&self) -> String {
         self.render(false, 80)
+    }
+}
+
+impl<T: PrettyPrintable> PrettyPrintable for Rc<T> {
+    fn to_pp_element(&self, detail: bool) -> PPElement {
+        self.as_ref().to_pp_element(detail)
+    }
+    
+    fn requires_parens(&self, detail: bool) -> bool {
+        self.as_ref().requires_parens(detail)
+    }
+    
+    fn open_paren(&self) -> String {
+        self.as_ref().open_paren()
+    }
+    
+    fn close_paren(&self) -> String {
+        self.as_ref().close_paren()
     }
 }
 
