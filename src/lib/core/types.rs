@@ -5,3 +5,5 @@ pub mod type_constant;
 pub mod type_variable;
 pub mod arrow_type;
 pub mod star_type;
+
+pub mod type_substitution;

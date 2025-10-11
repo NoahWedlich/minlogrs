@@ -7,10 +7,12 @@ use crate::core::types::type_variable::TypeVariable;
 use crate::core::types::arrow_type::ArrowType;
 use crate::core::types::star_type::StarType;
 
+use crate::core::types::type_substitution::TypeMatchContext;
+
 crate::wrapper_enum! {
     
     @default { TypeConstant }
-    pub trait TypeBody: PrettyPrintable {
+    pub trait TypeBody: PrettyPrintable, Clone, PartialEq, Eq {
         pub fn is_object_type(&Self) -> bool {
             false
         }
@@ -30,6 +32,13 @@ crate::wrapper_enum! {
         pub fn inner_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
+        
+        pub fn substitute(&Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType>
+        
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)>
+        
+        pub fn match_with(&Self, ctx: &mut TypeMatchContext)
+            -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()>
     }
     
     @pass_through {

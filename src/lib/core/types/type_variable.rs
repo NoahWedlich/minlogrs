@@ -1,8 +1,11 @@
 
 use std::rc::Rc;
+use crate::core::substitution::{MatchContext, Substitutable};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::core::types::type_substitution::TypeMatchContext;
 
+#[derive(Clone)]
 pub struct TypeVariable {
     name: String
 }
@@ -24,6 +27,33 @@ impl TypeBody for TypeVariable {
     
     fn remove_nulls(minlog_type: &TypeVariable) -> Option<Rc<MinlogType>> {
         Some(TypeVariable::create(minlog_type.name.clone()))
+    }
+    
+    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+        if from.is_variable() && self == from.to_variable().unwrap() {
+            to.clone()
+        } else {
+            TypeVariable::create(self.name.clone())
+        }
+    }
+    
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+        if other.is_variable() && self == other.to_variable().unwrap() {
+            None
+        } else {
+            Some((TypeVariable::create(self.name.clone()), other.clone()))
+        }
+    }
+    
+    fn match_with(self: &Self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        if pattern.valid_substitution(&instance) {
+            Ok(Some((pattern.clone(), instance.clone())))
+        } else {
+            Err(())
+        }
     }
 }
 

@@ -1,9 +1,11 @@
 
 use std::rc::Rc;
+use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::core::types::type_substitution::TypeMatchContext;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone)]
 pub enum TypeConstant {
     NullType,
     Atomic,
@@ -29,6 +31,62 @@ impl TypeConstant {
     }
 }
 
+impl TypeBody for TypeConstant {
+    fn remove_nulls(minlog_type: &TypeConstant) -> Option<Rc<MinlogType>> {
+        match minlog_type {
+            TypeConstant::NullType => None,
+            TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
+            TypeConstant::Existential => Some(TypeConstant::create_existential()),
+            TypeConstant::Proposition => Some(TypeConstant::create_proposition()),
+        }
+    }
+    
+    fn substitute(self: &Self, _from: &Rc<MinlogType>, _to: &Rc<MinlogType>) -> Rc<MinlogType> {
+        match self {
+            TypeConstant::NullType => TypeConstant::create_null(),
+            TypeConstant::Atomic => TypeConstant::create_atomic(),
+            TypeConstant::Existential => TypeConstant::create_existential(),
+            TypeConstant::Proposition => TypeConstant::create_proposition(),
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+        match self {
+            TypeConstant::NullType => if other.is_null() {
+                None
+            } else {
+                Some((TypeConstant::create_null(), other.clone()))
+            },
+            TypeConstant::Atomic => if other.is_atomic() {
+                None
+            } else {
+                Some((TypeConstant::create_atomic(), other.clone()))
+            },
+            TypeConstant::Existential => if other.is_existential() {
+                None
+            } else {
+                Some((TypeConstant::create_existential(), other.clone()))
+            },
+            TypeConstant::Proposition => if other.is_proposition() {
+                None
+            } else {
+                Some((TypeConstant::create_proposition(), other.clone()))
+            },
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        if pattern == instance {
+            Ok(None)
+        } else {
+            Err(())
+        }
+    }
+}
+
 impl PrettyPrintable for TypeConstant {
     fn to_pp_element(&self, _detail: bool) -> PPElement {
         match self {
@@ -44,13 +102,15 @@ impl PrettyPrintable for TypeConstant {
     }
 }
 
-impl TypeBody for TypeConstant {
-    fn remove_nulls(minlog_type: &TypeConstant) -> Option<Rc<MinlogType>> {
-        match minlog_type {
-            TypeConstant::NullType => None,
-            TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
-            TypeConstant::Existential => Some(TypeConstant::create_existential()),
-            TypeConstant::Proposition => Some(TypeConstant::create_proposition()),
-        }
+impl PartialEq for TypeConstant {
+    fn eq(&self, other: &Self) -> bool {
+        matches!((self, other),
+            (TypeConstant::NullType, TypeConstant::NullType)
+            | (TypeConstant::Atomic, TypeConstant::Atomic)
+            | (TypeConstant::Existential, TypeConstant::Existential)
+            | (TypeConstant::Proposition, TypeConstant::Proposition)
+        )
     }
 }
+
+impl Eq for TypeConstant {}

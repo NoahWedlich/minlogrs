@@ -1,8 +1,11 @@
 
 use std::rc::Rc;
+use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::core::types::type_substitution::TypeMatchContext;
 
+#[derive(Clone)]
 pub struct StarType {
     types: Vec<Rc<MinlogType>>,
 }
@@ -34,7 +37,7 @@ impl TypeBody for StarType {
         let mut inner = vec![];
         
         for t in &self.types {
-            inner.extend(t.inner_type_variables());
+            inner.extend(MinlogType::get_type_variables(t));
         }
         
         inner
@@ -44,7 +47,7 @@ impl TypeBody for StarType {
         let mut inner = vec![];
         
         for t in &self.types {
-            inner.extend(t.inner_algebra_types());
+            inner.extend(MinlogType::get_algebra_types(t));
         }
         
         inner
@@ -64,6 +67,54 @@ impl TypeBody for StarType {
         } else {
             Some(StarType::create(new_types))
         }
+    }
+
+    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+        let new_types: Vec<Rc<MinlogType>> = self.types.iter()
+            .map(|t| t.substitute(from, to))
+            .collect();
+        
+        StarType::create(new_types)
+    }
+    
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+        if !other.is_star() {
+            return Some((StarType::create(self.types.clone()), other.clone()));
+        }
+        
+        let other_star = other.to_star().unwrap();
+        
+        if self.types.len() != other_star.types.len() {
+            return Some((StarType::create(self.types.clone()), other.clone()));
+        }
+        
+        for (t1, t2) in self.types.iter().zip(other_star.types.iter()) {
+            if let Some(conflict) = t1.first_conflict_with(t2) {
+                return Some(conflict);
+            }
+        }
+        
+        None
+    }
+
+    fn match_with(self: &Self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+        let instance = ctx.next_instance().unwrap();
+        
+        if !instance.is_star() {
+            return Err(());
+        }
+        
+        let instance_star = instance.to_star().unwrap();
+        
+        if self.types.len() != instance_star.types.len() {
+            return Err(());
+        }
+        
+        for (t1, t2) in self.types.iter().zip(instance_star.types.iter()) {
+            ctx.extend(t1, t2);
+        }
+        
+        Ok(None)
     }
 }
 

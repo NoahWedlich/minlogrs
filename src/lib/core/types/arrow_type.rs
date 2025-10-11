@@ -1,8 +1,11 @@
 
 use std::{cmp::max, rc::Rc};
+use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::core::types::type_substitution::TypeMatchContext;
 
+#[derive(Clone)]
 pub struct ArrowType {
     arguments: Vec<Rc<MinlogType>>,
     value: Rc<MinlogType>,
@@ -60,10 +63,10 @@ impl TypeBody for ArrowType {
         let mut inner = vec![];
         
         for arg in &self.arguments {
-            inner.extend(arg.inner_type_variables());
+            inner.extend(MinlogType::get_type_variables(arg));
         }
-        
-        inner.extend(self.value.inner_type_variables());
+
+        inner.extend(MinlogType::get_type_variables(&self.value));
         inner
     }
     
@@ -71,10 +74,10 @@ impl TypeBody for ArrowType {
         let mut inner = vec![];
         
         for arg in &self.arguments {
-            inner.extend(arg.inner_algebra_types());
+            inner.extend(MinlogType::get_algebra_types(arg));
         }
-        
-        inner.extend(self.value.inner_algebra_types());
+
+        inner.extend(MinlogType::get_algebra_types(&self.value));
         inner
     }
     
@@ -94,6 +97,56 @@ impl TypeBody for ArrowType {
         } else {
             None
         }
+    }
+
+    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+        let new_arguments = self.arguments.iter()
+            .map(|arg| arg.substitute(from, to))
+            .collect();
+        let new_value = self.value.substitute(from, to);
+        
+        ArrowType::create(new_arguments, new_value)
+    }
+    
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+        if !other.is_arrow() {
+            return Some((Rc::new(MinlogType::Arrow(self.clone())), other.clone()));
+        }
+        
+        let other_arrow = other.to_arrow().unwrap();
+        
+        if self.arguments.len() != other_arrow.arguments.len() {
+            return Some((Rc::new(MinlogType::Arrow(self.clone())), other.clone()));
+        }
+        
+        for (arg1, arg2) in self.arguments.iter().zip(other_arrow.arguments.iter()) {
+            if let Some(conflict) = arg1.first_conflict_with(arg2) {
+                return Some(conflict);
+            }
+        }
+        
+        self.value.first_conflict_with(&other_arrow.value)
+    }
+    
+    fn match_with(self: &Self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+        let instance = ctx.next_instance().unwrap();
+        
+        if !instance.is_arrow() {
+            return Err(());
+        }
+        
+        let instance_arrow = instance.to_arrow().unwrap();
+        
+        if self.arguments.len() != instance_arrow.arguments.len() {
+            return Err(());
+        }
+        
+        for (arg1, arg2) in self.arguments.iter().zip(instance_arrow.arguments.iter()) {
+            ctx.extend(arg1, arg2);
+        }
+        
+        ctx.extend(&self.value, &instance_arrow.value);
+        Ok(None)
     }
 }
 
