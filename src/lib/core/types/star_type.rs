@@ -53,10 +53,10 @@ impl TypeBody for StarType {
         inner
     }
     
-    fn remove_nulls(minlog_type: &StarType) -> Option<Rc<MinlogType>> {
+    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
         let mut new_types = vec![];
         
-        for t in &minlog_type.types {
+        for t in &self.types {
             if let Some(new_t) = MinlogType::remove_nulls(t) {
                 new_types.push(new_t);
             }

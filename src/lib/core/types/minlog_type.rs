@@ -13,6 +13,8 @@ crate::wrapper_enum! {
     
     @default { TypeConstant }
     pub trait TypeBody: PrettyPrintable, Clone, PartialEq, Eq {
+        pub fn remove_nulls(&Self) -> Option<Rc<MinlogType>>
+        
         pub fn is_object_type(&Self) -> bool {
             false
         }
@@ -41,10 +43,6 @@ crate::wrapper_enum! {
             -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()>
     }
     
-    @pass_through {
-        fn remove_nulls(minlog_type: &Self) -> Option<Rc<MinlogType>>;
-    }
-    
     #[derive(PartialEq, Eq)]
     pub enum MinlogType {
         NullType(|null|),
@@ -55,13 +53,6 @@ crate::wrapper_enum! {
         Algebra(||algebra||),
         Arrow(||arrow|| ArrowType),
         Star(||star|| StarType),
-    }
-    
-    @forward {
-        pub fn remove_nulls(minlog_type: &Rc<MinlogType>) -> Option<Rc<MinlogType>> {
-            @match {minlog_type.as_ref()}
-            @method {remove_nulls()}
-        }
     }
     
     impl PrettyPrintable {

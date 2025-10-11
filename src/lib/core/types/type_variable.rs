@@ -25,8 +25,8 @@ impl TypeBody for TypeVariable {
         true
     }
     
-    fn remove_nulls(minlog_type: &TypeVariable) -> Option<Rc<MinlogType>> {
-        Some(TypeVariable::create(minlog_type.name.clone()))
+    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
+        Some(TypeVariable::create(self.name.clone()))
     }
     
     fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
