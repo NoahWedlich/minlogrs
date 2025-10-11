@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::MinlogType;
 
+use crate::core::terms::term_variable::TermVariable;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Totality {
@@ -51,17 +52,17 @@ crate::wrapper_enum! {
         }
         
         pub fn alpha_equivalent(&Self, other: &Rc<MinlogTerm>,
-            forward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>,
-            backward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>) -> bool
-            
-        pub fn totality(&Self) -> Totality {
+            forward: &mut Vec<(TermVariable, TermVariable)>,
+            backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
+
+        pub fn totality(&Self, _bound: &mut Vec<TermVariable>) -> Totality {
             Totality::Partial
         }
     }
     
     #[derive(PartialEq, Eq)]
     pub enum MinlogTerm {
-        Variable(||variable||),
+        Variable(||variable|| TermVariable),
         Constructor(||constructor||),
         ProgramTerm(||program_term||),
         InternalConstant(||internal_constant||),
@@ -84,20 +85,6 @@ crate::wrapper_enum! {
 }
 
 impl MinlogTerm {
-    pub fn correlated(var1: &Rc<MinlogTerm>, var2: &Rc<MinlogTerm>,
-        forward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>,
-        backward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>) -> bool {
-        
-        let forward_pair = forward.iter().find(|(v1, _)| v1 == var1);
-        let backward_pair = backward.iter().find(|(v2, _)| v2 == var2);
-        
-        match (forward_pair, backward_pair) {
-            (Some((f1, f2)), Some((b2, b1))) => f1 == b1 && f2 == b2,
-            (None, None) => var1 == var2,
-            _ => false,
-        }
-    }
-    
     pub fn get_free_variables(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
         let mut inner = term.inner_free_variables();
         
@@ -188,8 +175,8 @@ impl TermBody for EmptyTermBody {
     }
     
     fn alpha_equivalent(&self, _other: &Rc<MinlogTerm>,
-        _forward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>,
-        _backward: &mut Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>) -> bool {
+        _forward: &mut Vec<(TermVariable, TermVariable)>,
+        _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
             unimplemented!()
     }
 }
