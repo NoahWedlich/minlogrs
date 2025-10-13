@@ -1,34 +1,19 @@
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
-pub trait MatchContext<T>: Eq + Clone {
-    fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self;
-    
-    fn extend(&mut self, pattern: &T, instance: &T);
-    
-    fn next_pattern(&mut self) -> Option<T>;
-    fn next_instance(&mut self) -> Option<T>;
-    fn skip_current(&mut self);
-    
-    fn restrict(&mut self, element: &T);
-    fn is_restricted(&self, element: &T) -> bool;
-    
-    fn substitute(&mut self, from: &T, to: &T);
-}
 
-pub trait Substitutable<Ctx: MatchContext<Self>>: Eq + Clone + PrettyPrintable {
+pub trait Substitutable: Eq + Clone + PrettyPrintable {
     fn substitute(&self, from: &Self, to: &Self) -> Self;
     
     fn first_conflict_with(&self, other: &Self) -> Option<(Self, Self)>;
     
     fn valid_substitution(&self, to: &Self) -> bool;
 
-    fn match_with(&self, ctx: &mut Ctx) -> Result<Option<(Self, Self)>, ()>;
+    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> Result<Option<(Self, Self)>, ()>;
 }
 
 pub trait Substitution: Sized {
     
-    type ElementType: Substitutable<Self::ContextType>;
-    type ContextType: MatchContext<Self::ElementType>;
+    type ElementType: Substitutable;
     
     fn make_empty() -> Self;
     
@@ -214,12 +199,12 @@ pub trait Substitution: Sized {
             return None;
         }
         
-        let mut ctx = Self::ContextType::new(&mut patterns.to_vec(), &mut instances.to_vec());
+        let mut ctx = SimpleMatchContext::new(&mut patterns.to_vec(), &mut instances.to_vec());
         Self::match_on(&mut ctx)
     }
-    
-    fn match_on(ctx: &mut Self::ContextType) -> Option<Self> {
-        
+
+    fn match_on(ctx: &mut impl MatchContext<Self::ElementType>) -> Option<Self> {
+
         let mut substitution = Self::make_empty();
         
         while let Some(pattern) = ctx.next_pattern() {
@@ -344,5 +329,72 @@ impl<Sub: Substitution> PrettyPrintable for Sub {
     
     fn close_paren(&self) -> String {
         "}".to_string()
+    }
+}
+
+pub trait MatchContext<T: Substitutable> {
+    fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self;
+    
+    fn extend(&mut self, pattern: &T, instance: &T);
+    
+    fn next_pattern(&mut self) -> Option<T>;
+    fn next_instance(&mut self) -> Option<T>;
+    fn skip_current(&mut self);
+    
+    fn restrict(&mut self, element: &T);
+    fn is_restricted(&self, element: &T) -> bool;
+    
+    fn substitute(&mut self, from: &T, to: &T);
+}
+
+pub struct SimpleMatchContext<T> {
+    patterns: Vec<T>,
+    instances: Vec<T>,
+    restricted: Vec<T>,
+}
+
+impl<T: Substitutable> MatchContext<T> for SimpleMatchContext<T> {
+    fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self {
+        Self {
+            patterns: patterns.drain(..).collect(),
+            instances: instances.drain(..).collect(),
+            restricted: vec![],
+        }
+    }
+
+    fn extend(&mut self, pattern: &T, instance: &T) {
+        self.patterns.push(pattern.clone());
+        self.instances.push(instance.clone());
+    }
+    
+    fn next_pattern(&mut self) -> Option<T> {
+        self.patterns.last().cloned()
+    }
+
+    fn next_instance(&mut self) -> Option<T> {
+        self.instances.last().cloned()
+    }
+    
+    fn skip_current(&mut self) {
+        self.patterns.pop();
+        self.instances.pop();
+    }
+    
+    fn restrict(&mut self, element: &T) {
+        self.restricted.push(element.clone());
+    }
+    
+    fn is_restricted(&self, element: &T) -> bool {
+        self.restricted.iter().any(|e| e == element)
+    }
+    
+    fn substitute(&mut self, from: &T, to: &T) {
+        for pattern in self.patterns.iter_mut() {
+            *pattern = pattern.substitute(from, to);
+        }
+        
+        for instance in self.instances.iter_mut() {
+            *instance = instance.substitute(from, to);
+        }
     }
 }

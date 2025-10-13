@@ -3,7 +3,6 @@ use std::rc::Rc;
 use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
-use crate::core::types::type_substitution::TypeMatchContext;
 
 #[derive(Clone)]
 pub struct StarType {
@@ -97,7 +96,7 @@ impl TypeBody for StarType {
         None
     }
 
-    fn match_with(self: &Self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(self: &Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
         let instance = ctx.next_instance().unwrap();
         
         if !instance.is_star() {

@@ -3,7 +3,6 @@ use std::rc::Rc;
 use crate::core::substitution::{MatchContext, Substitutable};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
-use crate::core::types::type_substitution::TypeMatchContext;
 
 #[derive(Clone)]
 pub struct TypeVariable {
@@ -44,8 +43,8 @@ impl TypeBody for TypeVariable {
             Some((TypeVariable::create(self.name.clone()), other.clone()))
         }
     }
-    
-    fn match_with(self: &Self, ctx: &mut TypeMatchContext) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+
+    fn match_with(self: &Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
