@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-use crate::core::substitution::{Substitutable, Substitution, MatchContext};
+use crate::core::substitution::{Substitutable, Substitution, MatchContext, MatchContextImpl};
 use crate::core::types::minlog_type::MinlogType;
 
 impl Substitutable for Rc<MinlogType> {
@@ -21,26 +21,5 @@ impl Substitutable for Rc<MinlogType> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct TypeSubstitution {
-    pairs: Vec<(Rc<MinlogType>, Rc<MinlogType>)>,
-}
-
-impl Substitution for TypeSubstitution {
-    
-    type ElementType = Rc<MinlogType>;
-    
-    fn make_empty() -> Self {
-        Self {
-            pairs: vec![],
-        }
-    }
-    
-    fn pairs(&self) -> &Vec<(Rc<MinlogType>, Rc<MinlogType>)> {
-        &self.pairs
-    }
-    
-    fn pairs_mut(&mut self) -> &mut Vec<(Rc<MinlogType>, Rc<MinlogType>)> {
-        &mut self.pairs
-    }
-}
+pub type TypeSubstitution = Substitution<Rc<MinlogType>>;
+pub type TypeMatchContext = MatchContextImpl<Rc<MinlogType>>;

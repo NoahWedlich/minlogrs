@@ -1,7 +1,6 @@
 
 use std::rc::Rc;
 use lib::utils::pretty_printer::*;
-use lib::core::substitution::*;
 use lib::core::types::{type_variable::*, arrow_type::*, star_type::*, type_substitution::*};
 
 fn main() {
