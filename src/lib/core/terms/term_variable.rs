@@ -1,8 +1,15 @@
 
 use std::rc::Rc;
+
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+
+use crate::core::substitution::MatchContext;
+
 use crate::core::types::minlog_type::MinlogType;
+
 use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+
+use crate::core::terms::term_substitution::TermSubstEntry;
 
 #[derive(Clone)]
 pub struct TermVariable {
@@ -49,12 +56,7 @@ impl TermBody for TermVariable {
     }
     
     fn normalize(self: &Self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
-        Rc::new(MinlogTerm::Variable(TermVariable {
-            name: self.name.clone(),
-            minlog_type: Rc::clone(&self.minlog_type),
-            totality: self.totality.clone(),
-            index: self.index,
-        }))
+        Rc::new(MinlogTerm::Variable(self.clone()))
     }
     
     fn length(self: &Self) -> usize {
@@ -90,6 +92,59 @@ impl TermBody for TermVariable {
             Totality::Total
         } else {
             self.totality.clone()
+        }
+    }
+
+    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+        match (from, to) {
+            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
+                Rc::new(MinlogTerm::Variable(TermVariable {
+                    name: self.name.clone(),
+                    minlog_type: self.minlog_type.substitute(from_t, to_t),
+                    totality: self.totality.clone(),
+                    index: self.index,
+                }))
+            },
+            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(to_tm)) => {
+                if from_tm.is_variable() && self == from_tm.to_variable().unwrap() {
+                    to_tm.clone()
+                } else {
+                    Rc::new(MinlogTerm::Variable(self.clone()))
+                }
+            },
+            _ => {
+                panic!("Tried to substitute between incompatible TermSubstEntry types");
+            }
+        }
+    }
+    
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+        if other.is_variable() && self == other.to_variable().unwrap() {
+            None
+        } else {
+            Some((Rc::new(MinlogTerm::Variable(self.clone())), Rc::clone(other)))
+        }
+    }
+    
+    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
+                if p.minlog_type() != i.minlog_type() {
+                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
+                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
+                    return Ok(None);
+                }
+
+                if p.totality(&mut vec![]) == Totality::Total && i.totality(&mut vec![]) == Totality::Partial {
+                    return Err(());
+                }
+                
+                Ok(Some((TermSubstEntry::Term(p.clone()), TermSubstEntry::Term(i.clone()))))
+            },
+            _ => Err(())
         }
     }
 }

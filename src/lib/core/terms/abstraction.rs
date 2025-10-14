@@ -1,10 +1,16 @@
 
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+
+use crate::core::substitution::MatchContext;
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
+
 use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
 use crate::core::terms::term_variable::TermVariable;
+
+use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
 
 #[derive(Clone)]
 pub struct Abstraction {
@@ -106,9 +112,9 @@ impl TermBody for Abstraction {
         }
 
         if vars.is_empty() {
-            kernel
+            kernel.normalize(eta, pi)
         } else {
-            Abstraction::create(vars, kernel)
+            Abstraction::create(vars, kernel.normalize(eta, pi))
         }
     }
     
@@ -181,6 +187,96 @@ impl TermBody for Abstraction {
     fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
         bound.extend(self.vars.iter().filter_map(|v| v.to_variable().cloned()));
         self.kernel.totality(bound)
+    }
+
+    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+        match (from, to) {
+            (TermSubstEntry::Type(_), TermSubstEntry::Type(_)) => {
+                let new_vars = self.vars.iter()
+                    .map(|v| v.substitute(from, to)).collect::<Vec<_>>();
+                
+                let new_kernel = self.kernel.substitute(from, to);
+                
+                Abstraction::create(new_vars, new_kernel)
+            },
+            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(_)) => {
+                if self.vars.contains(from_tm) {
+                    return Rc::new(MinlogTerm::Abstraction(self.clone()));
+                } else {
+                    let new_kernel = self.kernel.substitute(from, to);
+                    Abstraction::create(self.vars.clone(), new_kernel)
+                }
+            },
+            _ => {
+                panic!("Tried to substitute between incompatible TermSubstEntry types");
+            }
+        }
+    }
+    
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+        if !other.is_abstraction() {
+            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::clone(other)));
+        }
+        
+        let other = other.to_abstraction().unwrap();
+        
+        if self.vars.len() != other.vars.len() {
+            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::new(MinlogTerm::Abstraction(other.clone()))));
+        }
+        
+        let mut subst = TermSubstitution::make_empty();
+        
+        for (v1, v2) in self.vars.iter().zip(other.vars.iter()) {
+            if v1 == v2 {
+                continue;
+            } else if v1.minlog_type() == v2.minlog_type() {
+                subst.extend((TermSubstEntry::Term(v2.clone()), TermSubstEntry::Term(v1.clone())));
+            } else {
+                return Some((v1.clone(), v2.clone()));
+            }
+        }
+        
+        let new_other = subst.apply(&TermSubstEntry::Term(Rc::new(MinlogTerm::Abstraction(other.clone()))));
+        
+        if let TermSubstEntry::Term(t) = new_other {
+            self.kernel.first_conflict_with(&t.to_abstraction().unwrap().kernel)
+        } else {
+            panic!("Substitution of abstraction resulted in type.");
+        }
+    }
+
+    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry,TermSubstEntry)>,()> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
+                if !p.is_abstraction() || !i.is_abstraction() {
+                    return Err(());
+                }
+                
+                if p.minlog_type() != i.minlog_type() {
+                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
+                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
+                    return Ok(None);
+                }
+                
+                let abs_pattern = p.to_abstraction().unwrap();
+                let abs_instance = i.to_abstraction().unwrap();
+
+                if abs_pattern.arity() != abs_instance.arity() {
+                    return Err(());
+                }
+
+                for (v1, v2) in abs_pattern.vars.iter().zip(abs_instance.vars.iter()) {
+                    ctx.extend(&TermSubstEntry::Term(v1.clone()), &TermSubstEntry::Term(v2.clone()));
+                }
+                
+                ctx.extend(&TermSubstEntry::Term(abs_pattern.kernel.clone()), &TermSubstEntry::Term(abs_instance.kernel.clone()));
+                Ok(None)
+            },
+            _ => Err(()),
+        }
     }
 }
 

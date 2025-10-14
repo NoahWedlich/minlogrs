@@ -1,10 +1,15 @@
 
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
+
+use crate::core::substitution::MatchContext;
+
 use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::abstraction::Abstraction;
+
+use crate::core::terms::term_substitution::TermSubstEntry;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum Totality {
@@ -59,6 +64,13 @@ crate::wrapper_enum! {
         pub fn totality(&Self, _bound: &mut Vec<TermVariable>) -> Totality {
             Totality::Partial
         }
+        
+        pub fn substitute(&Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
+        
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)>
+        
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>)
+            -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()>
     }
     
     #[derive(PartialEq, Eq)]
@@ -178,6 +190,19 @@ impl TermBody for EmptyTermBody {
     fn alpha_equivalent(&self, _other: &Rc<MinlogTerm>,
         _forward: &mut Vec<(TermVariable, TermVariable)>,
         _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
+            unimplemented!()
+    }
+    
+    fn substitute(self: &Self, _from: &TermSubstEntry, _to: &TermSubstEntry) -> Rc<MinlogTerm> {
+        unimplemented!()
+    }
+
+    fn first_conflict_with(self: &Self, _other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+        unimplemented!()
+    }
+    
+    fn match_with(self: &Self, _ctx: &mut impl MatchContext<TermSubstEntry>)
+        -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
             unimplemented!()
     }
 }
