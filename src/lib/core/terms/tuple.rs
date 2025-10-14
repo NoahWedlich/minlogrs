@@ -225,7 +225,6 @@ impl PrettyPrintable for Tuple {
             elements.push(PPElement::break_elem(1, 4, false));
         }
 
-        elements.push(PPElement::break_elem(1, 0, false));
         elements.push(PPElement::text(")".to_string()));
         
         PPElement::group(elements, BreakType::Consistent, 0)

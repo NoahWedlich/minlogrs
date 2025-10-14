@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use lib::utils::pretty_printer::*;
 use lib::core::types::{type_variable::*, arrow_type::*, star_type::*, type_substitution::*};
-use lib::core::terms::{minlog_term::*, term_variable::*, abstraction::*, application::*, term_substitution::*};
+use lib::core::terms::{minlog_term::*, term_variable::*, abstraction::*, application::*, term_substitution::*, tuple::*, projection::*};
 
 fn main() {
     let type_var_1 = TypeVariable::create("T".to_string());
@@ -19,19 +19,29 @@ fn main() {
     let var_x = TermVariable::create("x".to_string(), type_var_1.clone(), Totality::Total);
     let var_y = TermVariable::create("y".to_string(), type_var_2.clone(), Totality::Total);
     let var_z = TermVariable::create("z".to_string(), type_var_1.clone(), Totality::Total);
+    let var_w = TermVariable::create("w".to_string(), type_var_2.clone(), Totality::Total);
     
     let abs = Abstraction::create(vec![var_x.clone(), var_y.clone()], var_x.clone());
     let app = Application::create(abs.clone(), vec![var_z.clone()]);
     
+    let tuple = Tuple::create(vec![var_y.clone(), var_w.clone(), var_x.clone()]);
+    let proj = Projection::create(tuple.clone(), 1);
+    
     println!("Term Variable x: {}", var_x.debug_string());
     println!("Term Variable y: {}", var_y.debug_string());
     println!("Term Variable z: {}", var_z.debug_string());
+    println!("Term Variable w: {}", var_w.debug_string());
     
     println!("Abstraction: {}", abs.debug_string());
     println!("Application: {}", app.debug_string());
+    println!("Tuple: {}", tuple.debug_string());
+    println!("Projection: {}", proj.debug_string());
     
     let normalized_app = app.normalize(true, true);
     println!("Normalized Application: {}", normalized_app.debug_string());
+    
+    let normalized_proj = proj.normalize(true, true);
+    println!("Normalized Projection: {}", normalized_proj.debug_string());
     
     let subst = TermSubstitution::from_pairs(vec![
         (TermSubstEntry::Type(type_var_2.clone()), TermSubstEntry::Type(arrow.clone())),

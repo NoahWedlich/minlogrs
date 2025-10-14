@@ -10,6 +10,7 @@ use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::abstraction::Abstraction;
 use crate::core::terms::application::Application;
 use crate::core::terms::tuple::Tuple;
+use crate::core::terms::projection::Projection;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -84,7 +85,7 @@ crate::wrapper_enum! {
         Abstraction(||abstraction|| Abstraction),
         Application(||application|| Application),
         Tuple(||tuple|| Tuple),
-        Projection(||projection||),
+        Projection(||projection|| Projection),
         Conditional(||conditional||),
     }
     

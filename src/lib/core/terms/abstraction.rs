@@ -320,11 +320,11 @@ impl PrettyPrintable for Abstraction {
         
         elements.push(
             PPElement::group(vec![
-                PPElement::text("(".to_string()),
+                PPElement::text("[".to_string()),
                 PPElement::break_elem(1, 4, false),
                 PPElement::group(variables, BreakType::Flexible, 0),
                 PPElement::break_elem(1, 0, false),
-                PPElement::text(")".to_string())
+                PPElement::text("]".to_string())
             ], BreakType::Consistent, 0)
         );
         
