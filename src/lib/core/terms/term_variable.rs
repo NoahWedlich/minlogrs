@@ -11,7 +11,7 @@ use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TermVariable {
     name: String,
     minlog_type: Rc<MinlogType>,
@@ -184,11 +184,3 @@ impl PrettyPrintable for TermVariable {
         ")".to_string()
     }
 }
-
-impl PartialEq for TermVariable {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.index == other.index && self.minlog_type == other.minlog_type
-    }
-}
-
-impl Eq for TermVariable {}

@@ -12,7 +12,7 @@ use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Abstraction {
     vars: Vec<Rc<MinlogTerm>>,
     kernel: Rc<MinlogTerm>,
@@ -185,8 +185,20 @@ impl TermBody for Abstraction {
     }
     
     fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
-        bound.extend(self.vars.iter().filter_map(|v| v.to_variable().cloned()));
-        self.kernel.totality(bound)
+        let mut new_bound = vec![];
+        for var in &self.vars {
+            let var_body = var.to_variable().unwrap();
+            if !bound.contains(var_body) {
+                new_bound.push(var_body.clone());
+                bound.push(var_body.clone());
+            }
+        }
+        
+        let totality = self.kernel.totality(bound);
+        
+        bound.retain(|v| !new_bound.contains(v));
+        
+        totality
     }
 
     fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
@@ -218,15 +230,15 @@ impl TermBody for Abstraction {
             return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::clone(other)));
         }
         
-        let other = other.to_abstraction().unwrap();
-        
-        if self.vars.len() != other.vars.len() {
-            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::new(MinlogTerm::Abstraction(other.clone()))));
+        let other_abs = other.to_abstraction().unwrap();
+
+        if self.vars.len() != other_abs.vars.len() {
+            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), other.clone()));
         }
         
         let mut subst = TermSubstitution::make_empty();
         
-        for (v1, v2) in self.vars.iter().zip(other.vars.iter()) {
+        for (v1, v2) in self.vars.iter().zip(other_abs.vars.iter()) {
             if v1 == v2 {
                 continue;
             } else if v1.minlog_type() == v2.minlog_type() {
@@ -236,7 +248,7 @@ impl TermBody for Abstraction {
             }
         }
         
-        let new_other = subst.apply(&TermSubstEntry::Term(Rc::new(MinlogTerm::Abstraction(other.clone()))));
+        let new_other = subst.apply(&TermSubstEntry::Term(other.clone()));
         
         if let TermSubstEntry::Term(t) = new_other {
             self.kernel.first_conflict_with(&t.to_abstraction().unwrap().kernel)
@@ -337,11 +349,3 @@ impl PrettyPrintable for Abstraction {
         ")".to_string()
     }
 }
-
-impl PartialEq for Abstraction {
-    fn eq(&self, other: &Self) -> bool {
-        self.vars == other.vars && self.kernel == other.kernel
-    }
-}
-
-impl Eq for Abstraction {}

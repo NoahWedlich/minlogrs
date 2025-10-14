@@ -13,7 +13,7 @@ use crate::core::terms::abstraction::Abstraction;
 
 use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Application {
     operands: Vec<Rc<MinlogTerm>>,
     operator: Rc<MinlogTerm>,
@@ -285,17 +285,17 @@ impl TermBody for Application {
             return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::clone(other)));
         }
         
-        let other = other.to_application().unwrap();
+        let other_app = other.to_application().unwrap();
         
-        if self.operands.len() != other.operands.len() {
-            return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::new(MinlogTerm::Application(other.clone()))));
+        if self.operands.len() != other_app.operands.len() {
+            return Some((Rc::new(MinlogTerm::Application(self.clone())), other.clone()));
         }
         
-        if let Some((f, o)) = self.operator.first_conflict_with(other.operator()) {
+        if let Some((f, o)) = self.operator.first_conflict_with(other_app.operator()) {
             return Some((f, o));
         }
         
-        for (a, b) in self.operands.iter().zip(other.operands.iter()) {
+        for (a, b) in self.operands.iter().zip(other_app.operands.iter()) {
             if let Some((f, o)) = a.first_conflict_with(b) {
                 return Some((f, o));
             }
@@ -394,11 +394,3 @@ impl PrettyPrintable for Application {
         ")".to_string()
     }
 }
-
-impl PartialEq for Application {
-    fn eq(&self, other: &Self) -> bool {
-        self.operator == other.operator && self.operands == other.operands
-    }
-}
-
-impl Eq for Application {}
