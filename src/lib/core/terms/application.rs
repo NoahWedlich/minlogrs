@@ -1,0 +1,404 @@
+
+use std::{cmp::{max, min}, rc::Rc};
+use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+
+use crate::core::substitution::MatchContext;
+
+use crate::core::types::minlog_type::MinlogType;
+use crate::core::types::arrow_type::ArrowType;
+
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::term_variable::TermVariable;
+use crate::core::terms::abstraction::Abstraction;
+
+use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
+
+#[derive(Clone)]
+pub struct Application {
+    operands: Vec<Rc<MinlogTerm>>,
+    operator: Rc<MinlogTerm>,
+    minlog_type: Rc<MinlogType>,
+}
+
+impl Application {
+    pub fn create(operator: Rc<MinlogTerm>, operands: Vec<Rc<MinlogTerm>>) -> Rc<MinlogTerm> {
+        if operands.is_empty() {
+            return operator;
+        }
+        
+        let operator_type = operator.minlog_type();
+        if !operator_type.is_arrow() {
+            panic!("Tried to create an Application with a non-arrow operator");
+        }
+        
+        let arrow = operator_type.to_arrow().unwrap();
+        
+        if operator.minlog_type().arity() < operands.len() {
+            panic!("Tried to create an Application with too many operands");
+        }
+        
+        for (i, op) in operands.iter().enumerate() {
+            if !op.minlog_type().eq(&arrow.arguments()[i]) {
+                panic!("Tried to create an Application with an operand of the wrong type");
+            }
+        }
+        
+        let remaining_arg_types = arrow.arguments()[operands.len()..].to_vec();
+        let minlog_type = if remaining_arg_types.is_empty() {
+            Rc::clone(arrow.value())
+        } else {
+            ArrowType::create(remaining_arg_types, Rc::clone(arrow.value()))
+        };
+        
+        Application::collapse(&Rc::new(MinlogTerm::Application(Application {
+            operands,
+            operator,
+            minlog_type,
+        })))
+    }
+    
+    pub fn collapse(minlog_term: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
+        if !minlog_term.is_application() || !minlog_term.to_application().unwrap().operator.is_application() {
+            return Rc::clone(minlog_term);
+        } else {
+            let mut application = minlog_term.to_application().unwrap();
+            let mut operands = application.operands().clone();
+            
+            while application.operator().is_application() {
+                let next_application = application.operator().to_application().unwrap();
+                operands.splice(0..0, next_application.operands().iter().cloned());
+                application = next_application;
+            }
+            
+            return Application::create(Rc::clone(&application.operator()), operands);
+        }
+    }
+    
+    pub fn operand_count(&self) -> usize {
+        self.operands.len()
+    }
+    
+    pub fn operands(&self) -> &Vec<Rc<MinlogTerm>> {
+        &self.operands
+    }
+    
+    pub fn operand(&self, index: usize) -> &Rc<MinlogTerm> {
+        &self.operands[index]
+    }
+    
+    pub fn operator(&self) -> &Rc<MinlogTerm> {
+        &self.operator
+    }
+}
+
+impl TermBody for Application {
+    fn minlog_type(&self) -> Rc<MinlogType> {
+        Rc::clone(&self.minlog_type)
+    }
+    
+    fn normalize(self: &Self, eta: bool, pi: bool) -> Rc<MinlogTerm> {
+        if self.operands.is_empty() {
+            return self.operator.normalize(eta, pi);
+        }
+        
+        if pi {
+            for op in &self.operands {
+                if op.is_pairing() || op.is_conditional() {
+                    println!("Warning: Pi-normalization for Applications is not implemented yet.");
+                    break;
+                }
+            }
+        }
+        
+        if self.operator.is_abstraction() {
+            let abs = self.operator.to_abstraction().unwrap();
+            
+            let applicable = min(self.operand_count(), abs.arity());
+            
+            let mut subst = TermSubstitution::make_empty();
+            
+            for i in 0..applicable {
+                let var = abs.var(i).unwrap();
+                let op = self.operand(i).clone();
+                
+                if !var.minlog_type().eq(&op.minlog_type()) {
+                    panic!("Tried to apply an abstraction to an operand of the wrong type");
+                }
+                
+                if var.totality(&mut vec![]) == Totality::Total && op.totality(&mut vec![]) == Totality::Partial {
+                    panic!("Tried to apply an abstraction with a total variable to a partial operand");
+                }
+                
+                if MinlogTerm::contains_free_variable(&op, &var.clone()) {
+                    panic!("Tried to apply an abstraction to an operand that contains the bound variable");
+                }
+                
+                subst.extend((TermSubstEntry::Term(var.clone()), TermSubstEntry::Term(op.normalize(eta, pi))));
+            }
+            
+            let kernel = subst.apply(&TermSubstEntry::Term(abs.kernel().clone())).to_term().unwrap().clone();
+            
+            let remaining_vars = abs.vars()[applicable..].to_vec();
+            let inner_term = if remaining_vars.is_empty() {
+                kernel.normalize(eta, pi)
+            } else {
+                Abstraction::create(remaining_vars, kernel).normalize(eta, pi)
+            };
+            
+            let remaining_operands = self.operands[applicable..].iter()
+                .map(|op| op.normalize(eta, pi)).collect::<Vec<_>>();
+            
+            if remaining_operands.is_empty() {
+                return inner_term;
+            } else {
+                return Application::create(inner_term, remaining_operands);
+            }
+        }
+        
+        let operator = self.operator.normalize(eta, pi);
+        let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.normalize(eta, pi)).collect();
+        Application::create(operator, operands)
+    }
+    
+    fn length(self: &Self) -> usize {
+        1 + self.operands.iter().map(|op| op.length()).sum::<usize>() + self.operator.length()
+    }
+    
+    fn depth(self: &Self) -> usize {
+        1 + max(
+            self.operands.iter().map(|op| op.depth()).max().unwrap_or(0),
+            self.operator.depth(),
+        )
+    }
+    
+    fn constructor_pattern(&self) -> bool {
+        self.operator.is_constructor() && self.operands.iter().all(|op| op.constructor_pattern())
+    }
+    
+    fn inner_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = MinlogTerm::get_free_variables(&self.operator);
+        
+        for op in &self.operands {
+            for var in MinlogTerm::get_free_variables(op) {
+                if !vars.contains(&var) {
+                    vars.push(var);
+                }
+            }
+        }
+        
+        vars
+    }
+
+    fn inner_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = MinlogTerm::get_bound_variables(&self.operator);
+        
+        for op in &self.operands {
+            for var in MinlogTerm::get_bound_variables(op) {
+                if !vars.contains(&var) {
+                    vars.push(var);
+                }
+            }
+        }
+        
+        vars
+    }
+    
+    fn inner_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut cons = MinlogTerm::get_constructors(&self.operator);
+        
+        for op in &self.operands {
+            for con in MinlogTerm::get_constructors(op) {
+                if !cons.contains(&con) {
+                    cons.push(con);
+                }
+            }
+        }
+        
+        cons
+    }
+    
+    fn inner_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut progs = MinlogTerm::get_program_terms(&self.operator);
+        
+        for op in &self.operands {
+            for prog in MinlogTerm::get_program_terms(op) {
+                if !progs.contains(&prog) {
+                    progs.push(prog);
+                }
+            }
+        }
+        
+        progs
+    }
+    
+    fn inner_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut consts = MinlogTerm::get_internal_constants(&self.operator);
+        
+        for op in &self.operands {
+            for c in MinlogTerm::get_internal_constants(op) {
+                if !consts.contains(&c) {
+                    consts.push(c);
+                }
+            }
+        }
+        
+        consts
+    }
+    
+    fn alpha_equivalent(self: &Self, other: &Rc<MinlogTerm>,
+        forward: &mut Vec<(TermVariable, TermVariable)>,
+        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
+            
+        if !other.is_application() {
+            return false;
+        }
+        
+        let other = other.to_application().unwrap();
+        
+        if self.operands.len() != other.operands.len() {
+            return false;
+        }
+        
+        self.operator.alpha_equivalent(other.operator(), forward, backward) &&
+            self.operands.iter().zip(other.operands.iter())
+            .all(|(a, b)| a.alpha_equivalent(b, forward, backward))
+    }
+    
+    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
+        if self.operands.iter().any(|op| op.totality(bound) == Totality::Partial) {
+            return Totality::Partial;
+        }
+        
+        self.operator.totality(bound)
+    }
+
+    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+        let operator = self.operator.substitute(from, to);
+        
+        let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.substitute(from, to)).collect();
+        
+        Application::create(operator, operands)
+    }
+
+    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+        if !other.is_application() {
+            return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::clone(other)));
+        }
+        
+        let other = other.to_application().unwrap();
+        
+        if self.operands.len() != other.operands.len() {
+            return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::new(MinlogTerm::Application(other.clone()))));
+        }
+        
+        if let Some((f, o)) = self.operator.first_conflict_with(other.operator()) {
+            return Some((f, o));
+        }
+        
+        for (a, b) in self.operands.iter().zip(other.operands.iter()) {
+            if let Some((f, o)) = a.first_conflict_with(b) {
+                return Some((f, o));
+            }
+        }
+        
+        None
+    }
+
+    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
+                if !p.is_application() || !i.is_application() {
+                    return Err(());
+                }
+                
+                if p.minlog_type() != i.minlog_type() {
+                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
+                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
+                    return Ok(None);
+                }
+                
+                let app_pattern = p.to_application().unwrap();
+                let app_instance = i.to_application().unwrap();
+                
+                if app_pattern.operand_count() != app_instance.operand_count() {
+                    return Err(());
+                }
+                
+                for (op_p, op_i) in app_pattern.operands().iter().zip(app_instance.operands().iter()) {
+                    ctx.extend(&TermSubstEntry::Term(op_p.clone()), &TermSubstEntry::Term(op_i.clone()));
+                }
+                
+                ctx.extend(&TermSubstEntry::Term(app_pattern.operator().clone()), &TermSubstEntry::Term(app_instance.operator().clone()));
+                Ok(None)
+            },
+            _ => {
+                Err(())
+            }
+        }
+    }
+}
+
+impl PrettyPrintable for Application {
+    fn to_pp_element(&self, detail: bool) -> PPElement {
+        if self.operands.is_empty() {
+            return self.operator.to_pp_element(detail);
+        }
+        
+        let mut operands = vec![];
+        
+        for (i, op) in self.operands.iter().enumerate() {
+            operands.push(
+                if i > 0 {
+                    PPElement::group(vec![
+                        PPElement::text(",".to_string()),
+                        PPElement::break_elem(1, 4, false),
+                        op.to_pp_element(detail)
+                    ], BreakType::Flexible, 0)
+                } else {
+                    op.to_pp_element(detail)
+                }
+            );
+            
+            operands.push(PPElement::break_elem(0, 4, false));
+        }
+        
+        let mut elements = vec![];
+        
+        elements.push(self.operator.to_enclosed_pp_element(detail));
+        elements.push(PPElement::break_elem(1, 4, false));
+        elements.push(
+            PPElement::group(vec![
+                PPElement::text("(".to_string()),
+                PPElement::break_elem(1, 4, false),
+                PPElement::group(operands, BreakType::Flexible, 0),
+                PPElement::break_elem(1, 0, false),
+                PPElement::text(")".to_string())
+            ], BreakType::Consistent, 0)
+        );
+        
+        PPElement::group(elements, BreakType::Flexible, 0)
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool {
+        true
+    }
+    
+    fn open_paren(&self) -> String {
+        "(".to_string()
+    }
+    
+    fn close_paren(&self) -> String {
+        ")".to_string()
+    }
+}
+
+impl PartialEq for Application {
+    fn eq(&self, other: &Self) -> bool {
+        self.operator == other.operator && self.operands == other.operands
+    }
+}
+
+impl Eq for Application {}

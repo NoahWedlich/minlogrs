@@ -8,6 +8,7 @@ use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::abstraction::Abstraction;
+use crate::core::terms::application::Application;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -80,7 +81,7 @@ crate::wrapper_enum! {
         ProgramTerm(||program_term||),
         InternalConstant(||internal_constant||),
         Abstraction(||abstraction|| Abstraction),
-        Application(||application||),
+        Application(||application|| Application),
         Pairing(||pairing||),
         Projection(||projection||),
         Conditional(||conditional||),
