@@ -201,7 +201,7 @@ impl TermBody for Abstraction {
         totality
     }
 
-    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+    fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         match (from, to) {
             (TermSubstEntry::Type(_), TermSubstEntry::Type(_)) => {
                 let new_vars = self.vars.iter()
@@ -225,7 +225,7 @@ impl TermBody for Abstraction {
         }
     }
     
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
         if !other.is_abstraction() {
             return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::clone(other)));
         }
@@ -257,7 +257,7 @@ impl TermBody for Abstraction {
         }
     }
 
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry,TermSubstEntry)>,()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry,TermSubstEntry)>,()> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         

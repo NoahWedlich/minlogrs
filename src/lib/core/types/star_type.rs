@@ -68,7 +68,7 @@ impl TypeBody for StarType {
         }
     }
 
-    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
         let new_types: Vec<Rc<MinlogType>> = self.types.iter()
             .map(|t| t.substitute(from, to))
             .collect();
@@ -76,7 +76,7 @@ impl TypeBody for StarType {
         StarType::create(new_types)
     }
     
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
         if !other.is_star() {
             return Some((StarType::create(self.types.clone()), other.clone()));
         }
@@ -96,7 +96,7 @@ impl TypeBody for StarType {
         None
     }
 
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
         let instance = ctx.next_instance().unwrap();
         
         if !instance.is_star() {

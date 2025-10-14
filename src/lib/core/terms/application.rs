@@ -96,7 +96,7 @@ impl TermBody for Application {
         Rc::clone(&self.minlog_type)
     }
     
-    fn normalize(self: &Self, eta: bool, pi: bool) -> Rc<MinlogTerm> {
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogTerm> {
         if self.operands.is_empty() {
             return self.operator.normalize(eta, pi);
         }
@@ -160,11 +160,11 @@ impl TermBody for Application {
         Application::create(operator, operands)
     }
     
-    fn length(self: &Self) -> usize {
+    fn length(&self) -> usize {
         1 + self.operands.iter().map(|op| op.length()).sum::<usize>() + self.operator.length()
     }
     
-    fn depth(self: &Self) -> usize {
+    fn depth(&self) -> usize {
         1 + max(
             self.operands.iter().map(|op| op.depth()).max().unwrap_or(0),
             self.operator.depth(),
@@ -245,7 +245,7 @@ impl TermBody for Application {
         consts
     }
     
-    fn alpha_equivalent(self: &Self, other: &Rc<MinlogTerm>,
+    fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
             
@@ -272,7 +272,7 @@ impl TermBody for Application {
         self.operator.totality(bound)
     }
 
-    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+    fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         let operator = self.operator.substitute(from, to);
         
         let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.substitute(from, to)).collect();
@@ -280,7 +280,7 @@ impl TermBody for Application {
         Application::create(operator, operands)
     }
 
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
         if !other.is_application() {
             return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::clone(other)));
         }
@@ -304,7 +304,7 @@ impl TermBody for Application {
         None
     }
 
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         

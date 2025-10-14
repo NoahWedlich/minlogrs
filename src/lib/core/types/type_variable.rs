@@ -28,7 +28,7 @@ impl TypeBody for TypeVariable {
         Some(TypeVariable::create(self.name.clone()))
     }
     
-    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
         if from.is_variable() && self == from.to_variable().unwrap() {
             to.clone()
         } else {
@@ -36,7 +36,7 @@ impl TypeBody for TypeVariable {
         }
     }
     
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
         if other.is_variable() && self == other.to_variable().unwrap() {
             None
         } else {
@@ -44,7 +44,7 @@ impl TypeBody for TypeVariable {
         }
     }
 
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         

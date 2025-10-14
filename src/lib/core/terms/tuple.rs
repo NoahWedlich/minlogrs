@@ -39,7 +39,7 @@ impl TermBody for Tuple {
         self.minlog_type.clone()
     }
     
-    fn normalize(self: &Self, eta: bool, pi: bool) -> Rc<MinlogTerm> {
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogTerm> {
         if eta {
             if self.elements.iter().all(|e| e.is_projection()) {
                 println!("Warning: Eta-reduction for tuples of projections not implemented yet.");
@@ -114,8 +114,8 @@ impl TermBody for Tuple {
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
-        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
-    {
+        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
+        
         if !other.is_tuple() {
             return false;
         }
@@ -143,7 +143,7 @@ impl TermBody for Tuple {
         }
     }
     
-    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+    fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         let new_elements = self.elements.iter().map(|e| e.substitute(from, to)).collect();
         Tuple::create(new_elements)
     }
@@ -153,13 +153,13 @@ impl TermBody for Tuple {
             return Some((Rc::new(MinlogTerm::Tuple(self.clone())), other.clone()));
         }
         
-        let other_pair = other.to_tuple().unwrap();
+        let other_tup = other.to_tuple().unwrap();
 
-        if self.elements.len() != other_pair.elements.len() {
+        if self.elements.len() != other_tup.elements.len() {
             return Some((Rc::new(MinlogTerm::Tuple(self.clone())), other.clone()));
         }
 
-        for (e1, e2) in self.elements.iter().zip(other_pair.elements.iter()) {
+        for (e1, e2) in self.elements.iter().zip(other_tup.elements.iter()) {
             if let Some(conflict) = e1.first_conflict_with(e2) {
                 return Some(conflict);
             }
@@ -184,14 +184,14 @@ impl TermBody for Tuple {
                     return Ok(None);
                 }
                 
-                let pair_pattern = p.to_tuple().unwrap();
-                let pair_instance = i.to_tuple().unwrap();
+                let tup_pattern = p.to_tuple().unwrap();
+                let tup_instance = i.to_tuple().unwrap();
                 
-                if pair_pattern.elements.len() != pair_instance.elements.len() {
+                if tup_pattern.elements.len() != tup_instance.elements.len() {
                     return Err(());
                 }
                 
-                for (e1, e2) in pair_pattern.elements.iter().zip(pair_instance.elements.iter()) {
+                for (e1, e2) in tup_pattern.elements.iter().zip(tup_instance.elements.iter()) {
                     ctx.extend(&TermSubstEntry::Term(e1.clone()), &TermSubstEntry::Term(e2.clone()));
                 }
                 Ok(None)

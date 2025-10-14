@@ -55,19 +55,19 @@ impl TermBody for TermVariable {
         self.minlog_type.clone()
     }
     
-    fn normalize(self: &Self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
+    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
         Rc::new(MinlogTerm::Variable(self.clone()))
     }
     
-    fn length(self: &Self) -> usize {
+    fn length(&self) -> usize {
         1
     }
     
-    fn constructor_pattern(self: &Self) -> bool {
+    fn constructor_pattern(&self) -> bool {
         true
     }
     
-    fn alpha_equivalent(self: &Self, other: &Rc<MinlogTerm>,
+    fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
         
@@ -95,7 +95,7 @@ impl TermBody for TermVariable {
         }
     }
 
-    fn substitute(self: &Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
+    fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         match (from, to) {
             (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
                 Rc::new(MinlogTerm::Variable(TermVariable {
@@ -118,7 +118,7 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
         if other.is_variable() && self == other.to_variable().unwrap() {
             None
         } else {
@@ -126,7 +126,7 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         

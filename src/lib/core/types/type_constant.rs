@@ -40,7 +40,7 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn substitute(self: &Self, _from: &Rc<MinlogType>, _to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, _from: &Rc<MinlogType>, _to: &Rc<MinlogType>) -> Rc<MinlogType> {
         match self {
             TypeConstant::NullType => TypeConstant::create_null(),
             TypeConstant::Atomic => TypeConstant::create_atomic(),

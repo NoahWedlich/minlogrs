@@ -185,7 +185,7 @@ impl TermBody for EmptyTermBody {
         unimplemented!()
     }
     
-    fn normalize(self: &Self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
+    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
         unimplemented!()
     }
     
@@ -195,15 +195,15 @@ impl TermBody for EmptyTermBody {
             unimplemented!()
     }
     
-    fn substitute(self: &Self, _from: &TermSubstEntry, _to: &TermSubstEntry) -> Rc<MinlogTerm> {
+    fn substitute(&self, _from: &TermSubstEntry, _to: &TermSubstEntry) -> Rc<MinlogTerm> {
         unimplemented!()
     }
 
-    fn first_conflict_with(self: &Self, _other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, _other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
         unimplemented!()
     }
     
-    fn match_with(self: &Self, _ctx: &mut impl MatchContext<TermSubstEntry>)
+    fn match_with(&self, _ctx: &mut impl MatchContext<TermSubstEntry>)
         -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
             unimplemented!()
     }

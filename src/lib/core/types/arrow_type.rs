@@ -98,7 +98,7 @@ impl TypeBody for ArrowType {
         }
     }
 
-    fn substitute(self: &Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
         let new_arguments = self.arguments.iter()
             .map(|arg| arg.substitute(from, to))
             .collect();
@@ -107,7 +107,7 @@ impl TypeBody for ArrowType {
         ArrowType::create(new_arguments, new_value)
     }
     
-    fn first_conflict_with(self: &Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
         if !other.is_arrow() {
             return Some((Rc::new(MinlogType::Arrow(self.clone())), other.clone()));
         }
@@ -127,7 +127,7 @@ impl TypeBody for ArrowType {
         self.value.first_conflict_with(&other_arrow.value)
     }
     
-    fn match_with(self: &Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
         let instance = ctx.next_instance().unwrap();
         
         if !instance.is_arrow() {
