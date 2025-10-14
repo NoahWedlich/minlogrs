@@ -103,7 +103,7 @@ impl TermBody for Application {
         
         if pi {
             for op in &self.operands {
-                if op.is_pairing() || op.is_conditional() {
+                if op.is_tuple() || op.is_conditional() {
                     println!("Warning: Pi-normalization for Applications is not implemented yet.");
                     break;
                 }

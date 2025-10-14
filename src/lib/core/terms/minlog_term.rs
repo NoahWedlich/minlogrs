@@ -9,6 +9,7 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::abstraction::Abstraction;
 use crate::core::terms::application::Application;
+use crate::core::terms::tuple::Tuple;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -82,7 +83,7 @@ crate::wrapper_enum! {
         InternalConstant(||internal_constant||),
         Abstraction(||abstraction|| Abstraction),
         Application(||application|| Application),
-        Pairing(||pairing||),
+        Tuple(||tuple|| Tuple),
         Projection(||projection||),
         Conditional(||conditional||),
     }
