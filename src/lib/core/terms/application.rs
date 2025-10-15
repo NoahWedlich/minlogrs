@@ -351,18 +351,20 @@ impl PrettyPrintable for Application {
         
         for (i, op) in self.operands.iter().enumerate() {
             operands.push(
-                if i > 0 {
+                if i < self.operands.len() - 1 {
                     PPElement::group(vec![
-                        PPElement::text(",".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        op.to_pp_element(detail)
+                        op.to_pp_element(detail),
+                        PPElement::break_elem(0, 0, false),
+                        PPElement::text(",".to_string())
                     ], BreakType::Flexible, 0)
                 } else {
                     op.to_pp_element(detail)
                 }
             );
             
-            operands.push(PPElement::break_elem(0, 4, false));
+            if i < self.operands.len() - 1 {
+                operands.push(PPElement::break_elem(1, 0, false));
+            }
         }
         
         let mut elements = vec![];
