@@ -136,7 +136,7 @@ impl PrettyPrintable for Constructor {
                 PPElement::text(self.name.clone()),
                 PPElement::text(":".to_string()),
                 PPElement::break_elem(1, 4, false),
-                self.minlog_type.to_enclosed_pp_element(true),
+                self.minlog_type.to_pp_element(true),
             ], BreakType::Flexible, 0)
         } else {
             PPElement::text(self.name.clone())

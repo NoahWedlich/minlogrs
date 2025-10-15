@@ -7,6 +7,7 @@ use crate::core::substitution::MatchContext;
 
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
+use crate::core::types::algebra_type::AlgebraType;
 use crate::core::types::arrow_type::ArrowType;
 use crate::core::types::star_type::StarType;
 
@@ -51,7 +52,7 @@ crate::wrapper_enum! {
         Existential(|existential|),
         Proposition(|proposition|),
         Variable(||variable|| TypeVariable),
-        Algebra(||algebra||),
+        Algebra(||algebra|| AlgebraType),
         Arrow(||arrow|| ArrowType),
         Star(||star|| StarType),
     }

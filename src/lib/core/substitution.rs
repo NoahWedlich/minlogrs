@@ -11,6 +11,7 @@ pub trait Substitutable: Eq + Clone + PrettyPrintable {
     fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> Result<Option<(Self, Self)>, ()>;
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct Substitution<T: Substitutable> {
     pairs: Vec<(T, T)>,
 }
@@ -38,6 +39,10 @@ impl<T: Substitutable> Substitution<T> {
     
     pub fn size(&self) -> usize {
         self.pairs.len()
+    }
+    
+    pub fn pairs(&self) -> &Vec<(T, T)> {
+        &self.pairs
     }
     
     pub fn restrict<F>(&mut self, filter: F)
