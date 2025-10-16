@@ -1,11 +1,10 @@
 
-use std::rc::Rc;
 use lib::utils::pretty_printer::*;
-use lib::core::types::{type_variable::*, algebra_type::*, arrow_type::*, star_type::*, type_substitution::*};
-use lib::core::terms::{minlog_term::*, term_variable::*, constructor::*, abstraction::*, application::*,
+use lib::core::types::{type_variable::*, algebra_type::*, arrow_type::*, star_type::*};
+use lib::core::terms::{minlog_term::*, term_variable::*, constructor::*, program_term::*, abstraction::*, application::*,
     term_substitution::*, tuple::*, projection::*};
 
-use lib::core::structures::algebra::*;
+use lib::core::structures::{algebra::*, program_constant::*};
 
 fn main() {
     let type_var_1 = TypeVariable::create("T".to_string());
@@ -134,13 +133,13 @@ fn main() {
     println!("Natural Number 2:");
     println!("{}", nat_2.debug_string());
     
-    let list_nil = nat_list_type.to_algebra().unwrap().constructor(&"Nil".to_string()).unwrap();
-    let list_cons = nat_list_type.to_algebra().unwrap().constructor(&"Cons".to_string()).unwrap();
+    let nat_list_nil = nat_list_type.to_algebra().unwrap().constructor(&"Nil".to_string()).unwrap();
+    let nat_list_cons = nat_list_type.to_algebra().unwrap().constructor(&"Cons".to_string()).unwrap();
     
-    let nat_list_0 = list_nil.clone();
-    let nat_list_1 = Application::create(list_cons.clone(), vec![nat_0.clone(), nat_list_0.clone()]);
-    let nat_list_2 = Application::create(list_cons.clone(), vec![nat_1.clone(), nat_list_1.clone()]);
-    let nat_list_3 = Application::create(list_cons.clone(), vec![nat_2.clone(), nat_list_2.clone()]);
+    let nat_list_0 = nat_list_nil.clone();
+    let nat_list_1 = Application::create(nat_list_cons.clone(), vec![nat_0.clone(), nat_list_0.clone()]);
+    let nat_list_2 = Application::create(nat_list_cons.clone(), vec![nat_1.clone(), nat_list_1.clone()]);
+    let nat_list_3 = Application::create(nat_list_cons.clone(), vec![nat_2.clone(), nat_list_2.clone()]);
     
     println!("Natural Number List 0:");
     println!("{}", nat_list_0.debug_string());
@@ -150,4 +149,103 @@ fn main() {
     println!("{}", nat_list_2.debug_string());
     println!("Natural Number List 3:");
     println!("{}", nat_list_3.debug_string());
+    
+    let nat_add_type = ArrowType::create(vec![nat_type.clone(), nat_type.clone()], nat_type.clone());
+    let nat_add = ProgramConstant::create("NatAdd".to_string(), nat_add_type.clone(), Totality::Total, vec![]);
+    
+    let nat_var_0 = TermVariable::create("m".to_string(), nat_type.clone(), Totality::Total);
+    let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone(), Totality::Total);
+    
+    let nat_add_term = ProgramTerm::create(nat_add.clone(), vec![]);
+    println!("Program Term nat_add:");
+    println!("{}", nat_add_term.debug_string());
+    
+    let nat_add_rule_0 = RewriteRule::create(
+        Application::create(nat_add_term.clone(), vec![nat_0.clone(), nat_var_1.clone()]),
+        nat_var_1.clone()
+    );
+    
+    let nat_add_rule_succ = RewriteRule::create(
+        Application::create(nat_add_term.clone(), vec![
+            Application::create(nat_succ.clone(), vec![nat_var_1.clone()]),
+            nat_var_0.clone()
+        ]),
+        Application::create(nat_succ.clone(), vec![
+            Application::create(nat_add_term.clone(), vec![nat_var_1.clone(), nat_var_0.clone()])
+        ])
+    );
+    
+    nat_add.add_computation_rule(nat_add_rule_0);
+    nat_add.add_computation_rule(nat_add_rule_succ);
+    
+    println!("Program Constant nat_add:");
+    println!("{}", nat_add.debug_string());
+    
+    let mut num_1 = nat_0.clone();
+    for _ in 0..3 {
+        num_1 = Application::create(nat_succ.clone(), vec![num_1]);
+    }
+    
+    let mut num_2 = nat_0.clone();
+    for _ in 0..2 {
+        num_2 = Application::create(nat_succ.clone(), vec![num_2]);
+    }
+    
+    let addition = Application::create(nat_add_term.clone(), vec![num_1.clone(), num_2.clone()]);
+    println!("Term addition:");
+    println!("{}", addition.debug_string());
+    
+    let normalized_add = addition.normalize(true, true);
+    println!("Normalized Term addition:");
+    println!("{}", normalized_add.debug_string());
+    
+    let list_concat_type = ArrowType::create(vec![list_type.clone(), list_type.clone()], list_type.clone());
+    let list_concat = ProgramConstant::create("ListConcat".to_string(),
+        list_concat_type.clone(), Totality::Total, vec![type_var_1.clone()]);
+        
+    let list_var_0 = TermVariable::create("l1".to_string(), list_type.clone(), Totality::Total);
+    let list_var_1 = TermVariable::create("l2".to_string(), list_type.clone(), Totality::Total);
+    
+    let list_concat_term = ProgramTerm::create(list_concat.clone(), vec![(type_var_1.clone(), type_var_1.clone())]);
+    println!("Program Term list_concat:");
+    println!("{}", list_concat_term.debug_string());
+    println!("Program Term list_concat Type:");
+    println!("{}", list_concat_term.minlog_type().debug_string());
+    
+    let nil = list_type.to_algebra().unwrap().constructor(&"Nil".to_string()).unwrap();
+    let cons = list_type.to_algebra().unwrap().constructor(&"Cons".to_string()).unwrap();
+    
+    let list_concat_rule_0 = RewriteRule::create(
+        Application::create(list_concat_term.clone(), vec![nil.clone(), list_var_1.clone()]),
+        list_var_1.clone()
+    );
+    
+    let list_concat_rule_cons = RewriteRule::create(
+        Application::create(list_concat_term.clone(), vec![
+            Application::create(cons.clone(), vec![var_x.clone(), list_var_0.clone()]),
+            list_var_1.clone()
+        ]),
+        Application::create(cons.clone(), vec![
+            var_x.clone(),
+            Application::create(list_concat_term.clone(), vec![list_var_0.clone(), list_var_1.clone()])
+        ])
+    );
+    
+    list_concat.add_computation_rule(list_concat_rule_0);
+    list_concat.add_computation_rule(list_concat_rule_cons);
+    
+    println!("Program Constant list_concat:");
+    println!("{}", list_concat.debug_string());
+    
+    let nat_list_concat = ProgramTerm::create(list_concat.clone(), vec![(type_var_1.clone(), nat_type.clone())]);
+    println!("Program Term nat_list_concat:");
+    println!("{}", nat_list_concat.debug_string());
+    
+    let nat_list_concat = Application::create(nat_list_concat.clone(), vec![nat_list_2.clone(), nat_list_3.clone()]);
+    println!("Term nat_list_concat:");
+    println!("{}", nat_list_concat.debug_string());
+    
+    let normalized_nat_list_concat = nat_list_concat.normalize(true, true);
+    println!("Normalized Term nat_list_concat:");
+    println!("{}", normalized_nat_list_concat.debug_string());
 }

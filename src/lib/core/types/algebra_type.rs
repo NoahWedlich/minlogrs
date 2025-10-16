@@ -68,7 +68,7 @@ impl AlgebraType {
     
     pub fn substitution(&self) -> TermSubstitution {
         TermSubstitution::from_pairs(self.parameters.iter()
-            .map(|(from, to)| (TermSubstEntry::Type(from.clone()), TermSubstEntry::Type(to.clone())))
+            .map(|(from, to)| (from.into(), to.into()))
             .collect())
     }
 }
@@ -89,19 +89,27 @@ impl TypeBody for AlgebraType {
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        let mut subst = self.substitution();
-        subst.extend((from.into(), to.into()));
-        let mut new_params = subst.pairs().iter()
-            .map(|(f, t)| (f.to_type().unwrap(), t.to_type().unwrap()))
-            .collect::<Vec<_>>();
-        
-        for (f, _) in self.parameters.iter() {
-            if !new_params.iter().any(|(nf, _)| nf == f) {
-                new_params.push((f.clone(), f.clone()));
+        if self.parameters.iter().any(|(f, _)| f == from) {
+            let mut subst = self.substitution();
+            subst.extend((from.into(), to.into()));
+            let mut new_params = subst.pairs().iter()
+                .map(|(f, t)| (f.to_type().unwrap(), t.to_type().unwrap()))
+                .collect::<Vec<_>>();
+            
+            for (f, _) in self.parameters.iter() {
+                if !new_params.iter().any(|(nf, _)| nf == f) {
+                    new_params.push((f.clone(), f.clone()));
+                }
             }
+            
+            if new_params.len() != self.parameters.len() {
+                panic!("Substitution changed the number of parameters in an algebra type.");
+            }
+            
+            AlgebraType::create(self.algebra.clone(), new_params)
+        } else {
+            AlgebraType::create(self.algebra.clone(), self.parameters.clone())
         }
-        
-        AlgebraType::create(self.algebra.clone(), new_params)
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
@@ -115,17 +123,15 @@ impl TypeBody for AlgebraType {
             return Some((Rc::new(MinlogType::Algebra(self.clone())), other.clone()));
         }
         
-        let subst = self.substitution();
-
         for (from, to) in self.parameters.iter() {
-            let other_to = subst.substitute(&from.into()).to_type().unwrap();
+            let other_to = self.substitution().substitute(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&other_to) {
                 return Some(conflict);
             }
         }
         
         for (from, to) in other_alg.parameters.iter() {
-            let self_to = subst.substitute(&from.into()).to_type().unwrap();
+            let self_to = other_alg.substitution().substitute(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&self_to) {
                 return Some(conflict);
             }
@@ -146,6 +152,10 @@ impl TypeBody for AlgebraType {
         let instance_alg = instance.to_algebra().unwrap();
         
         if pattern_alg.algebra.as_ref() != instance_alg.algebra.as_ref() {
+            return Err(());
+        }
+        
+        if pattern_alg.parameters.len() != instance_alg.parameters.len() {
             return Err(());
         }
         

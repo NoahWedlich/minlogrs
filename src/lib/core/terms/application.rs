@@ -153,6 +153,14 @@ impl TermBody for Application {
             } else {
                 return Application::create(inner_term, remaining_operands);
             }
+        } else if self.operator.is_program_term() {
+            let (computed, success) = self.operator.to_program_term().unwrap().pconst().compute(
+                &Application::create(self.operator.clone(), self.operands.clone())
+            );
+            
+            if success {
+                return computed.normalize(eta, pi);
+            }
         }
         
         let operator = self.operator.normalize(eta, pi);

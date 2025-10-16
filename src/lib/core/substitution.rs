@@ -99,23 +99,13 @@ impl<T: Substitutable> Substitution<T> {
                 panic!("Invalid substitution: {} -> {}", pair.0.debug_string(), pair.1.debug_string());
             }
             
-            let mut contains = false;
-            
-            for (k, v) in self.pairs.iter_mut() {
-                if v.clone().eq(&pair.1) {
+            for (_, v) in self.pairs.iter_mut() {
+                if v.clone().eq(&pair.0) {
                     *v = pair.1.clone();
-                }
-                
-                if k.clone().eq(&pair.1) {
-                    if !v.clone().eq(&pair.1) {
-                        *v = pair.1.clone();
-                    }
-                    
-                    contains = true;
                 }
             }
             
-            if !contains {
+            if !self.pairs.iter().any(|(k, _)| k == &pair.0) {
                 self.pairs.push(pair);
             }
         }
@@ -230,7 +220,7 @@ impl<T: Substitutable> Substitution<T> {
         
         while let Some(pattern) = ctx.next_pattern() {
             if let Some(instance) = ctx.next_instance() {
-                
+
                 if ctx.is_restricted(&pattern) {
                     if pattern == instance {
                         ctx.skip_current();
@@ -246,13 +236,10 @@ impl<T: Substitutable> Substitution<T> {
                         substitution.extend((pattern.clone(), instance.clone()));
                         
                         ctx.restrict(&pattern);
-                        
-                        ctx.skip_current();
-                        
-                        continue;
-                    } else {
-                        return None;
                     }
+                    
+                    ctx.skip_current();
+                    continue;
                 }
                 
                 let match_result = pattern.match_with(ctx);
@@ -260,18 +247,14 @@ impl<T: Substitutable> Substitution<T> {
                     return None;
                 } else if let Ok(Some((from, to))) = match_result {
                     if from.valid_substitution(&to) {
+                        ctx.skip_current();
+                        
                         ctx.substitute(&from, &to);
                         
                         substitution.extend((from.clone(), to.clone()));
                         ctx.restrict(&from);
-                        
-                        ctx.skip_current();
-                        
-                        continue;
                     }
                 }
-                
-                return None;
                 
             } else {
                 return None;
@@ -384,8 +367,10 @@ impl<T: Substitutable> MatchContext<T> for MatchContextImpl<T> {
     }
 
     fn extend(&mut self, pattern: &T, instance: &T) {
-        self.patterns.push(pattern.clone());
-        self.instances.push(instance.clone());
+        if pattern != instance && (!self.patterns.contains(pattern) || !self.instances.contains(instance)) {
+            self.patterns.push(pattern.clone());
+            self.instances.push(instance.clone());
+        }
     }
     
     fn next_pattern(&mut self) -> Option<T> {
