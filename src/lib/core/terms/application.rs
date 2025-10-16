@@ -280,15 +280,19 @@ impl TermBody for Application {
         Application::create(operator, operands)
     }
 
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if !other.is_application() {
-            return Some((Rc::new(MinlogTerm::Application(self.clone())), Rc::clone(other)));
+            return Some((Rc::new(MinlogTerm::Application(self.clone())).into(), Rc::clone(other).into()));
         }
         
         let other_app = other.to_application().unwrap();
         
         if self.operands.len() != other_app.operands.len() {
-            return Some((Rc::new(MinlogTerm::Application(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Application(self.clone())).into(), other.clone().into()));
         }
         
         if let Some((f, o)) = self.operator.first_conflict_with(other_app.operator()) {

@@ -11,6 +11,10 @@ pub trait Substitutable: Eq + Clone + PrettyPrintable {
     fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> Result<Option<(Self, Self)>, ()>;
 }
 
+pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
+    fn substitute(&self, from: &T, to: &T) -> Self;
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct Substitution<T: Substitutable> {
     pairs: Vec<(T, T)>,
@@ -62,6 +66,16 @@ impl<T: Substitutable> Substitution<T> {
     }
     
     pub fn substitute(&self, element: &T) -> T {
+        let mut result = element.clone();
+        
+        for (k, v) in self.pairs.iter() {
+            result = result.substitute(k, v);
+        }
+
+        result
+    }
+    
+    pub fn substitute_other<U: SubstitutableWith<T>>(&self, element: &U) -> U {
         let mut result = element.clone();
         
         for (k, v) in self.pairs.iter() {

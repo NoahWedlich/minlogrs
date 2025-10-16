@@ -89,15 +89,19 @@ impl TermBody for Constructor {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if !other.is_constructor() {
-            return Some((Rc::new(MinlogTerm::Constructor(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Constructor(self.clone())).into(), other.clone().into()));
         }
         
         let other_constr = other.to_constructor().unwrap();
         
         if self.name != other_constr.name || self.minlog_type != other_constr.minlog_type {
-            return Some((Rc::new(MinlogTerm::Constructor(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Constructor(self.clone())).into(), other.clone().into()));
         }
         None
     }

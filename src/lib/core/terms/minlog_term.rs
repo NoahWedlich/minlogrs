@@ -71,7 +71,7 @@ crate::wrapper_enum! {
         
         pub fn substitute(&Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
         
-        pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)>
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
         
         pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>)
             -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()>
@@ -201,7 +201,7 @@ impl TermBody for EmptyTermBody {
         unimplemented!()
     }
 
-    fn first_conflict_with(&self, _other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, _other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
         unimplemented!()
     }
     

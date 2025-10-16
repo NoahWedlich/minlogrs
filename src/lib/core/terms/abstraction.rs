@@ -225,15 +225,19 @@ impl TermBody for Abstraction {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if !other.is_abstraction() {
-            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), Rc::clone(other)));
+            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())).into(), Rc::clone(other).into()));
         }
         
         let other_abs = other.to_abstraction().unwrap();
 
         if self.vars.len() != other_abs.vars.len() {
-            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Abstraction(self.clone())).into(), other.clone().into()));
         }
         
         let mut subst = TermSubstitution::make_empty();
@@ -244,7 +248,7 @@ impl TermBody for Abstraction {
             } else if v1.minlog_type() == v2.minlog_type() {
                 subst.extend((TermSubstEntry::Term(v2.clone()), TermSubstEntry::Term(v1.clone())));
             } else {
-                return Some((v1.clone(), v2.clone()));
+                return Some((v1.clone().into(), v2.clone().into()));
             }
         }
         

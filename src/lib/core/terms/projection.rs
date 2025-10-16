@@ -110,15 +110,19 @@ impl TermBody for Projection {
         Projection::create(new_term, self.index)
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if !other.is_projection() {
-            return Some((Rc::new(MinlogTerm::Projection(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Projection(self.clone())).into(), other.clone().into()));
         }
         
         let other_proj = other.to_projection().unwrap();
         
         if self.index != other_proj.index {
-            return Some((Rc::new(MinlogTerm::Projection(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Projection(self.clone())).into(), other.clone().into()));
         }
         
         self.term.first_conflict_with(&other_proj.term)

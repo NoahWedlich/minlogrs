@@ -118,11 +118,15 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>,Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if other.is_variable() && self == other.to_variable().unwrap() {
             None
         } else {
-            Some((Rc::new(MinlogTerm::Variable(self.clone())), Rc::clone(other)))
+            Some((Rc::new(MinlogTerm::Variable(self.clone())).into(), Rc::clone(other).into()))
         }
     }
     

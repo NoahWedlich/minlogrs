@@ -148,15 +148,19 @@ impl TermBody for Tuple {
         Tuple::create(new_elements)
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
+        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
         if !other.is_tuple() {
-            return Some((Rc::new(MinlogTerm::Tuple(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Tuple(self.clone())).into(), other.clone().into()));
         }
         
         let other_tup = other.to_tuple().unwrap();
 
         if self.elements.len() != other_tup.elements.len() {
-            return Some((Rc::new(MinlogTerm::Tuple(self.clone())), other.clone()));
+            return Some((Rc::new(MinlogTerm::Tuple(self.clone())).into(), other.clone().into()));
         }
 
         for (e1, e2) in self.elements.iter().zip(other_tup.elements.iter()) {

@@ -62,7 +62,7 @@ impl Substitutable for TermSubstEntry {
                 t1.first_conflict_with(t2).map(|(f, o)| (TermSubstEntry::Type(f), TermSubstEntry::Type(o)))
             },
             (TermSubstEntry::Term(tm1), TermSubstEntry::Term(tm2)) => {
-                tm1.first_conflict_with(tm2).map(|(f, o)| (TermSubstEntry::Term(f), TermSubstEntry::Term(o)))
+                tm1.first_conflict_with(tm2).map(|(f, o)| (f, o))
             },
             _ => {
                 panic!("Tried to find conflict between incompatible TermSubstEntry types");

@@ -79,8 +79,8 @@ fn main() {
     println!("Substituted Normalized Application Type:");
     println!("{}", substituted_normalized_app.minlog_type().debug_string());
     
-    let nat = Algebra::create("Nat".to_string());
-    let nat_type = AlgebraType::create(nat.clone(), TermSubstitution::make_empty());
+    let nat = Algebra::create("Nat".to_string(), vec![]);
+    let nat_type = AlgebraType::create(nat.clone(), vec![]);
     println!("Algebra Type:");
     println!("{}", nat_type.debug_string());
     
@@ -94,10 +94,8 @@ fn main() {
     println!("Algebra:");
     println!("{}", nat.debug_string());
     
-    let list = Algebra::create("List".to_string());
-    let list_type = AlgebraType::create(list.clone(), TermSubstitution::from_pairs(vec![
-        (TermSubstEntry::Type(type_var_1.clone()), TermSubstEntry::Type(type_var_1.clone()))
-    ]));
+    let list = Algebra::create("List".to_string(), vec![type_var_1.clone()]);
+    let list_type = AlgebraType::create(list.clone(), vec![(type_var_1.clone(), type_var_1.clone())]);
     println!("Algebra Type:");
     println!("{}", list_type.debug_string());
     
@@ -110,20 +108,16 @@ fn main() {
     
     println!("Algebra:");
     println!("{}", list.debug_string());
-    
-    let subst = TermSubstitution::from_pairs(vec![
-        (TermSubstEntry::Type(type_var_1.clone()), TermSubstEntry::Type(nat_type.clone()))
-    ]);
-    
-    let nat_list_type = AlgebraType::create(list.clone(), subst.clone());
+
+    let nat_list_type = AlgebraType::create(list.clone(), vec![(type_var_1.clone(), nat_type.clone())]);
     println!("Nat List Type:");
     println!("{}", nat_list_type.debug_string());
     
     for constructor in nat_list_type.to_algebra().unwrap().constructors() {
-        println!("Constructor:")
-   ;     println!("{}", constructor.debug_string());
-        println!("Constructor Type:")
-   ;     println!("{}", constructor.minlog_type().debug_string());
+        println!("Constructor:");
+        println!("{}", constructor.debug_string());
+        println!("Constructor Type:");
+        println!("{}", constructor.minlog_type().debug_string());
     }
     
     let nat_zero = nat_type.to_algebra().unwrap().constructor(&"Zero".to_string()).unwrap();
