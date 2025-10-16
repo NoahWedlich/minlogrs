@@ -10,11 +10,12 @@ use crate::core::terms::minlog_term::MinlogTerm;
 pub struct Algebra {
     name: String,
     constructors: RefCell<Vec<Rc<MinlogTerm>>>,
+    type_variables: Vec<Rc<MinlogType>>,
 }
 
 impl Algebra {
-    pub fn create(name: String) -> Rc<Algebra> {
-        Rc::new(Algebra { name, constructors: RefCell::new(vec![]) })
+    pub fn create(name: String, type_variables: Vec<Rc<MinlogType>>) -> Rc<Algebra> {
+        Rc::new(Algebra { name, constructors: RefCell::new(vec![]), type_variables })
     }
     
     pub fn name(&self) -> &String {
@@ -54,11 +55,17 @@ impl Algebra {
             panic!("Constructor with name '{}' already exists in algebra '{}'", existing.to_constructor().unwrap().name(), self.name);
         }
         
+        for tvar in MinlogType::get_type_variables(&constructor.minlog_type()) {
+            if !self.type_variables.contains(&tvar) {
+                panic!("Constructor type contains type variable '{}' not in the algebra's type variables", tvar.debug_string());
+            }
+        }
+        
         self.constructors.borrow_mut().push(constructor);
     }
     
-    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        self.constructors.borrow().iter().flat_map(|c| MinlogType::get_type_variables(&c.minlog_type())).collect()
+    pub fn get_type_variables(&self) -> &Vec<Rc<MinlogType>> {
+        &self.type_variables
     }
 }
 
@@ -83,7 +90,9 @@ impl PrettyPrintable for Algebra {
                     }
                 );
                 
-                tvarlist.push(PPElement::break_elem(0, 4, false));
+                if i < tvars.len() - 1 {
+                    tvarlist.push(PPElement::break_elem(1, 4, false));
+                }
             }
             
             PPElement::group(vec![

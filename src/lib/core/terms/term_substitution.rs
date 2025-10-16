@@ -128,6 +128,30 @@ impl PrettyPrintable for TermSubstEntry {
     }
 }
 
+impl From<Rc<MinlogType>> for TermSubstEntry {
+    fn from(t: Rc<MinlogType>) -> Self {
+        TermSubstEntry::Type(t)
+    }
+}
+
+impl From<&Rc<MinlogType>> for TermSubstEntry {
+    fn from(t: &Rc<MinlogType>) -> Self {
+        TermSubstEntry::Type(t.clone())
+    }
+}
+
+impl From<Rc<MinlogTerm>> for TermSubstEntry {
+    fn from(tm: Rc<MinlogTerm>) -> Self {
+        TermSubstEntry::Term(tm)
+    }
+}
+
+impl From<&Rc<MinlogTerm>> for TermSubstEntry {
+    fn from(tm: &Rc<MinlogTerm>) -> Self {
+        TermSubstEntry::Term(tm.clone())
+    }
+}
+
 pub type TermSubstitution = Substitution<TermSubstEntry>;
 pub type TermMatchContext = MatchContextImpl<TermSubstEntry>;
 

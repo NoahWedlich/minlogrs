@@ -15,29 +15,21 @@ use crate::core::structures::algebra::Algebra;
 #[derive(Clone, PartialEq, Eq)]
 pub struct AlgebraType {
     algebra: Rc<Algebra>,
-    parameters: TermSubstitution
+    parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>,
 }
 
 impl AlgebraType {
-    pub fn create(algebra: Rc<Algebra>, parameters: TermSubstitution) -> Rc<MinlogType> {
+    pub fn create(algebra: Rc<Algebra>, parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>) -> Rc<MinlogType> {
         let expected_vars = algebra.get_type_variables();
         
-        for (from, _) in parameters.pairs() {
-            match from {
-                TermSubstEntry::Type(t) => {
-                    if !expected_vars.iter().any(|v| v == t) {
-                        panic!("Type variable '{}' not expected in parameters for algebra '{}'", t.debug_string(), algebra.name());
-                    }
-                },
-                _ => panic!("Only type variables can be used as parameters for algebra types"),
+        for (from, _) in parameters.iter() {
+            if !expected_vars.iter().any(|v| v == from) {
+                panic!("Type variable '{}' not expected in parameters for algebra '{}'", from.debug_string(), algebra.name());
             }
         }
         
         for var in expected_vars {
-            if !parameters.pairs().iter().any(|(from, _)| match from {
-                TermSubstEntry::Type(t) => t == &var,
-                _ => false,
-            }) {
+            if !parameters.iter().any(|(from, _)| from == var) {
                 panic!("Missing type variable '{}' in parameters for algebra '{}'", var.debug_string(), algebra.name());
             }
         }
@@ -54,20 +46,30 @@ impl AlgebraType {
     }
     
     pub fn constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        let subst = self.substitution();
+
         self.algebra.constructors().iter()
-            .map(|c| self.parameters.substitute(&TermSubstEntry::Term(c.clone())))
+            .map(|c| subst.substitute(&TermSubstEntry::Term(c.clone())))
             .map(|t| t.to_term().unwrap())
             .collect()
     }
     
     pub fn constructor(&self, name: &String) -> Option<Rc<MinlogTerm>> {
+        let subst = self.substitution();
+
         self.algebra.constructor(name).map(|c| {
-            self.parameters.substitute(&TermSubstEntry::Term(c.clone())).to_term().unwrap()
+            subst.substitute(&TermSubstEntry::Term(c.clone())).to_term().unwrap()
         })
     }
     
-    pub fn parameters(&self) -> &TermSubstitution {
+    pub fn parameters(&self) -> &Vec<(Rc<MinlogType>, Rc<MinlogType>)> {
         &self.parameters
+    }
+    
+    pub fn substitution(&self) -> TermSubstitution {
+        TermSubstitution::from_pairs(self.parameters.iter()
+            .map(|(from, to)| (TermSubstEntry::Type(from.clone()), TermSubstEntry::Type(to.clone())))
+            .collect())
     }
 }
 
@@ -81,16 +83,24 @@ impl TypeBody for AlgebraType {
     }
     
     fn level(&self) -> usize {
-        self.parameters.pairs().iter()
-            .map(|(_, t)| match t {
-                TermSubstEntry::Type(t) => t.level(),
-                TermSubstEntry::Term(_) => 0,
-            }).max().unwrap_or(0)
+        self.parameters.iter()
+            .map(|(_, to)| to.level())
+            .max().unwrap_or(0)
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        let mut new_params = self.parameters.clone();
-        new_params.extend((TermSubstEntry::Type(from.clone()), TermSubstEntry::Type(to.clone())));
+        let mut subst = self.substitution();
+        subst.extend((from.into(), to.into()));
+        let mut new_params = subst.pairs().iter()
+            .map(|(f, t)| (f.to_type().unwrap(), t.to_type().unwrap()))
+            .collect::<Vec<_>>();
+        
+        for (f, _) in self.parameters.iter() {
+            if !new_params.iter().any(|(nf, _)| nf == f) {
+                new_params.push((f.clone(), f.clone()));
+            }
+        }
+        
         AlgebraType::create(self.algebra.clone(), new_params)
     }
     
@@ -105,31 +115,19 @@ impl TypeBody for AlgebraType {
             return Some((Rc::new(MinlogType::Algebra(self.clone())), other.clone()));
         }
         
-        for (from, to) in self.parameters.pairs() {
-            match (from, to) {
-                (TermSubstEntry::Type(_), TermSubstEntry::Type(to_t)) => {
-                    let other_to = other_alg.parameters.apply(&from).to_type().unwrap();
-                    if let Some(conflict) = to_t.first_conflict_with(&other_to) {
-                        return Some(conflict);
-                    }
-                },
-                _ => {
-                    panic!("Algebra type parameters must be type substitutions");
-                }
+        let subst = self.substitution();
+
+        for (from, to) in self.parameters.iter() {
+            let other_to = subst.substitute(&from.into()).to_type().unwrap();
+            if let Some(conflict) = to.first_conflict_with(&other_to) {
+                return Some(conflict);
             }
         }
         
-        for (from, to) in other_alg.parameters.pairs() {
-            match (from, to) {
-                (TermSubstEntry::Type(_), TermSubstEntry::Type(to_t)) => {
-                    let self_to = self.parameters.apply(&from).to_type().unwrap();
-                    if let Some(conflict) = to_t.first_conflict_with(&self_to) {
-                        return Some(conflict);
-                    }
-                },
-                _ => {
-                    panic!("Algebra type parameters must be type substitutions");
-                }
+        for (from, to) in other_alg.parameters.iter() {
+            let self_to = subst.substitute(&from.into()).to_type().unwrap();
+            if let Some(conflict) = to.first_conflict_with(&self_to) {
+                return Some(conflict);
             }
         }
         
@@ -151,9 +149,11 @@ impl TypeBody for AlgebraType {
             return Err(());
         }
         
-        for (from, to) in pattern_alg.parameters.pairs() {
-            let instance_to = instance_alg.parameters.apply(&from).to_type().unwrap();
-            ctx.extend(&to.to_type().unwrap(), &instance_to);
+        let subst = instance_alg.substitution();
+
+        for (from, to) in pattern_alg.parameters.iter() {
+            let instance_to = subst.substitute(&from.into()).to_type().unwrap();
+            ctx.extend(&to, &instance_to);
         }
         
         Ok(None)
@@ -162,12 +162,12 @@ impl TypeBody for AlgebraType {
 
 impl PrettyPrintable for AlgebraType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.parameters.empty() {
+        if self.parameters.is_empty() {
             PPElement::text(self.algebra.name().clone())
         } else {
             let mut params = vec![];
-            for (i, (from, to)) in self.parameters.pairs().iter().enumerate() {
-                let param_elem = if detail {
+            for (i, (from, to)) in self.parameters.iter().enumerate() {
+                let param_elem = if detail && from != to {
                     PPElement::group(vec![
                         from.to_pp_element(detail),
                         PPElement::break_elem(1, 4, false),
@@ -180,7 +180,7 @@ impl PrettyPrintable for AlgebraType {
                 };
                 
                 params.push(
-                    if i < self.parameters.pairs().len() - 1 {
+                    if i < self.parameters.iter().len() - 1 {
                         PPElement::group(vec![
                             param_elem,
                             PPElement::break_elem(0, 4, false),
@@ -191,7 +191,9 @@ impl PrettyPrintable for AlgebraType {
                     }
                 );
                 
-                params.push(PPElement::break_elem(1, 4, false));
+                if i < self.parameters.iter().len() - 1 {
+                    params.push(PPElement::break_elem(1, 4, false));
+                }
             }
             
             PPElement::group(vec![
