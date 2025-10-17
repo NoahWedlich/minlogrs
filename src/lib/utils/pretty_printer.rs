@@ -97,7 +97,7 @@ pub struct TextElement {
 }
 
 impl TextElement {
-    pub fn new(text: String) -> PPElement {
+    pub fn create(text: String) -> PPElement {
         PPElement::Text(TextElement { text })
     }
 }
@@ -116,10 +116,11 @@ impl PPElementBody for TextElement {
             
             let mut result = String::new();
             let chars = self.text.chars().collect::<Vec<_>>();
-            
-            for i in 0..width_left {
-                result.push(chars[i]);
+
+            for char in chars.iter().take(width_left) {
+                result.push(*char);
             }
+            
             result.push('\n');
             result.push_str(&" ".repeat(indent));
             
@@ -154,7 +155,7 @@ pub struct BreakElement {
 }
 
 impl BreakElement {
-    pub fn new(space: usize, indent: usize, breaks: bool) -> PPElement {
+    pub fn create(space: usize, indent: usize, breaks: bool) -> PPElement {
         PPElement::Break(BreakElement { space, indent, breaks })
     }
 }
@@ -200,7 +201,7 @@ pub struct GroupElement {
 }
 
 impl GroupElement {
-    pub fn new(elements: Vec<PPElement>, break_type: BreakType, indent: usize) -> PPElement {
+    pub fn create(elements: Vec<PPElement>, break_type: BreakType, indent: usize) -> PPElement {
         PPElement::Group(GroupElement { elements, break_type, indent })
     }
 }

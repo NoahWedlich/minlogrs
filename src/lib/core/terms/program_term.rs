@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -158,21 +158,21 @@ impl TermBody for ProgramTerm {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
             (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
                 if !p.is_program_term() || !i.is_program_term() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 let pterm_pattern = p.to_program_term().unwrap();
                 let pterm_instance = i.to_program_term().unwrap();
                 
                 if pterm_pattern.pconst != pterm_instance.pconst {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 for (from, to) in pterm_pattern.parameters.iter() {
@@ -181,9 +181,9 @@ impl TermBody for ProgramTerm {
                         ctx.extend(&to.into(), &instance_to.into());
                     }
                 }
-                Ok(None)
+                MatchOutput::Matched
             },
-            _ => Err(())
+            _ => MatchOutput::FailedMatch,
         }
     }
 }

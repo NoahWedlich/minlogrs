@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
@@ -41,8 +41,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<Rc<MinlogType>>)
-            -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()>
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>>
     }
     
     #[derive(PartialEq, Eq)]

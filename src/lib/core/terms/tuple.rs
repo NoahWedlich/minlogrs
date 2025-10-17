@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::star_type::StarType;
@@ -171,36 +171,36 @@ impl TermBody for Tuple {
         
         None
     }
-    
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry,TermSubstEntry)>, ()> {
+
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
             (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
                 if !p.is_tuple() || !i.is_tuple() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 if p.minlog_type() != i.minlog_type() {
                     ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
                     ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return Ok(None);
+                    return MatchOutput::Matched;
                 }
                 
                 let tup_pattern = p.to_tuple().unwrap();
                 let tup_instance = i.to_tuple().unwrap();
                 
                 if tup_pattern.elements.len() != tup_instance.elements.len() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 for (e1, e2) in tup_pattern.elements.iter().zip(tup_instance.elements.iter()) {
                     ctx.extend(&TermSubstEntry::Term(e1.clone()), &TermSubstEntry::Term(e2.clone()));
                 }
-                Ok(None)
+                MatchOutput::Matched
             },
-            _ => Err(())
+            _ => MatchOutput::FailedMatch,
         }
         
         

@@ -51,7 +51,7 @@ impl Algebra {
             panic!("Constructor type must be an algebra type or an arrow type ending in an algebra type");
         }
         
-        if let Some(existing) = self.constructor(&constructor.to_constructor().unwrap().name()) {
+        if let Some(existing) = self.constructor(constructor.to_constructor().unwrap().name()) {
             panic!("Constructor with name '{}' already exists in algebra '{}'", existing.to_constructor().unwrap().name(), self.name);
         }
         

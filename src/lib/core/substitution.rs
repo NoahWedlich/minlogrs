@@ -8,7 +8,7 @@ pub trait Substitutable: Eq + Clone + PrettyPrintable {
     
     fn valid_substitution(&self, to: &Self) -> bool;
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> Result<Option<(Self, Self)>, ()>;
+    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self>;
 }
 
 pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
@@ -127,10 +127,9 @@ impl<T: Substitutable> Substitution<T> {
 
     pub fn agrees(&self, _other: &Self) -> bool {
         for (k, v) in self.pairs.iter() {
-            if let Some((_, v2)) = _other.pairs.iter().find(|(k2, _)| k == k2) {
-                if v != v2 {
-                    return false;
-                }
+            match _other.pairs.iter().find(|(k2, _)| k == k2) {
+                Some((_, v2)) if v != v2 => return false,
+                _ => {}
             }
         }
         
@@ -242,17 +241,20 @@ impl<T: Substitutable> Substitution<T> {
                     continue;
                 }
                 
-                let match_result = pattern.match_with(ctx);
-                if match_result.is_err() {
-                    return None;
-                } else if let Ok(Some((from, to))) = match_result {
-                    if from.valid_substitution(&to) {
-                        ctx.skip_current();
-                        
-                        ctx.substitute(&from, &to);
-                        
-                        substitution.extend((from.clone(), to.clone()));
-                        ctx.restrict(&from);
+                match pattern.match_with(ctx) {
+                    MatchOutput::Matched => {}
+                    MatchOutput::FailedMatch => {
+                        return None;
+                    },
+                    MatchOutput::Substitution(from, to) => {
+                        if from.valid_substitution(&to) {
+                            ctx.skip_current();
+                            
+                            ctx.substitute(&from, &to);
+                            
+                            substitution.extend((from.clone(), to.clone()));
+                            ctx.restrict(&from);
+                        }
                     }
                 }
                 
@@ -360,8 +362,8 @@ pub struct MatchContextImpl<T> {
 impl<T: Substitutable> MatchContext<T> for MatchContextImpl<T> {
     fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self {
         Self {
-            patterns: patterns.drain(..).collect(),
-            instances: instances.drain(..).collect(),
+            patterns: std::mem::take(patterns),
+            instances: std::mem::take(instances),
             restricted: vec![],
         }
     }
@@ -403,4 +405,10 @@ impl<T: Substitutable> MatchContext<T> for MatchContextImpl<T> {
             *instance = instance.substitute(from, to);
         }
     }
+}
+
+pub enum MatchOutput<T> {
+    Substitution(T, T),
+    Matched,
+    FailedMatch,
 }

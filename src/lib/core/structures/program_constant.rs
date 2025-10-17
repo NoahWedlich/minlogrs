@@ -91,13 +91,13 @@ impl RewriteRule {
             bound.push(term.clone());
         } else if let Some(app) = term.to_application() {
             for op in app.operands() {
-                if !RewriteRule::is_left_linear(&op, bound) {
+                if !RewriteRule::is_left_linear(op, bound) {
                     return false;
                 }
             }
         }
         
-        return true;
+        true
     }
     
     pub fn is_computation_rule(&self) -> bool {
@@ -114,7 +114,7 @@ impl RewriteRule {
             
             let mut bound = vec![];
             for op in app.operands() {
-                if !RewriteRule::is_left_linear(&op, &mut bound) {
+                if !RewriteRule::is_left_linear(op, &mut bound) {
                     return false;
                 }
             }
@@ -211,8 +211,7 @@ impl ProgramConstant {
         
         for rule in self.computation_rules.borrow().iter() {
             let unifier = TermSubstitution::unify(&rule.pattern().into(), &rule.pattern().into());
-            if unifier.is_some() {
-                let unifier = unifier.unwrap();
+            if let Some(unifier) = unifier {
                 let existing = unifier.substitute(&rule.result().into());
                 let new = unifier.substitute(&rule.result().into());
                 

@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -130,7 +130,7 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
@@ -139,16 +139,16 @@ impl TermBody for TermVariable {
                 if p.minlog_type() != i.minlog_type() {
                     ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
                     ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return Ok(None);
+                    return MatchOutput::Matched;
                 }
 
                 if p.totality(&mut vec![]) == Totality::Total && i.totality(&mut vec![]) == Totality::Partial {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
-                
-                Ok(Some((TermSubstEntry::Term(p.clone()), TermSubstEntry::Term(i.clone()))))
+
+                MatchOutput::Substitution(p.into(), i.into())
             },
-            _ => Err(())
+            _ => MatchOutput::FailedMatch,
         }
     }
 }

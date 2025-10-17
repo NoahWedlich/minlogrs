@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
@@ -30,8 +30,8 @@ impl Abstraction {
         }
         
         for (i, var) in vars.iter().enumerate() {
-            for j in (i + 1)..vars.len() {
-                if var == &vars[j] {
+            for other in &vars[(i+1)..] {
+                if var == other {
                     panic!("Tried to create an Abstraction with duplicate variables");
                 }
             }
@@ -47,7 +47,7 @@ impl Abstraction {
     
     pub fn collapse(minlog_term: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
         if !minlog_term.is_abstraction() || !minlog_term.to_abstraction().unwrap().kernel.is_abstraction() {
-            return Rc::clone(minlog_term);
+            Rc::clone(minlog_term)
         } else {
             let mut abstraction = minlog_term.to_abstraction().unwrap();
             let mut vars = abstraction.vars().clone();
@@ -58,7 +58,7 @@ impl Abstraction {
                 abstraction = next_abstraction;
             }
             
-            return Abstraction::create(vars, Rc::clone(&abstraction.kernel()));
+            Abstraction::create(vars, Rc::clone(abstraction.kernel()))
         }
     }
     
@@ -213,7 +213,7 @@ impl TermBody for Abstraction {
             },
             (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(_)) => {
                 if self.vars.contains(from_tm) {
-                    return Rc::new(MinlogTerm::Abstraction(self.clone()));
+                    Rc::new(MinlogTerm::Abstraction(self.clone()))
                 } else {
                     let new_kernel = self.kernel.substitute(from, to);
                     Abstraction::create(self.vars.clone(), new_kernel)
@@ -261,27 +261,27 @@ impl TermBody for Abstraction {
         }
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry,TermSubstEntry)>,()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
             (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
                 if !p.is_abstraction() || !i.is_abstraction() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 if p.minlog_type() != i.minlog_type() {
                     ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
                     ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return Ok(None);
+                    return MatchOutput::Matched;
                 }
                 
                 let abs_pattern = p.to_abstraction().unwrap();
                 let abs_instance = i.to_abstraction().unwrap();
 
                 if abs_pattern.arity() != abs_instance.arity() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
 
                 for (v1, v2) in abs_pattern.vars.iter().zip(abs_instance.vars.iter()) {
@@ -289,9 +289,9 @@ impl TermBody for Abstraction {
                 }
                 
                 ctx.extend(&TermSubstEntry::Term(abs_pattern.kernel.clone()), &TermSubstEntry::Term(abs_instance.kernel.clone()));
-                Ok(None)
+                MatchOutput::Matched
             },
-            _ => Err(()),
+            _ => MatchOutput::FailedMatch,
         }
     }
 }
@@ -320,23 +320,19 @@ impl PrettyPrintable for Abstraction {
             variables.push(PPElement::break_elem(0, 4, false));
         }
         
-        let mut elements = vec![];
-        
-        elements.push(
+        let elements = vec![
             PPElement::group(vec![
                 PPElement::text("[".to_string()),
                 PPElement::break_elem(1, 4, false),
                 PPElement::group(variables, BreakType::Flexible, 0),
                 PPElement::break_elem(1, 0, false),
                 PPElement::text("]".to_string())
-            ], BreakType::Consistent, 0)
-        );
-        
-        elements.push(PPElement::break_elem(1, 4, false));
-        elements.push(PPElement::text("->".to_string()));
-        elements.push(PPElement::break_elem(1, 4, false));
-        
-        elements.push(self.kernel.to_enclosed_pp_element(detail));
+            ], BreakType::Consistent, 0),
+            PPElement::break_elem(1, 4, false),
+            PPElement::text("->".to_string()),
+            PPElement::break_elem(1, 4, false),
+            self.kernel.to_enclosed_pp_element(detail)
+        ];
         
         PPElement::group(elements, BreakType::Flexible, 0)
     }

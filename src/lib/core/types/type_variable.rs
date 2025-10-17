@@ -1,7 +1,9 @@
 
 use std::rc::Rc;
-use crate::core::substitution::{MatchContext, Substitutable};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
+
+use crate::core::substitution::{MatchContext, MatchOutput, Substitutable};
+
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
 #[derive(Clone)]
@@ -44,14 +46,14 @@ impl TypeBody for TypeVariable {
         }
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         if pattern.valid_substitution(&instance) {
-            Ok(Some((pattern.clone(), instance.clone())))
+            MatchOutput::Substitution(pattern.clone(), instance.clone())
         } else {
-            Err(())
+            MatchOutput::FailedMatch
         }
     }
 }

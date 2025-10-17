@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -74,8 +74,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>)
-            -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()>
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry>
     }
     
     #[derive(PartialEq, Eq)]
@@ -206,8 +205,7 @@ impl TermBody for EmptyTermBody {
         unimplemented!()
     }
     
-    fn match_with(&self, _ctx: &mut impl MatchContext<TermSubstEntry>)
-        -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, _ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
             unimplemented!()
     }
 }

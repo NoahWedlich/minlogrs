@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::{MinlogType, TypeBody};
 
@@ -140,33 +140,33 @@ impl TypeBody for AlgebraType {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         if !pattern.is_algebra() || !instance.is_algebra() {
-            return Err(());
+            return MatchOutput::FailedMatch;
         }
         
         let pattern_alg = pattern.to_algebra().unwrap();
         let instance_alg = instance.to_algebra().unwrap();
         
         if pattern_alg.algebra.as_ref() != instance_alg.algebra.as_ref() {
-            return Err(());
+            return MatchOutput::FailedMatch;
         }
         
         if pattern_alg.parameters.len() != instance_alg.parameters.len() {
-            return Err(());
+            return MatchOutput::FailedMatch;
         }
         
         let subst = instance_alg.substitution();
 
         for (from, to) in pattern_alg.parameters.iter() {
             let instance_to = subst.substitute(&from.into()).to_type().unwrap();
-            ctx.extend(&to, &instance_to);
+            ctx.extend(to, &instance_to);
         }
         
-        Ok(None)
+        MatchOutput::Matched
     }
 }
 

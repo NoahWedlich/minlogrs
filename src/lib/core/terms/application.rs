@@ -2,7 +2,7 @@
 use std::{cmp::{max, min}, rc::Rc};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
@@ -59,7 +59,7 @@ impl Application {
     
     pub fn collapse(minlog_term: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
         if !minlog_term.is_application() || !minlog_term.to_application().unwrap().operator.is_application() {
-            return Rc::clone(minlog_term);
+            Rc::clone(minlog_term)
         } else {
             let mut application = minlog_term.to_application().unwrap();
             let mut operands = application.operands().clone();
@@ -70,7 +70,7 @@ impl Application {
                 application = next_application;
             }
             
-            return Application::create(Rc::clone(&application.operator()), operands);
+            Application::create(Rc::clone(application.operator()), operands)
         }
     }
     
@@ -316,27 +316,27 @@ impl TermBody for Application {
         None
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
             (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
                 if !p.is_application() || !i.is_application() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 if p.minlog_type() != i.minlog_type() {
                     ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
                     ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return Ok(None);
+                    return MatchOutput::Matched;
                 }
                 
                 let app_pattern = p.to_application().unwrap();
                 let app_instance = i.to_application().unwrap();
                 
                 if app_pattern.operand_count() != app_instance.operand_count() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 for (op_p, op_i) in app_pattern.operands().iter().zip(app_instance.operands().iter()) {
@@ -344,10 +344,10 @@ impl TermBody for Application {
                 }
                 
                 ctx.extend(&TermSubstEntry::Term(app_pattern.operator().clone()), &TermSubstEntry::Term(app_instance.operator().clone()));
-                Ok(None)
+                MatchOutput::Matched
             },
             _ => {
-                Err(())
+                MatchOutput::FailedMatch
             }
         }
     }
@@ -379,11 +379,9 @@ impl PrettyPrintable for Application {
             }
         }
         
-        let mut elements = vec![];
-        
-        elements.push(self.operator.to_enclosed_pp_element(detail));
-        elements.push(PPElement::break_elem(1, 4, false));
-        elements.push(
+        let elements = vec![
+            self.operator.to_enclosed_pp_element(detail),
+            PPElement::break_elem(1, 4, false),
             PPElement::group(vec![
                 PPElement::text("(".to_string()),
                 PPElement::break_elem(1, 4, false),
@@ -391,7 +389,7 @@ impl PrettyPrintable for Application {
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(")".to_string())
             ], BreakType::Consistent, 0)
-        );
+        ];
         
         PPElement::group(elements, BreakType::Flexible, 0)
     }

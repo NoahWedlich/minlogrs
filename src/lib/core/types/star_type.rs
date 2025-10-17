@@ -1,7 +1,9 @@
 
 use std::rc::Rc;
-use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
 #[derive(Clone)]
@@ -96,24 +98,26 @@ impl TypeBody for StarType {
         None
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
+        let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
-        
-        if !instance.is_star() {
-            return Err(());
+
+        if !pattern.is_star() || !instance.is_star() {
+            return MatchOutput::FailedMatch;
         }
         
+        let pattern_star = pattern.to_star().unwrap();
         let instance_star = instance.to_star().unwrap();
-        
-        if self.types.len() != instance_star.types.len() {
-            return Err(());
+
+        if pattern_star.types.len() != instance_star.types.len() {
+            return MatchOutput::FailedMatch;
         }
-        
-        for (t1, t2) in self.types.iter().zip(instance_star.types.iter()) {
+
+        for (t1, t2) in pattern_star.types.iter().zip(instance_star.types.iter()) {
             ctx.extend(t1, t2);
         }
         
-        Ok(None)
+        MatchOutput::Matched
     }
 }
 

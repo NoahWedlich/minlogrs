@@ -2,7 +2,7 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::MatchContext;
+use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -106,29 +106,29 @@ impl TermBody for Constructor {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> Result<Option<(TermSubstEntry, TermSubstEntry)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
             (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
                 if !p.is_constructor() || !i.is_constructor() {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 let constr_pattern = p.to_constructor().unwrap();
                 let constr_instance = i.to_constructor().unwrap();
                 
                 if constr_pattern.name != constr_instance.name {
-                    return Err(());
+                    return MatchOutput::FailedMatch;
                 }
                 
                 if constr_pattern.minlog_type != constr_instance.minlog_type {
                     ctx.extend(&TermSubstEntry::Type(constr_pattern.minlog_type.clone()), &TermSubstEntry::Type(constr_instance.minlog_type.clone()));
                 }
-                Ok(None)
+                MatchOutput::Matched
             },
-            _ => Err(())
+            _ => MatchOutput::FailedMatch,
         }
     }
 }

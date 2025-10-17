@@ -1,7 +1,9 @@
 
 use std::{cmp::max, rc::Rc};
-use crate::core::substitution::MatchContext;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
 #[derive(Clone)]
@@ -17,7 +19,7 @@ impl ArrowType {
     
     pub fn collapse(minlog_type: &Rc<MinlogType>) -> Rc<MinlogType> {
         if !minlog_type.is_arrow() || !minlog_type.to_arrow().unwrap().value().is_arrow() {
-            return Rc::clone(minlog_type);
+            minlog_type.clone()
         } else {
             let mut arrow = minlog_type.to_arrow().unwrap();
             let mut arguments = arrow.arguments().clone();
@@ -28,7 +30,7 @@ impl ArrowType {
                 arrow = next_arrow;
             }
             
-            return ArrowType::create(arguments, Rc::clone(arrow.value()));
+            ArrowType::create(arguments, arrow.value().clone())
         }
     }
     
@@ -91,11 +93,7 @@ impl TypeBody for ArrowType {
             }
         }
         
-        if let Some(new_value) = MinlogType::remove_nulls(&self.value) {
-            Some(ArrowType::create(new_arguments, new_value))
-        } else {
-            None
-        }
+        MinlogType::remove_nulls(&self.value).map(|new_value| ArrowType::create(new_arguments, new_value))
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
@@ -127,25 +125,27 @@ impl TypeBody for ArrowType {
         self.value.first_conflict_with(&other_arrow.value)
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> Result<Option<(Rc<MinlogType>, Rc<MinlogType>)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
+        let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
-        if !instance.is_arrow() {
-            return Err(());
+        if !pattern.is_arrow() || !instance.is_arrow() {
+            return MatchOutput::FailedMatch;
         }
-        
+
+        let pattern_arrow = pattern.to_arrow().unwrap();
         let instance_arrow = instance.to_arrow().unwrap();
-        
-        if self.arguments.len() != instance_arrow.arguments.len() {
-            return Err(());
+
+        if pattern_arrow.arguments.len() != instance_arrow.arguments.len() {
+            return MatchOutput::FailedMatch;
         }
-        
-        for (arg1, arg2) in self.arguments.iter().zip(instance_arrow.arguments.iter()) {
+
+        for (arg1, arg2) in pattern_arrow.arguments.iter().zip(instance_arrow.arguments.iter()) {
             ctx.extend(arg1, arg2);
         }
         
         ctx.extend(&self.value, &instance_arrow.value);
-        Ok(None)
+        MatchOutput::Matched
     }
 }
 

@@ -1,7 +1,7 @@
 
 use core::panic;
 use std::rc::Rc;
-use crate::core::substitution::{Substitutable, Substitution, MatchContext, MatchContextImpl};
+use crate::core::substitution::{Substitutable, Substitution, MatchContext, MatchContextImpl, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::utils::pretty_printer::PrettyPrintable;
@@ -59,10 +59,10 @@ impl Substitutable for TermSubstEntry {
     fn first_conflict_with(&self, other: &Self) -> Option<(Self, Self)> {
         match (self, other) {
             (TermSubstEntry::Type(t1), TermSubstEntry::Type(t2)) => {
-                t1.first_conflict_with(t2).map(|(f, o)| (TermSubstEntry::Type(f), TermSubstEntry::Type(o)))
+                t1.first_conflict_with(t2).map(|(f, o)| (f.into(), o.into()))
             },
             (TermSubstEntry::Term(tm1), TermSubstEntry::Term(tm2)) => {
-                tm1.first_conflict_with(tm2).map(|(f, o)| (f, o))
+                tm1.first_conflict_with(tm2)
             },
             _ => {
                 panic!("Tried to find conflict between incompatible TermSubstEntry types");
@@ -84,12 +84,15 @@ impl Substitutable for TermSubstEntry {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> Result<Option<(Self, Self)>, ()> {
+    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self> {
         match self {
             TermSubstEntry::Type(t) => {
-                t.match_with(ctx).map(|opt| {
-                    opt.map(|(p, i)| (TermSubstEntry::Type(p), TermSubstEntry::Type(i)))
-                })
+                match t.match_with(ctx) {
+                    MatchOutput::Substitution(p, i)
+                        => MatchOutput::Substitution(TermSubstEntry::Type(p), TermSubstEntry::Type(i)),
+                    MatchOutput::Matched => MatchOutput::Matched,
+                    MatchOutput::FailedMatch => MatchOutput::FailedMatch,
+                }
             },
             TermSubstEntry::Term(tm) => {
                 tm.match_with(ctx)
