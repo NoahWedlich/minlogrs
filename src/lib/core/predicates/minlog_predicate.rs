@@ -8,12 +8,14 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 
+use crate::core::predicates::predicate_variable::PredicateVariable;
+
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct PredicateDegree {
-    positive_content: bool,
-    negative_content: bool,
+    pub positive_content: bool,
+    pub negative_content: bool,
 }
 
 crate::wrapper_enum! {
@@ -64,7 +66,7 @@ crate::wrapper_enum! {
     #[derive(PartialEq, Eq)]
     pub enum MinlogPredicate {
         Constant(||constant||),
-        Variable(||variable||),
+        Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension||),
         Inductive(||inductive||),
     }
