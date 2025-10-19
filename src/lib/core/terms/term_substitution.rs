@@ -1,7 +1,7 @@
 
-use core::panic;
 use std::rc::Rc;
-use crate::core::substitution::{Substitutable, Substitution, MatchContext, MatchContextImpl, MatchOutput};
+use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
+    Substitutable, SubstitutableWith, Substitution};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::utils::pretty_printer::PrettyPrintable;
@@ -44,10 +44,7 @@ impl Substitutable for TermSubstEntry {
             (TermSubstEntry::Type(t), TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
                 TermSubstEntry::Type(t.substitute(from_t, to_t))
             },
-            (TermSubstEntry::Term(tm), TermSubstEntry::Term(_), TermSubstEntry::Term(_)) => {
-                TermSubstEntry::Term(tm.substitute(from, to))
-            },
-            (TermSubstEntry::Term(tm), TermSubstEntry::Type(_), TermSubstEntry::Type(_)) => {
+            (TermSubstEntry::Term(tm), _, _) => {
                 TermSubstEntry::Term(tm.substitute(from, to))
             },
             _ => {
@@ -109,10 +106,10 @@ impl PrettyPrintable for TermSubstEntry {
         }
     }
     
-    fn requires_parens(&self, _detail: bool) -> bool {
+    fn requires_parens(&self, detail: bool) -> bool {
         match self {
-            TermSubstEntry::Type(t) => t.requires_parens(_detail),
-            TermSubstEntry::Term(tm) => tm.requires_parens(_detail),
+            TermSubstEntry::Type(t) => t.requires_parens(detail),
+            TermSubstEntry::Term(tm) => tm.requires_parens(detail),
         }
     }
     
@@ -160,10 +157,10 @@ pub type TermMatchContext = MatchContextImpl<TermSubstEntry>;
 
 impl TermSubstitution {
     pub fn admissible(&self, term: &Rc<MinlogTerm>) -> bool {
-        for free_var in MinlogTerm::get_free_variables(term) {
+        for free_var in term.get_free_variables() {
             let substituted = self.apply(&TermSubstEntry::Term(free_var.clone()));
             if let TermSubstEntry::Term(t) = substituted {
-                if free_var.minlog_type() != t.minlog_type() {
+                if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
                     return false;
                 }
             } else {
@@ -233,5 +230,16 @@ impl<T: MatchContext<TermSubstEntry>> MatchContext<Rc<MinlogType>> for T {
             &TermSubstEntry::Type(from.clone()),
             &TermSubstEntry::Type(to.clone())
         );
+    }
+}
+
+impl<T: SubstitutableWith<Rc<MinlogType>>> SubstitutableWith<TermSubstEntry> for T {
+    fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
+        match (from, to) {
+            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
+                self.substitute_with(from_t, to_t)
+            },
+            _ => self.clone(),
+        }
     }
 }

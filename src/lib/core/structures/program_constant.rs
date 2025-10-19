@@ -127,7 +127,7 @@ impl RewriteRule {
 }
 
 impl SubstitutableWith<TermSubstEntry> for Rc<RewriteRule> {
-    fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
+    fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
         RewriteRule::create(
             self.pattern.substitute(from, to),
             self.result.substitute(from, to)
@@ -212,9 +212,9 @@ impl ProgramConstant {
         for rule in self.computation_rules.borrow().iter() {
             let unifier = TermSubstitution::unify(&rule.pattern().into(), &rule.pattern().into());
             if let Some(unifier) = unifier {
-                let existing = unifier.substitute(&rule.result().into());
-                let new = unifier.substitute(&rule.result().into());
-                
+                let existing = unifier.substitute::<TermSubstEntry>(&rule.result().into());
+                let new = unifier.substitute::<TermSubstEntry>(&rule.result().into());
+
                 if existing != new {
                     panic!("Attempted to add a computation rule that overlaps with an existing computation rule but has a different result");
                 }
@@ -239,13 +239,13 @@ impl ProgramConstant {
     pub fn compute(&self, term: &Rc<MinlogTerm>) -> (Rc<MinlogTerm>, bool) {
         for rule in self.computation_rules.borrow().iter() {
             if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute(&rule.result().into()).to_term().unwrap(), true);
+                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
             }
         }
         
         for rule in self.rewrite_rules.borrow().iter() {
             if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute(&rule.result().into()).to_term().unwrap(), true);
+                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
             }
         }
         

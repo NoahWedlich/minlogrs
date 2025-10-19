@@ -50,13 +50,13 @@ impl ProgramTerm {
     
     pub fn computation_rules(&self) -> Vec<Rc<RewriteRule>> {
         self.pconst.computation_rules().iter()
-            .map(|r| self.substitution().substitute_other(r))
+            .map(|r| self.substitution().substitute(r))
             .collect()
     }
     
     pub fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>> {
         self.pconst.rewrite_rules().iter()
-            .map(|r| self.substitution().substitute_other(r))
+            .map(|r| self.substitution().substitute(r))
             .collect()
     }
     
@@ -74,7 +74,7 @@ impl ProgramTerm {
 impl TermBody for ProgramTerm {
     fn minlog_type(&self) -> Rc<MinlogType> {
         let pc_type = self.pconst.minlog_type();
-        self.substitution().substitute(&pc_type.into()).to_type().unwrap()
+        self.substitution().substitute::<TermSubstEntry>(&pc_type.into()).to_type().unwrap()
     }
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
@@ -146,14 +146,14 @@ impl TermBody for ProgramTerm {
         }
         
         for (from, to) in self.parameters.iter() {
-            let other_to = self.substitution().substitute(&from.into()).to_type().unwrap();
+            let other_to = self.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&other_to) {
                 return Some((conflict.0.into(), conflict.1.into()));
             }
         }
         
         for (from, to) in other_pterm.parameters.iter() {
-            let self_to = other_pterm.substitution().substitute(&from.into()).to_type().unwrap();
+            let self_to = other_pterm.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&self_to) {
                 return Some((conflict.0.into(), conflict.1.into()));
             }
@@ -180,7 +180,7 @@ impl TermBody for ProgramTerm {
                 }
                 
                 for (from, to) in pterm_pattern.parameters.iter() {
-                    let instance_to = pterm_pattern.substitution().substitute(&from.into()).to_type().unwrap();
+                    let instance_to = pterm_pattern.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
                     if from != &instance_to {
                         ctx.extend(&to.into(), &instance_to.into());
                     }

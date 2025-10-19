@@ -2,9 +2,13 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
+
+use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct PredicateDegree {
@@ -49,6 +53,12 @@ crate::wrapper_enum! {
         pub fn get_formulas(&Self) -> Vec<Rc<MinlogFormula>> {
             vec![]
         }
+        
+        pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
+        
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
+        
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry>
     }
     
     #[derive(PartialEq, Eq)]
@@ -71,23 +81,36 @@ crate::wrapper_enum! {
 }
 
 impl MinlogPredicate {
-    pub fn get_type_variables(pred: &Rc<MinlogPredicate>) -> Vec<Rc<MinlogType>> {
-        let types = pred.arity();
-        let mut type_vars = vec![];
-        
-        for t in types {
-            for var in t.get_type_variables() {
-                if !type_vars.contains(&var) {
-                    type_vars.push(var);
-                }
-            }
-        }
-        
-        type_vars
-    }
-    
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         todo!()
+    }
+    
+    pub fn contains_free_variable(pred: &Rc<MinlogPredicate>, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && pred.get_free_variables().contains(var)
+    }
+    
+    pub fn contains_bound_variable(pred: &Rc<MinlogPredicate>, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && pred.get_bound_variables().contains(var)
+    }
+    
+    pub fn contains_type_variable(pred: &Rc<MinlogPredicate>, tvar: &Rc<MinlogType>) -> bool {
+        pred.get_type_variables().contains(tvar)
+    }
+
+    pub fn contains_predicate_variable(pred: &Rc<MinlogPredicate>, pvar: &Rc<MinlogPredicate>) -> bool {
+        pred.get_predicate_variables().contains(pvar)
+    }
+    
+    pub fn contains_comprehension_term(pred: &Rc<MinlogPredicate>, cterm: &Rc<MinlogPredicate>) -> bool {
+        pred.get_comprehension_terms().contains(cterm)
+    }
+    
+    pub fn contains_inductive_predicate(pred: &Rc<MinlogPredicate>, ipred: &Rc<MinlogPredicate>) -> bool {
+        pred.get_inductive_predicates().contains(ipred)
+    }
+    
+    pub fn contains_formula(pred: &Rc<MinlogPredicate>, formula: &Rc<MinlogFormula>) -> bool {
+        pred.get_formulas().contains(formula)
     }
 }
 
@@ -102,6 +125,18 @@ impl PrettyPrintable for EmptyPredicateBody {
 
 impl PredicateBody for EmptyPredicateBody {
     fn arity(&self) -> Vec<Rc<MinlogType>> {
+        unimplemented!()
+    }
+    
+    fn substitute(&self, _from: &PredSubstEntry, _to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+        unimplemented!()
+    }
+    
+    fn first_conflict_with(&self, _other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+        unimplemented!()
+    }
+    
+    fn match_with(&self, _ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
         unimplemented!()
     }
 }

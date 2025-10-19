@@ -2,9 +2,13 @@
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
+
+use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 crate::wrapper_enum! {
     
@@ -43,6 +47,10 @@ crate::wrapper_enum! {
             vec![]
         }
         
+        pub fn get_comprehension_terms(&Self) -> Vec<Rc<MinlogPredicate>> {
+            vec![]
+        }
+        
         pub fn get_inductive_predicates(&Self) -> Vec<Rc<MinlogPredicate>> {
             vec![]
         }
@@ -52,6 +60,12 @@ crate::wrapper_enum! {
         }
         
         pub fn equivalent(&Self, other: &Rc<MinlogFormula>) -> bool
+        
+        pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula>
+        
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)>
+        
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry>
     }
     
     #[derive(PartialEq, Eq)]
@@ -108,6 +122,18 @@ impl FormulaBody for EmptyFormulaBody {
     }
     
     fn equivalent(&self, _other: &Rc<MinlogFormula>) -> bool {
+        unimplemented!()
+    }
+    
+    fn substitute(&self, _from: &PredSubstEntry, _to: &PredSubstEntry) -> Rc<MinlogFormula> {
+        unimplemented!()
+    }
+    
+    fn first_conflict_with(&self, _other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+        unimplemented!()
+    }
+    
+    fn match_with(&self, _ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
         unimplemented!()
     }
 }

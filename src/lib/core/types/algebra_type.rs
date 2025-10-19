@@ -128,14 +128,14 @@ impl TypeBody for AlgebraType {
         }
         
         for (from, to) in self.parameters.iter() {
-            let other_to = self.substitution().substitute(&from.into()).to_type().unwrap();
+            let other_to = self.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&other_to) {
                 return Some(conflict);
             }
         }
         
         for (from, to) in other_alg.parameters.iter() {
-            let self_to = other_alg.substitution().substitute(&from.into()).to_type().unwrap();
+            let self_to = other_alg.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
             if let Some(conflict) = to.first_conflict_with(&self_to) {
                 return Some(conflict);
             }
@@ -166,7 +166,7 @@ impl TypeBody for AlgebraType {
         let subst = instance_alg.substitution();
 
         for (from, to) in pattern_alg.parameters.iter() {
-            let instance_to = subst.substitute(&from.into()).to_type().unwrap();
+            let instance_to = subst.substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
             ctx.extend(to, &instance_to);
         }
         

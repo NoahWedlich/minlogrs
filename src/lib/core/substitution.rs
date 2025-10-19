@@ -11,8 +11,14 @@ pub trait Substitutable: Eq + Clone + PrettyPrintable {
     fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self>;
 }
 
+impl<T: Substitutable> SubstitutableWith<T> for T {
+    fn substitute_with(&self, from: &T, to: &T) -> T {
+        self.substitute(from, to)
+    }
+}
+
 pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
-    fn substitute(&self, from: &T, to: &T) -> Self;
+    fn substitute_with(&self, from: &T, to: &T) -> Self;
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -65,28 +71,18 @@ impl<T: Substitutable> Substitution<T> {
             .unwrap_or(value.clone())
     }
     
-    pub fn substitute(&self, element: &T) -> T {
+    pub fn substitute<U: SubstitutableWith<T>>(&self, element: &U) -> U {
         let mut result = element.clone();
         
         for (k, v) in self.pairs.iter() {
-            result = result.substitute(k, v);
+            result = result.substitute_with(k, v);
         }
 
         result
     }
-    
-    pub fn substitute_other<U: SubstitutableWith<T>>(&self, element: &U) -> U {
-        let mut result = element.clone();
-        
-        for (k, v) in self.pairs.iter() {
-            result = result.substitute(k, v);
-        }
 
-        result
-    }
-    
-    pub fn substitute_all(&self, elements: &[T]) -> Vec<T> {
-        elements.iter().map(|e| self.substitute(e)).collect()
+    pub fn substitute_all<U: SubstitutableWith<T>>(&self, elements: &[U]) -> Vec<U> {
+        elements.iter().map(|e| self.substitute::<U>(e)).collect()
     }
     
     pub fn collapse(&mut self) {
