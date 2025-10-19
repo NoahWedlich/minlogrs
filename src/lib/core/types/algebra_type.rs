@@ -88,6 +88,10 @@ impl TypeBody for AlgebraType {
             .max().unwrap_or(0)
     }
     
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        vec![Rc::new(MinlogType::Algebra(self.clone()))]
+    }
+    
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
         if self.parameters.iter().any(|(f, _)| f == from) {
             let mut subst = self.substitution();

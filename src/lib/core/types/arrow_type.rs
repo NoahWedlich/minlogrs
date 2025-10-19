@@ -60,25 +60,25 @@ impl TypeBody for ArrowType {
         max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
     }
     
-    fn inner_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
         let mut inner = vec![];
         
         for arg in &self.arguments {
-            inner.extend(MinlogType::get_type_variables(arg));
+            inner.extend(arg.get_type_variables());
         }
 
-        inner.extend(MinlogType::get_type_variables(&self.value));
+        inner.extend(self.value.get_type_variables());
         inner
     }
     
-    fn inner_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
         let mut inner = vec![];
         
         for arg in &self.arguments {
-            inner.extend(MinlogType::get_algebra_types(arg));
+            inner.extend(arg.get_algebra_types());
         }
 
-        inner.extend(MinlogType::get_algebra_types(&self.value));
+        inner.extend(self.value.get_algebra_types());
         inner
     }
     

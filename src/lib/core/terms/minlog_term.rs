@@ -42,23 +42,23 @@ crate::wrapper_enum! {
             false
         }
         
-        pub fn inner_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
+        pub fn get_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
         }
         
-        pub fn inner_bound_variables(&Self) -> Vec<Rc<MinlogTerm>> {
+        pub fn get_bound_variables(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
         }
         
-        pub fn inner_constructors(&Self) -> Vec<Rc<MinlogTerm>> {
+        pub fn get_constructors(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
         }
         
-        pub fn inner_program_terms(&Self) -> Vec<Rc<MinlogTerm>> {
+        pub fn get_program_terms(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
         }
         
-        pub fn inner_internal_constants(&Self) -> Vec<Rc<MinlogTerm>> {
+        pub fn get_internal_constants(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
         }
         
@@ -93,7 +93,7 @@ crate::wrapper_enum! {
     impl PrettyPrintable {
         fn to_pp_element(&Self, detail: bool) -> PPElement;
 
-        fn requires_parens(&Self, _detail: bool) -> bool;
+        fn requires_parens(&Self, detail: bool) -> bool;
 
         fn open_paren(&Self) -> String;
 
@@ -102,74 +102,24 @@ crate::wrapper_enum! {
 }
 
 impl MinlogTerm {
-    pub fn get_free_variables(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = term.inner_free_variables();
-        
-        if term.is_variable() {
-            inner.push(term.clone());
-        }
-        
-        inner
-    }
-    
     pub fn contains_free_variable(term: &Rc<MinlogTerm>, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && MinlogTerm::get_free_variables(term).contains(var)
-    }
-    
-    pub fn get_bound_variables(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = term.inner_bound_variables();
-        
-        if term.is_variable() {
-            inner.push(term.clone());
-        }
-        
-        inner
+        var.is_variable() && term.get_free_variables().contains(var)
     }
     
     pub fn contains_bound_variable(term: &Rc<MinlogTerm>, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && MinlogTerm::get_bound_variables(term).contains(var)
-    }
-    
-    pub fn get_constructors(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = term.inner_constructors();
-        
-        if term.is_constructor() {
-            inner.push(term.clone());
-        }
-        
-        inner
+        var.is_variable() && term.get_bound_variables().contains(var)
     }
     
     pub fn contains_constructor(term: &Rc<MinlogTerm>, con: &Rc<MinlogTerm>) -> bool {
-        con.is_constructor() && MinlogTerm::get_constructors(term).contains(con)
-    }
-    
-    pub fn get_program_terms(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = term.inner_program_terms();
-        
-        if term.is_program_term() {
-            inner.push(term.clone());
-        }
-        
-        inner
+        con.is_constructor() && term.get_constructors().contains(con)
     }
     
     pub fn contains_program_term(term: &Rc<MinlogTerm>, prog: &Rc<MinlogTerm>) -> bool {
-        prog.is_program_term() && MinlogTerm::get_program_terms(term).contains(prog)
-    }
-    
-    pub fn get_internal_constants(term: &Rc<MinlogTerm>) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = term.inner_internal_constants();
-        
-        if term.is_internal_constant() {
-            inner.push(term.clone());
-        }
-        
-        inner
+        prog.is_program_term() && term.get_program_terms().contains(prog)
     }
     
     pub fn contains_internal_constant(term: &Rc<MinlogTerm>, ic: &Rc<MinlogTerm>) -> bool {
-        ic.is_internal_constant() && MinlogTerm::get_internal_constants(term).contains(ic)
+        ic.is_internal_constant() && term.get_internal_constants().contains(ic)
     }
 }
 

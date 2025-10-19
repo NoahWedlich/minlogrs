@@ -60,6 +60,10 @@ impl TermBody for Constructor {
         self.minlog_type.is_algebra()
     }
     
+    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        vec![Rc::new(MinlogTerm::Constructor(self.clone()))]
+    }
+    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         _forward: &mut Vec<(TermVariable, TermVariable)>,
         _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {

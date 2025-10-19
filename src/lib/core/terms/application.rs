@@ -183,11 +183,11 @@ impl TermBody for Application {
         self.operator.is_constructor() && self.operands.iter().all(|op| op.constructor_pattern())
     }
     
-    fn inner_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = MinlogTerm::get_free_variables(&self.operator);
-        
+    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = self.operator.get_free_variables();
+
         for op in &self.operands {
-            for var in MinlogTerm::get_free_variables(op) {
+            for var in op.get_free_variables() {
                 if !vars.contains(&var) {
                     vars.push(var);
                 }
@@ -197,11 +197,11 @@ impl TermBody for Application {
         vars
     }
 
-    fn inner_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = MinlogTerm::get_bound_variables(&self.operator);
-        
+    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = self.operator.get_bound_variables();
+
         for op in &self.operands {
-            for var in MinlogTerm::get_bound_variables(op) {
+            for var in op.get_bound_variables() {
                 if !vars.contains(&var) {
                     vars.push(var);
                 }
@@ -210,12 +210,12 @@ impl TermBody for Application {
         
         vars
     }
-    
-    fn inner_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut cons = MinlogTerm::get_constructors(&self.operator);
-        
+
+    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut cons = self.operator.get_constructors();
+
         for op in &self.operands {
-            for con in MinlogTerm::get_constructors(op) {
+            for con in op.get_constructors() {
                 if !cons.contains(&con) {
                     cons.push(con);
                 }
@@ -224,12 +224,12 @@ impl TermBody for Application {
         
         cons
     }
-    
-    fn inner_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut progs = MinlogTerm::get_program_terms(&self.operator);
-        
+
+    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut progs = self.operator.get_program_terms();
+
         for op in &self.operands {
-            for prog in MinlogTerm::get_program_terms(op) {
+            for prog in op.get_program_terms() {
                 if !progs.contains(&prog) {
                     progs.push(prog);
                 }
@@ -238,12 +238,12 @@ impl TermBody for Application {
         
         progs
     }
-    
-    fn inner_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut consts = MinlogTerm::get_internal_constants(&self.operator);
-        
+
+    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut consts = self.operator.get_internal_constants();
+
         for op in &self.operands {
-            for c in MinlogTerm::get_internal_constants(op) {
+            for c in op.get_internal_constants() {
                 if !consts.contains(&c) {
                     consts.push(c);
                 }

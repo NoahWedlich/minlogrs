@@ -68,24 +68,24 @@ impl TermBody for Projection {
         1 + self.term.depth()
     }
     
-    fn inner_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_free_variables(&self.term)
+    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        self.term.get_free_variables()
+    }
+
+    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        self.term.get_bound_variables()
     }
     
-    fn inner_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_bound_variables(&self.term)
+    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        self.term.get_constructors()
+    }
+
+    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        self.term.get_program_terms()
     }
     
-    fn inner_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_constructors(&self.term)
-    }
-    
-    fn inner_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_program_terms(&self.term)
-    }
-    
-    fn inner_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_internal_constants(&self.term)
+    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+        self.term.get_internal_constants()
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

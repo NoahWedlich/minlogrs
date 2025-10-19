@@ -29,11 +29,11 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn inner_type_variables(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
         
-        pub fn inner_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn get_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
         
@@ -59,7 +59,7 @@ crate::wrapper_enum! {
     impl PrettyPrintable {
         fn to_pp_element(&Self, detail: bool) -> PPElement;
 
-        fn requires_parens(&Self, _detail: bool) -> bool;
+        fn requires_parens(&Self, detail: bool) -> bool;
 
         fn open_paren(&Self) -> String;
 
@@ -80,31 +80,11 @@ impl MinlogType {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }
     
-    pub fn get_type_variables(minlog_type: &Rc<MinlogType>) -> Vec<Rc<MinlogType>> {
-        let mut inner = minlog_type.inner_type_variables();
-        
-        if minlog_type.is_variable() {
-            inner.push(minlog_type.clone());
-        }
-        
-        inner
-    }
-    
     pub fn contains_type_variable(minlog_type: &Rc<MinlogType>, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && MinlogType::get_type_variables(minlog_type).contains(var)
-    }
-    
-    pub fn get_algebra_types(minlog_type: &Rc<MinlogType>) -> Vec<Rc<MinlogType>> {
-        let mut inner = minlog_type.inner_algebra_types();
-        
-        if minlog_type.is_algebra() {
-            inner.push(minlog_type.clone());
-        }
-        
-        inner
+        var.is_variable() && minlog_type.get_type_variables().contains(var)
     }
     
     pub fn contains_algebra_type(minlog_type: &Rc<MinlogType>, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && MinlogType::get_algebra_types(minlog_type).contains(alg)
+        alg.is_algebra() && minlog_type.get_algebra_types().contains(alg)
     }
 }

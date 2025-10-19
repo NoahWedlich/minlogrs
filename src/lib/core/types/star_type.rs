@@ -34,21 +34,21 @@ impl TypeBody for StarType {
         self.types.iter().map(|t| t.level()).max().unwrap_or(0)
     }
     
-    fn inner_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
         let mut inner = vec![];
         
         for t in &self.types {
-            inner.extend(MinlogType::get_type_variables(t));
+            inner.extend(t.get_type_variables());
         }
         
         inner
     }
-    
-    fn inner_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
         let mut inner = vec![];
         
         for t in &self.types {
-            inner.extend(MinlogType::get_algebra_types(t));
+            inner.extend(t.get_algebra_types());
         }
         
         inner

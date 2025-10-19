@@ -126,16 +126,16 @@ impl TermBody for Abstraction {
         1 + self.kernel.depth()
     }
     
-    fn inner_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = MinlogTerm::get_free_variables(&self.kernel);
+    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut inner = self.kernel.get_free_variables();
         
         inner.retain(|v| !self.vars.contains(v));
         
         inner
     }
     
-    fn inner_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = MinlogTerm::get_bound_variables(&self.kernel);
+    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut inner = self.kernel.get_bound_variables();
         
         for var in &self.vars {
             if !inner.contains(var) {
@@ -146,16 +146,16 @@ impl TermBody for Abstraction {
         inner
     }
     
-    fn inner_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_constructors(&self.kernel)
+    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        self.kernel.get_constructors()
     }
     
-    fn inner_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_program_terms(&self.kernel)
+    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        self.kernel.get_program_terms()
     }
     
-    fn inner_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        MinlogTerm::get_internal_constants(&self.kernel)
+    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+        self.kernel.get_internal_constants()
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

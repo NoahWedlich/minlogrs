@@ -67,6 +67,10 @@ impl TermBody for TermVariable {
         true
     }
     
+    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        vec![Rc::new(MinlogTerm::Variable(self.clone()))]
+    }
+    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {

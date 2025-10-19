@@ -89,6 +89,10 @@ impl TermBody for ProgramTerm {
         0
     }
     
+    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        vec![Rc::new(MinlogTerm::ProgramTerm(self.clone()))]
+    }
+    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         _forward: &mut Vec<(TermVariable, TermVariable)>,
         _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {

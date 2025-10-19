@@ -22,7 +22,7 @@ crate::wrapper_enum! {
     impl PrettyPrintable {
         fn to_pp_element(&Self, detail: bool) -> PPElement;
 
-        fn requires_parens(&Self, _detail: bool) -> bool;
+        fn requires_parens(&Self, detail: bool) -> bool;
 
         fn open_paren(&Self) -> String;
 

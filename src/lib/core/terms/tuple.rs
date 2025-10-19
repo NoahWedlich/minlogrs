@@ -1,5 +1,6 @@
 
 use std::rc::Rc;
+use std::vec;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -62,54 +63,74 @@ impl TermBody for Tuple {
         1 + self.elements.iter().map(|e| e.depth()).max().unwrap_or(0)
     }
     
-    fn inner_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = vec![];
-        
-        for element in &self.elements {
-            inner.extend(MinlogTerm::get_free_variables(element));
+    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = vec![];
+
+        for elem in &self.elements {
+            for var in elem.get_free_variables() {
+                if !vars.contains(&var) {
+                    vars.push(var);
+                }
+            }
         }
         
-        inner
+        vars
     }
-    
-    fn inner_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = vec![];
-        
-        for element in &self.elements {
-            inner.extend(MinlogTerm::get_bound_variables(element));
+
+    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut vars = vec![];
+
+        for elem in &self.elements {
+            for var in elem.get_bound_variables() {
+                if !vars.contains(&var) {
+                    vars.push(var);
+                }
+            }
         }
         
-        inner
+        vars
     }
-    
-    fn inner_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = vec![];
-        
-        for element in &self.elements {
-            inner.extend(MinlogTerm::get_constructors(element));
+
+    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut cons = vec![];
+
+        for elem in &self.elements {
+            for con in elem.get_constructors() {
+                if !cons.contains(&con) {
+                    cons.push(con);
+                }
+            }
         }
         
-        inner
+        cons
     }
-    
-    fn inner_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = vec![];
-        
-        for element in &self.elements {
-            inner.extend(MinlogTerm::get_program_terms(element));
+
+    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut progs = vec![];
+
+        for elem in &self.elements {
+            for prog in elem.get_program_terms() {
+                if !progs.contains(&prog) {
+                    progs.push(prog);
+                }
+            }
         }
         
-        inner
+        progs
     }
-    
-    fn inner_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = vec![];
-        
-        for element in &self.elements {
-            inner.extend(MinlogTerm::get_internal_constants(element));
+
+    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+        let mut consts = vec![];
+
+        for elem in &self.elements {
+            for c in elem.get_internal_constants() {
+                if !consts.contains(&c) {
+                    consts.push(c);
+                }
+            }
         }
         
-        inner
+        consts
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
