@@ -59,10 +59,6 @@ impl PredicateBody for PredicateVariable {
         self.degree.clone()
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        self.arity.iter().flat_map(|t| t.get_type_variables()).collect()
-    }
-    
     fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
         vec![Rc::new(MinlogPredicate::Variable(self.clone()))]
     }

@@ -252,7 +252,7 @@ impl TermBody for Abstraction {
             }
         }
         
-        let new_other = subst.apply(&TermSubstEntry::Term(other.clone()));
+        let new_other = subst.substitute(&TermSubstEntry::Term(other.clone()));
         
         if let TermSubstEntry::Term(t) = new_other {
             self.kernel.first_conflict_with(&t.to_abstraction().unwrap().kernel)

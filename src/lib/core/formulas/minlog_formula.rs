@@ -10,10 +10,20 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
+#[derive(PartialEq, Eq, Clone)]
+pub struct FormulaOfNulltype {
+    pub positive_nulltype: bool,
+    pub negative_nulltype: bool,
+}
+
 crate::wrapper_enum! {
     
     @default { EmptyFormulaBody }
     pub trait FormulaBody: PrettyPrintable, Clone, PartialEq, Eq {
+        pub fn of_nulltype(&Self) -> FormulaOfNulltype {
+            FormulaOfNulltype { positive_nulltype: false, negative_nulltype: false }
+        }
+        
         pub fn fold(&Self) -> Rc<MinlogFormula>
         pub fn unfold(&Self) -> Rc<MinlogFormula>
 

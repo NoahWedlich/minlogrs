@@ -10,6 +10,7 @@ use crate::core::formulas::minlog_formula::MinlogFormula;
 
 use crate::core::predicates::predicate_constant::PredicateConstant;
 use crate::core::predicates::predicate_variable::PredicateVariable;
+use crate::core::predicates::comprehension_term::ComprehensionTerm;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -37,10 +38,6 @@ crate::wrapper_enum! {
             vec![]
         }
         
-        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
-            vec![]
-        }
-        
         pub fn get_predicate_variables(&Self) -> Vec<Rc<MinlogPredicate>> {
             vec![]
         }
@@ -50,10 +47,6 @@ crate::wrapper_enum! {
         }
         
         pub fn get_inductive_predicates(&Self) -> Vec<Rc<MinlogPredicate>> {
-            vec![]
-        }
-        
-        pub fn get_formulas(&Self) -> Vec<Rc<MinlogFormula>> {
             vec![]
         }
         
@@ -68,8 +61,8 @@ crate::wrapper_enum! {
     pub enum MinlogPredicate {
         Constant(||constant|| PredicateConstant),
         Variable(||variable|| PredicateVariable),
-        Comprehension(||comprehension||),
-        Inductive(||inductive||),
+        Comprehension(||comprehension_term|| ComprehensionTerm),
+        Inductive(||inductive_predicate||),
     }
     
     impl PrettyPrintable {
@@ -86,6 +79,18 @@ crate::wrapper_enum! {
 impl MinlogPredicate {
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         todo!()
+    }
+    
+    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        let mut type_vars = vec![];
+
+        for t in self.arity().iter() {
+            if !type_vars.contains(t) {
+                type_vars.push(t.clone());
+            }
+        }
+        
+        type_vars
     }
     
     pub fn contains_free_variable(pred: &Rc<MinlogPredicate>, var: &Rc<MinlogTerm>) -> bool {
@@ -110,10 +115,6 @@ impl MinlogPredicate {
     
     pub fn contains_inductive_predicate(pred: &Rc<MinlogPredicate>, ipred: &Rc<MinlogPredicate>) -> bool {
         pred.get_inductive_predicates().contains(ipred)
-    }
-    
-    pub fn contains_formula(pred: &Rc<MinlogPredicate>, formula: &Rc<MinlogFormula>) -> bool {
-        pred.get_formulas().contains(formula)
     }
 }
 
