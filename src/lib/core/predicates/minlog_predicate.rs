@@ -8,6 +8,7 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 
+use crate::core::predicates::predicate_constant::PredicateConstant;
 use crate::core::predicates::predicate_variable::PredicateVariable;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
@@ -25,7 +26,7 @@ crate::wrapper_enum! {
         pub fn arity(&Self) -> Vec<Rc<MinlogType>>
         
         pub fn degree(&Self) -> PredicateDegree {
-            PredicateDegree { positive_content: true, negative_content: true }
+            PredicateDegree { positive_content: false, negative_content: false }
         }
         
         pub fn get_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
@@ -65,7 +66,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq)]
     pub enum MinlogPredicate {
-        Constant(||constant||),
+        Constant(||constant|| PredicateConstant),
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension||),
         Inductive(||inductive||),
