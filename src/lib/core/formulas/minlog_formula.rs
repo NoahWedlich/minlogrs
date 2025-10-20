@@ -34,13 +34,15 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn ex_free(&Self) -> bool {
+        pub fn existential_free(&Self) -> bool {
             false
         }
         
         pub fn to_nc_formula(&Self) -> Rc<MinlogFormula>
 
         pub fn to_normal_form(&Self, eta: bool, pi: bool) -> Rc<MinlogFormula>
+        
+        pub fn extracted_type(&Self) -> Rc<MinlogType>
         
         pub fn get_polarized_tvars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
             vec![]
@@ -195,7 +197,11 @@ impl FormulaBody for EmptyFormulaBody {
     fn to_normal_form(&self, _eta: bool, _pi: bool) -> Rc<MinlogFormula> {
         unimplemented!()
     }
-    
+
+    fn extracted_type(&self) -> Rc<MinlogType> {
+        unimplemented!()
+    }
+
     fn equivalent(&self, _other: &Rc<MinlogFormula>) -> bool {
         unimplemented!()
     }

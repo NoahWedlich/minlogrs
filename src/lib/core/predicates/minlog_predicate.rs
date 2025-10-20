@@ -31,6 +31,8 @@ crate::wrapper_enum! {
             PredicateDegree { positive_content: false, negative_content: false }
         }
         
+        pub fn extracted_type(&Self) -> Rc<MinlogType>
+        
         pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
@@ -158,6 +160,10 @@ impl PrettyPrintable for EmptyPredicateBody {
 
 impl PredicateBody for EmptyPredicateBody {
     fn arity(&self) -> Vec<Rc<MinlogType>> {
+        unimplemented!()
+    }
+    
+    fn extracted_type(&self) -> Rc<MinlogType> {
         unimplemented!()
     }
     

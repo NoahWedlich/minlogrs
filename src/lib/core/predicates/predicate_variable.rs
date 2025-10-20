@@ -7,6 +7,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
+use crate::core::types::type_variable::TypeVariable;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
@@ -58,6 +59,16 @@ impl PredicateBody for PredicateVariable {
     
     fn degree(&self) -> PredicateDegree {
         self.degree.clone()
+    }
+    
+    fn extracted_type(&self) -> Rc<MinlogType> {
+        let name = if self.index > 0 {
+            format!("{}_{}^et", self.name, self.index)
+        } else {
+            format!("{}^et", self.name)
+        };
+        
+        TypeVariable::create(name)
     }
     
     fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {

@@ -6,6 +6,7 @@ use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
+use crate::core::types::type_constant::TypeConstant;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
@@ -15,11 +16,12 @@ use crate::core::predicates::predicate_substitution::PredSubstEntry;
 pub struct PredicateConstant {
     name: String,
     arity: Vec<Rc<MinlogType>>,
+    computational: bool,
 }
 
 impl PredicateConstant {
-    pub fn create(name: String, arity: Vec<Rc<MinlogType>>) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Constant(PredicateConstant { name, arity }))
+    pub fn create(name: String, arity: Vec<Rc<MinlogType>>, computational: bool) -> Rc<MinlogPredicate> {
+        Rc::new(MinlogPredicate::Constant(PredicateConstant { name, arity, computational }))
     }
     
     pub fn name(&self) -> &str {
@@ -30,6 +32,14 @@ impl PredicateConstant {
 impl PredicateBody for PredicateConstant {
     fn arity(&self) -> Vec<Rc<MinlogType>> {
         self.arity.clone()
+    }
+    
+    fn extracted_type(&self) -> Rc<MinlogType> {
+        if self.computational {
+            self.arity.last().unwrap().clone()
+        } else {
+            TypeConstant::create_null()
+        }
     }
     
     fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
@@ -47,7 +57,7 @@ impl PredicateBody for PredicateConstant {
                     .map(|t| t.substitute(from_t, to_t))
                     .collect();
                 
-                PredicateConstant::create(self.name.clone(), new_arity)
+                PredicateConstant::create(self.name.clone(), new_arity, self.computational)
             },
             (PredSubstEntry::Term(_), PredSubstEntry::Term(_)) => {
                 Rc::new(MinlogPredicate::Constant(self.clone()))

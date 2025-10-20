@@ -76,6 +76,10 @@ impl PredicateBody for ComprehensionTerm {
         }
     }
     
+    fn extracted_type(&self) -> Rc<MinlogType> {
+        self.body.extracted_type()
+    }
+    
     fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
         let mut inner = self.body.get_type_variables();
         
