@@ -161,25 +161,13 @@ impl PredicateBody for PredicateVariable {
 impl PrettyPrintable for PredicateVariable {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         if detail {
-            let mut types = vec![];
-            
-            for (i, t) in self.arity.iter().enumerate() {
-                types.push(
-                    if i < self.arity.len() - 1 {
-                        PPElement::group(vec![
-                            t.to_pp_element(true),
-                            PPElement::break_elem(0, 0, false),
-                            PPElement::text(",".to_string()),
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        t.to_pp_element(true)
-                    }
-                );
-                
-                if i < self.arity.len() - 1 {
-                    types.push(PPElement::break_elem(1, 0, false));
-                }
-            }
+            let types = PPElement::list(
+                self.arity.iter().map(|t| t.to_pp_element(true)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Flexible,
+            );
             
             PPElement::group(vec![
                 PPElement::text(if self.index > 0 {
@@ -191,7 +179,7 @@ impl PrettyPrintable for PredicateVariable {
                 PPElement::group(vec![
                     PPElement::text("[".to_string()),
                     PPElement::break_elem(1, 4, false),
-                    PPElement::group(types, BreakType::Flexible, 0),
+                    types,
                     PPElement::break_elem(1, 0, false),
                     PPElement::text("]".to_string()),
                 ], BreakType::Consistent, 0),

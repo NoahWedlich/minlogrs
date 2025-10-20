@@ -71,65 +71,42 @@ impl Algebra {
 
 impl PrettyPrintable for Algebra {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.get_type_variables();
-        
-        let name = if tvars.is_empty() {
+        let name = if self.get_type_variables().is_empty() {
             PPElement::text(self.name.clone())
         } else {
-            let mut tvarlist = vec![];
-            for (i, tvar) in tvars.iter().enumerate() {
-                tvarlist.push(
-                    if i < tvars.len() - 1 {
-                        PPElement::group(vec![
-                            tvar.to_pp_element(detail),
-                            PPElement::break_elem(0, 4, false),
-                            PPElement::text(",".to_string())
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        tvar.to_pp_element(detail)
-                    }
-                );
-                
-                if i < tvars.len() - 1 {
-                    tvarlist.push(PPElement::break_elem(1, 4, false));
-                }
-            }
+            let tvars = PPElement::list(
+                self.get_type_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible,
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.name.clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(tvarlist, BreakType::Flexible, 0),
+                tvars,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
         };
         
         if detail {
-            let mut constructors = vec![];
-            for (i, c) in self.constructors.borrow().iter().enumerate() {
-                constructors.push(
-                    if i < self.constructors.borrow().len() - 1 {
-                        PPElement::group(vec![
-                            c.to_pp_element(true),
-                            PPElement::text(";".to_string()),
-                            PPElement::break_elem(1, 4, true)
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        PPElement::group(vec![
-                            c.to_pp_element(true),
-                            PPElement::text(";".to_string())
-                        ], BreakType::Flexible, 0)
-                    }
-                );
-            }
+            let constructors = PPElement::list(
+                self.constructors.borrow().iter().map(|c| c.to_pp_element(true)).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, true),
+                BreakType::Flexible,
+            );
             
             
             PPElement::group(vec![
                 name,
                 PPElement::text(" {".to_string()),
                 PPElement::break_elem(1, 4, true),
-                PPElement::group(constructors, BreakType::Flexible, 0),
+                constructors,
                 PPElement::break_elem(1, 0, true),
                 PPElement::text("}".to_string())
             ], BreakType::Consistent, 0)

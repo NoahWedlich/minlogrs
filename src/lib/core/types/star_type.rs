@@ -116,28 +116,13 @@ impl TypeBody for StarType {
 
 impl PrettyPrintable for StarType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let mut elements = vec![];
-        
-        for (i, arg_type) in self.types.iter().enumerate() {
-            elements.push(
-                if i > 0 {
-                    PPElement::group(
-                        vec![
-                            PPElement::text("*".to_string()),
-                            PPElement::break_elem(1, 4, false),
-                            arg_type.to_enclosed_pp_element(detail),
-                        ], BreakType::Flexible, 0)
-                } else {
-                    arg_type.to_enclosed_pp_element(detail)
-                }
-            );
-            
-            if i + 1 < self.types.len() {
-                elements.push(PPElement::break_elem(1, 4, false));
-            }
-        }
-        
-        PPElement::group(elements, BreakType::Flexible, 0)
+        PPElement::list(
+            self.types.iter().map(|t| t.to_enclosed_pp_element(detail)).collect(),
+            PPElement::break_elem(1, 4, false),
+            PPElement::text("*".to_string()),
+            PPElement::break_elem(1, 4, false),
+            BreakType::Flexible
+        )
     }
     
     fn requires_parens(&self, _detail: bool) -> bool {

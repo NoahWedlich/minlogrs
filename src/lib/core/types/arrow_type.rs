@@ -154,35 +154,14 @@ impl PrettyPrintable for ArrowType {
             return self.value.to_pp_element(detail);
         }
         
-        let mut elements = vec![];
-        
-        for (i, arg) in self.arguments.iter().enumerate() {
-            elements.push(
-                if i > 0 {
-                    PPElement::group(vec![
-                        PPElement::text("->".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        arg.to_enclosed_pp_element(detail)
-                    ], BreakType::Flexible, 0)
-                } else {
-                    arg.to_enclosed_pp_element(detail)
-                }
-            );
-            
-            elements.push(PPElement::break_elem(1, 4, false));
-        }
-        
-        elements.push(
-            PPElement::group(
-                vec![
-                    PPElement::text("->".to_string()),
-                    PPElement::break_elem(1, 4, false),
-                    self.value.to_enclosed_pp_element(detail)
-                ], BreakType::Flexible, 0
-            )
-        );
-        
-        PPElement::group(elements, BreakType::Flexible, 0)
+        PPElement::list(
+            self.arguments.iter().map(|arg| arg.to_enclosed_pp_element(detail))
+                .chain(std::iter::once(self.value.to_enclosed_pp_element(detail))).collect(),
+            PPElement::break_elem(1, 4, false),
+            PPElement::text("->".to_string()),
+            PPElement::break_elem(1, 4, false),
+            BreakType::Flexible
+        )
     }
     
     fn requires_parens(&self, _detail: bool) -> bool {

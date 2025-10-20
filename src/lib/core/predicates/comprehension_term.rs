@@ -236,31 +236,19 @@ impl PredicateBody for ComprehensionTerm {
 }
 
 impl PrettyPrintable for ComprehensionTerm {
-    fn to_pp_element(&self, detail: bool) -> PPElement {
-        let mut variables = vec![];
-        
-        for (i, var) in self.vars.iter().enumerate() {
-            variables.push(
-                if i < self.vars.len() - 1 {
-                    PPElement::group(vec![
-                        var.to_pp_element(detail),
-                        PPElement::break_elem(0, 0, false),
-                        PPElement::text(",".to_string()),
-                    ], BreakType::Flexible, 0)
-                } else {
-                    var.to_pp_element(detail)
-                }
-            );
-            
-            if i < self.vars.len() - 1 {
-                variables.push(PPElement::break_elem(1, 0, false));
-            }
-        }
+    fn to_pp_element(&self, detail: bool) -> PPElement {        
+        let variables = PPElement::list(
+            self.vars.iter().map(|v| v.to_pp_element(detail)).collect(),
+            PPElement::break_elem(0, 0, false),
+            PPElement::text(",".to_string()),
+            PPElement::break_elem(1, 0, false),
+            BreakType::Flexible,
+        );
         
         PPElement::group(vec![
             PPElement::text("{".to_string()),
             PPElement::break_elem(1, 4, false),
-            PPElement::group(variables, BreakType::Flexible, 0),
+            variables,
             PPElement::break_elem(1, 0, false),
             PPElement::text("|".to_string()),
             PPElement::break_elem(1, 4, false),

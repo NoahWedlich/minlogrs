@@ -302,29 +302,19 @@ impl PrettyPrintable for Abstraction {
             return self.kernel.to_pp_element(detail);
         }
         
-        let mut variables = vec![];
-        
-        for (i, var) in self.vars.iter().enumerate() {
-            variables.push(
-                if i > 0 {
-                    PPElement::group(vec![
-                        PPElement::text(",".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        var.to_pp_element(detail)
-                    ], BreakType::Flexible, 0)
-                } else {
-                    var.to_pp_element(detail)
-                }
-            );
-            
-            variables.push(PPElement::break_elem(0, 4, false));
-        }
+        let variables = PPElement::list(
+            self.vars.iter().map(|v| v.to_pp_element(detail)).collect(),
+            PPElement::break_elem(0, 4, false),
+            PPElement::text(",".to_string()),
+            PPElement::break_elem(1, 4, false),
+            BreakType::Flexible
+        );
         
         let elements = vec![
             PPElement::group(vec![
                 PPElement::text("[".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(variables, BreakType::Flexible, 0),
+                variables,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text("]".to_string())
             ], BreakType::Consistent, 0),

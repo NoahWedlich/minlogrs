@@ -89,6 +89,8 @@ fn main() {
     let succ_type = ArrowType::create(vec![nat_type.clone()], nat_type.clone());
     let succ = Constructor::create("Succ".to_string(), succ_type.clone());
     nat.add_constructor(succ);
+    
+    nat_type.to_algebra().unwrap().ensure_well_founded();
 
     println!("Algebra:");
     println!("{}", nat.debug_string());
@@ -104,6 +106,8 @@ fn main() {
     let cons_type = ArrowType::create(vec![type_var_1.clone(), list_type.clone()], list_type.clone());
     let cons = Constructor::create("Cons".to_string(), cons_type.clone());
     list.add_constructor(cons);
+    
+    list_type.to_algebra().unwrap().ensure_well_founded();
     
     println!("Algebra:");
     println!("{}", list.debug_string());

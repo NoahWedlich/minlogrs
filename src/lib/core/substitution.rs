@@ -281,35 +281,21 @@ impl<T: Substitutable> PrettyPrintable for Substitution<T> {
         elements.push(PPElement::text("{".to_string()));
         elements.push(PPElement::break_elem(1, 4, false));
         
-        for (i, (k, v)) in self.pairs.iter().enumerate() {
-            elements.push(
-                if i < self.pairs.len() - 1 {
-                    PPElement::group(vec![
-                        PPElement::group(vec![
-                            k.to_enclosed_pp_element(detail),
-                            PPElement::break_elem(1, 4, false),
-                            PPElement::text("->".to_string()),
-                            PPElement::break_elem(1, 4, false),
-                            v.to_enclosed_pp_element(detail),
-                        ], BreakType::Flexible, 0),
-                        PPElement::break_elem(0, 4, false),
-                        PPElement::text(",".to_string()),
-                    ], BreakType::Flexible, 0)
-                } else {
-                    PPElement::group(vec![
-                        k.to_enclosed_pp_element(detail),
-                        PPElement::break_elem(1, 4, false),
-                        PPElement::text("->".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        v.to_enclosed_pp_element(detail),
-                    ], BreakType::Flexible, 0)
-                }
-            );
-            
-            if i + 1 < self.pairs.len() {
-                elements.push(PPElement::break_elem(1, 4, false));
-            }
-        }
+        elements.push(PPElement::list(
+            self.pairs.iter().map(|(k, v)| {
+                PPElement::group(vec![
+                    k.to_enclosed_pp_element(detail),
+                    PPElement::break_elem(1, 4, false),
+                    PPElement::text("->".to_string()),
+                    PPElement::break_elem(1, 4, false),
+                    v.to_enclosed_pp_element(detail),
+                ], BreakType::Flexible, 0)
+            }).collect(),
+            PPElement::break_elem(0, 4, false),
+            PPElement::text(",".to_string()),
+            PPElement::break_elem(1, 4, false),
+            BreakType::Flexible,
+        ));
         
         elements.push(PPElement::break_elem(1, 0, false));
         elements.push(PPElement::text("}".to_string()));

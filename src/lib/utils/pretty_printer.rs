@@ -89,6 +89,31 @@ impl PPElement {
     pub fn group(elements: Vec<PPElement>, break_type: BreakType, indent: usize) -> PPElement {
         PPElement::Group(GroupElement { elements, break_type, indent })
     }
+    
+    pub fn list(elements: Vec<PPElement>, first_break: PPElement, separator: PPElement, sec_break: PPElement, break_type: BreakType) -> PPElement {
+        let mut grouped_elements = vec![];
+        
+        let element_count = elements.len();
+        for (i, element) in elements.into_iter().enumerate() {
+            grouped_elements.push(
+                if i < element_count - 1 {
+                    PPElement::group(vec![
+                        element,
+                        first_break.clone(),
+                        separator.clone(),
+                    ], BreakType::Flexible, 0)
+                } else {
+                    element
+                }
+            );
+            
+            if i < element_count - 1 {
+                grouped_elements.push(sec_break.clone());
+            }
+        }
+        
+        PPElement::group(grouped_elements, break_type, 0)
+    }
 }
 
 #[derive(Debug, Clone)]

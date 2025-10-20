@@ -278,78 +278,50 @@ impl PrettyPrintable for ProgramConstant {
         let name = if tvars.is_empty() {
             PPElement::text(self.name.clone())
         } else {
-            let mut tvarlist = vec![];
-            for (i, tvar) in tvars.iter().enumerate() {
-                tvarlist.push(
-                    if i < tvars.len() - 1 {
-                        PPElement::group(vec![
-                            tvar.to_pp_element(detail),
-                            PPElement::break_elem(0, 4, false),
-                            PPElement::text(",".to_string())
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        tvar.to_pp_element(detail)
-                    }
-                );
-                
-                if i < tvars.len() - 1 {
-                    tvarlist.push(PPElement::break_elem(1, 4, false));
-                }
-            }
+            let tvars = PPElement::list(
+                self.get_type_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.name.clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(tvarlist, BreakType::Flexible, 0),
+                tvars,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
         };
         
         if detail {
-            let mut comp_rules = vec![];
-            for (i, c) in self.computation_rules.borrow().iter().enumerate() {
-                comp_rules.push(
-                    if i < self.computation_rules.borrow().len() - 1 {
-                        PPElement::group(vec![
-                            c.to_pp_element(true),
-                            PPElement::text(";".to_string()),
-                            PPElement::break_elem(1, 0, true)
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        PPElement::group(vec![
-                            c.to_pp_element(true),
-                            PPElement::text(";".to_string())
-                        ], BreakType::Flexible, 0)
-                    }
-                );
-            }
-            
-            let mut rewrite_rules = vec![];
-            for (i, r) in self.rewrite_rules.borrow().iter().enumerate() {
-                rewrite_rules.push(
-                    if i < self.rewrite_rules.borrow().len() - 1 {
-                        PPElement::group(vec![
-                            r.to_pp_element(true),
-                            PPElement::text(";".to_string()),
-                            PPElement::break_elem(1, 4, true)
-                        ], BreakType::Flexible, 0)
-                    } else {
-                        PPElement::group(vec![
-                            r.to_pp_element(true),
-                            PPElement::text(";".to_string())
-                        ], BreakType::Flexible, 0)
-                    }
-                );
-            }
+            let comp_rules = self.computation_rules.borrow();
+            let rewrite_rules = self.rewrite_rules.borrow();
             
             let has_comp_rules = !comp_rules.is_empty();
             let has_rewrite_rules = !rewrite_rules.is_empty();
             
+            let comp_rules = PPElement::list(
+                comp_rules.iter().map(|c| c.to_pp_element(true)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(";".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Flexible
+            );
+            
+            let rewrite_rules = PPElement::list(
+                rewrite_rules.iter().map(|r| r.to_pp_element(true)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(";".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Flexible
+            );
+            
             let mut rule_objects = vec![];
             if has_comp_rules {
-                rule_objects.push(PPElement::group(comp_rules, BreakType::Flexible, 0));
+                rule_objects.push(comp_rules);
                 if has_rewrite_rules {
                     rule_objects.push(PPElement::break_elem(1, 4, true));
                 } else {
@@ -363,7 +335,7 @@ impl PrettyPrintable for ProgramConstant {
             
             if has_rewrite_rules {
                 rule_objects.push(PPElement::break_elem(1, 4, true));
-                rule_objects.push(PPElement::group(rewrite_rules, BreakType::Flexible, 0));
+                rule_objects.push(rewrite_rules);
             }
             
             PPElement::group(vec![

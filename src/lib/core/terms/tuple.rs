@@ -230,29 +230,21 @@ impl TermBody for Tuple {
 
 impl PrettyPrintable for Tuple {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let mut elements = vec![];
-        elements.push(PPElement::text("(".to_string()));
-        elements.push(PPElement::break_elem(1, 4, false));
+        let elements = PPElement::list(
+            self.elements.iter().map(|e| e.minlog_type().to_pp_element(detail)).collect(),
+            PPElement::break_elem(0, 4, false),
+            PPElement::text(",".to_string()),
+            PPElement::break_elem(1, 4, false),
+            BreakType::Flexible
+        );
         
-        for (i, element) in self.elements.iter().enumerate() {
-            elements.push(
-                if i < self.elements.len() - 1 {
-                    PPElement::group(vec![
-                        element.to_pp_element(detail),
-                        PPElement::break_elem(0, 4, false),
-                        PPElement::text(",".to_string()),
-                    ], BreakType::Flexible, 0)
-                } else {
-                    element.to_pp_element(detail)
-                }
-            );
-            
-            elements.push(PPElement::break_elem(1, 4, false));
-        }
-
-        elements.push(PPElement::text(")".to_string()));
-        
-        PPElement::group(elements, BreakType::Consistent, 0)
+        PPElement::group(vec![
+            PPElement::text("(".to_string()),
+            PPElement::break_elem(1, 4, false),
+            elements,
+            PPElement::break_elem(1, 0, false),
+            PPElement::text(")".to_string())
+        ], BreakType::Consistent, 0)
     }
     
     fn requires_parens(&self, _detail: bool) -> bool {

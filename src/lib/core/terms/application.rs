@@ -359,39 +359,22 @@ impl PrettyPrintable for Application {
             return self.operator.to_pp_element(detail);
         }
         
-        let mut operands = vec![];
+        let operands = PPElement::list(
+            self.operands.iter().map(|op| op.to_pp_element(detail)).collect(),
+            PPElement::break_elem(0, 0, false),
+            PPElement::text(",".to_string()),
+            PPElement::break_elem(1, 0, false),
+            BreakType::Flexible
+        );
         
-        for (i, op) in self.operands.iter().enumerate() {
-            operands.push(
-                if i < self.operands.len() - 1 {
-                    PPElement::group(vec![
-                        op.to_pp_element(detail),
-                        PPElement::break_elem(0, 0, false),
-                        PPElement::text(",".to_string())
-                    ], BreakType::Flexible, 0)
-                } else {
-                    op.to_pp_element(detail)
-                }
-            );
-            
-            if i < self.operands.len() - 1 {
-                operands.push(PPElement::break_elem(1, 0, false));
-            }
-        }
-        
-        let elements = vec![
+        PPElement::group(vec![
             self.operator.to_enclosed_pp_element(detail),
+            PPElement::text(" (".to_string()),
             PPElement::break_elem(1, 4, false),
-            PPElement::group(vec![
-                PPElement::text("(".to_string()),
-                PPElement::break_elem(1, 4, false),
-                PPElement::group(operands, BreakType::Flexible, 0),
-                PPElement::break_elem(1, 0, false),
-                PPElement::text(")".to_string())
-            ], BreakType::Consistent, 0)
-        ];
-        
-        PPElement::group(elements, BreakType::Flexible, 0)
+            operands,
+            PPElement::break_elem(1, 0, false),
+            PPElement::text(")".to_string())
+        ], BreakType::Consistent, 0)
     }
     
     fn requires_parens(&self, _detail: bool) -> bool {

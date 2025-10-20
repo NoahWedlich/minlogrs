@@ -197,42 +197,31 @@ impl PrettyPrintable for ProgramTerm {
         if self.parameters.is_empty() {
             PPElement::text(self.pconst.name().clone())
         } else {
-            let mut params = vec![];
-            for (i, (from, to)) in self.parameters.iter().enumerate() {
-                let param_elem = if detail && from != to {
-                    PPElement::group(vec![
-                        from.to_pp_element(detail),
-                        PPElement::break_elem(1, 4, false),
-                        PPElement::text("=".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        to.to_enclosed_pp_element(detail)
-                    ], BreakType::Flexible, 0)
-                } else {
-                    to.to_enclosed_pp_element(detail)
-                };
-                
-                params.push(
-                    if i < self.parameters.iter().len() - 1 {
+            let params = PPElement::list(
+                self.parameters.iter().map(|(from, to)| {
+                    if detail && from != to {
                         PPElement::group(vec![
-                            param_elem,
-                            PPElement::break_elem(0, 4, false),
-                            PPElement::text(",".to_string())
+                            from.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            to.to_enclosed_pp_element(detail)
                         ], BreakType::Flexible, 0)
                     } else {
-                        param_elem
+                        to.to_enclosed_pp_element(detail)
                     }
-                );
-                
-                if i < self.parameters.iter().len() - 1 {
-                    params.push(PPElement::break_elem(1, 4, false));
-                }
-            }
+                }).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible,
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.pconst.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(params, BreakType::Flexible, 0),
+                params,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)

@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell};
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -17,6 +17,7 @@ use crate::core::structures::algebra::Algebra;
 pub struct AlgebraType {
     algebra: Rc<Algebra>,
     parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>,
+    blocked_collection: RefCell<bool>,
 }
 
 impl AlgebraType {
@@ -35,7 +36,7 @@ impl AlgebraType {
             }
         }
         
-        Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters }))
+        Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters, blocked_collection: RefCell::new(false) }))
     }
     
     pub fn algebra(&self) -> &Rc<Algebra> {
@@ -116,9 +117,18 @@ impl TypeBody for AlgebraType {
     }
     
     fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        // TODO: Get rid of this hacky fix to avoid infinite recursion
+        if *self.blocked_collection.borrow() {
+            return vec![];
+        }
+        
+        *self.blocked_collection.borrow_mut() = true;
+        
         let mut result = self.constructors().iter()
             .flat_map(|c| c.minlog_type().get_polarized_tvars(current))
             .collect::<Vec<_>>();
+        
+        *self.blocked_collection.borrow_mut() = false;
         
         result.extend(self.parameters.iter()
             .flat_map(|(_, to)| to.get_polarized_tvars(current)));
@@ -127,9 +137,17 @@ impl TypeBody for AlgebraType {
     }
     
     fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        if *self.blocked_collection.borrow() {
+            return vec![];
+        }
+        
+        *self.blocked_collection.borrow_mut() = true;
+        
         let mut result = self.constructors().iter()
             .flat_map(|c| c.minlog_type().get_polarized_algebras(current))
             .collect::<Vec<_>>();
+        
+        *self.blocked_collection.borrow_mut() = false;
         
         result.extend(self.parameters.iter()
             .flat_map(|(_, to)| to.get_polarized_algebras(current)));
@@ -226,42 +244,31 @@ impl PrettyPrintable for AlgebraType {
         if self.parameters.is_empty() {
             PPElement::text(self.algebra.name().clone())
         } else {
-            let mut params = vec![];
-            for (i, (from, to)) in self.parameters.iter().enumerate() {
-                let param_elem = if detail && from != to {
-                    PPElement::group(vec![
-                        from.to_pp_element(detail),
-                        PPElement::break_elem(1, 4, false),
-                        PPElement::text("=".to_string()),
-                        PPElement::break_elem(1, 4, false),
-                        to.to_enclosed_pp_element(detail)
-                    ], BreakType::Flexible, 0)
-                } else {
-                    to.to_enclosed_pp_element(detail)
-                };
-                
-                params.push(
-                    if i < self.parameters.iter().len() - 1 {
+            let params = PPElement::list(
+                self.parameters.iter().map(|(from, to)| {
+                    if detail && from != to {
                         PPElement::group(vec![
-                            param_elem,
-                            PPElement::break_elem(0, 4, false),
-                            PPElement::text(",".to_string())
+                            from.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            to.to_enclosed_pp_element(detail)
                         ], BreakType::Flexible, 0)
                     } else {
-                        param_elem
+                        to.to_enclosed_pp_element(detail)
                     }
-                );
-                
-                if i < self.parameters.iter().len() - 1 {
-                    params.push(PPElement::break_elem(1, 4, false));
-                }
-            }
+                }).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.algebra.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(params, BreakType::Flexible, 0),
+                params,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
