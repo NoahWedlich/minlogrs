@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -40,6 +41,14 @@ crate::wrapper_enum! {
         pub fn to_nc_formula(&Self) -> Rc<MinlogFormula>
 
         pub fn to_normal_form(&Self, eta: bool, pi: bool) -> Rc<MinlogFormula>
+        
+        pub fn get_polarized_tvars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+            vec![]
+        }
+        
+        pub fn get_polarized_algebras(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+            vec![]
+        }
 
         pub fn get_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
             vec![]
@@ -49,23 +58,19 @@ crate::wrapper_enum! {
             vec![]
         }
         
-        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn get_polarized_pred_vars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
             vec![]
         }
         
-        pub fn get_predicate_variables(&Self) -> Vec<Rc<MinlogPredicate>> {
+        pub fn get_polarized_comp_terms(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
             vec![]
         }
         
-        pub fn get_comprehension_terms(&Self) -> Vec<Rc<MinlogPredicate>> {
+        pub fn get_polarized_inductive_preds(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
             vec![]
         }
         
-        pub fn get_inductive_predicates(&Self) -> Vec<Rc<MinlogPredicate>> {
-            vec![]
-        }
-        
-        pub fn get_prime_formulas(&Self) -> Vec<Rc<MinlogFormula>> {
+        pub fn get_polarized_prime_formulas(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
             vec![]
         }
         
@@ -80,7 +85,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq)]
     pub enum MinlogFormula {
-        Atom(||atom||),
+        Prime(||prime||),
         Implication(||implication||),
         AllQuantifier(||all_quantifier||),
         Tensor(||tensor||),
@@ -98,7 +103,67 @@ crate::wrapper_enum! {
 }
 
 impl MinlogFormula {
+    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        self.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
     
+    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        self.get_polarized_algebras(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
+        self.get_polarized_pred_vars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn get_comprehension_terms(&self) -> Vec<Rc<MinlogPredicate>> {
+        self.get_polarized_comp_terms(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn get_inductive_predicates(&self) -> Vec<Rc<MinlogPredicate>> {
+        self.get_polarized_inductive_preds(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn get_prime_formulas(&self) -> Vec<Rc<MinlogFormula>> {
+        self.get_polarized_prime_formulas(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+        var.is_variable() && self.get_type_variables().contains(var)
+    }
+    
+    pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
+        alg.is_algebra() && self.get_algebra_types().contains(alg)
+    }
+    
+    pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_free_variables().contains(var)
+    }
+    
+    pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_bound_variables().contains(var)
+    }
+    
+    pub fn contains_predicate_variable(&self, pvar: &Rc<MinlogPredicate>) -> bool {
+        pvar.is_variable() && self.get_predicate_variables().contains(pvar)
+    }
+    
+    pub fn contains_comprehension_term(&self, cterm: &Rc<MinlogPredicate>) -> bool {
+        cterm.is_comprehension_term() && self.get_comprehension_terms().contains(cterm)
+    }
+    
+    pub fn contains_inductive_predicate(&self, ipred: &Rc<MinlogPredicate>) -> bool {
+        ipred.is_inductive_predicate() && self.get_inductive_predicates().contains(ipred)
+    }
+    
+    pub fn contains_prime_formula(&self, pform: &Rc<MinlogFormula>) -> bool {
+        pform.is_prime() && self.get_prime_formulas().contains(pform)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone)]

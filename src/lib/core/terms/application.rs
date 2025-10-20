@@ -129,7 +129,7 @@ impl TermBody for Application {
                     panic!("Tried to apply an abstraction with a total variable to a partial operand");
                 }
                 
-                if MinlogTerm::contains_free_variable(&op, &var.clone()) {
+                if op.contains_free_variable(&var.clone()) {
                     panic!("Tried to apply an abstraction to an operand that contains the bound variable");
                 }
                 

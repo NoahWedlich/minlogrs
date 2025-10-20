@@ -55,7 +55,7 @@ impl Algebra {
             panic!("Constructor with name '{}' already exists in algebra '{}'", existing.to_constructor().unwrap().name(), self.name);
         }
         
-        for tvar in constructor.minlog_type().get_type_variables() {
+        for tvar in constructor.get_type_variables() {
             if !self.type_variables.contains(&tvar) {
                 panic!("Constructor type contains type variable '{}' not in the algebra's type variables", tvar.debug_string());
             }

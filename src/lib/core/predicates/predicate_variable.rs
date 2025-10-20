@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -59,8 +60,16 @@ impl PredicateBody for PredicateVariable {
         self.degree.clone()
     }
     
-    fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
-        vec![Rc::new(MinlogPredicate::Variable(self.clone()))]
+    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        self.arity.iter().flat_map(|t| t.get_type_variables()).collect()
+    }
+    
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        self.arity.iter().flat_map(|t| t.get_algebra_types()).collect()
+    }
+    
+    fn get_polarized_pred_vars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+        vec![Polarized::new(current, Rc::new(MinlogPredicate::Variable(self.clone())))]
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

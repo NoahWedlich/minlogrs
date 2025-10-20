@@ -73,7 +73,7 @@ impl Substitutable for TermSubstEntry {
                 t.valid_substitution(to_t)
             },
             (TermSubstEntry::Term(tm), TermSubstEntry::Term(to_tm)) => {
-                tm.is_variable() && !MinlogTerm::contains_free_variable(to_tm, tm)
+                tm.is_variable() && !to_tm.contains_free_variable(tm)
             },
             _ => {
                 false

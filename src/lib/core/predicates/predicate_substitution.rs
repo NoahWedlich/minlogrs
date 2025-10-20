@@ -127,7 +127,7 @@ impl Substitutable for PredSubstEntry {
     fn valid_substitution(&self, to: &Self) -> bool {
         match (self, to) {
             (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(to_p)) => {
-                p.is_variable() && !MinlogPredicate::contains_predicate_variable(to_p, p)
+                p.is_variable() && !to_p.contains_predicate_variable(p)
             },
             (_, _) if self.is_term_subst_entry() && to.is_term_subst_entry() => {
                 let from_tse = self.to_term_subst_entry().unwrap();

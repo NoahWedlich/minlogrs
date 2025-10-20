@@ -102,24 +102,40 @@ crate::wrapper_enum! {
 }
 
 impl MinlogTerm {
-    pub fn contains_free_variable(term: &Rc<MinlogTerm>, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && term.get_free_variables().contains(var)
+    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        self.minlog_type().get_type_variables()
     }
     
-    pub fn contains_bound_variable(term: &Rc<MinlogTerm>, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && term.get_bound_variables().contains(var)
+    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        self.minlog_type().get_algebra_types()
     }
     
-    pub fn contains_constructor(term: &Rc<MinlogTerm>, con: &Rc<MinlogTerm>) -> bool {
-        con.is_constructor() && term.get_constructors().contains(con)
+    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+        self.minlog_type().contains_type_variable(var)
+    }
+
+    pub fn contains_algebra_type(&self, var: &Rc<MinlogType>) -> bool {
+        self.minlog_type().contains_algebra_type(var)
+    }
+
+    pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_free_variables().contains(var)
     }
     
-    pub fn contains_program_term(term: &Rc<MinlogTerm>, prog: &Rc<MinlogTerm>) -> bool {
-        prog.is_program_term() && term.get_program_terms().contains(prog)
+    pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_bound_variables().contains(var)
     }
     
-    pub fn contains_internal_constant(term: &Rc<MinlogTerm>, ic: &Rc<MinlogTerm>) -> bool {
-        ic.is_internal_constant() && term.get_internal_constants().contains(ic)
+    pub fn contains_constructor(&self, con: &Rc<MinlogTerm>) -> bool {
+        con.is_constructor() && self.get_constructors().contains(con)
+    }
+    
+    pub fn contains_program_term(&self, prog: &Rc<MinlogTerm>) -> bool {
+        prog.is_program_term() && self.get_program_terms().contains(prog)
+    }
+    
+    pub fn contains_internal_constant(&self, ic: &Rc<MinlogTerm>) -> bool {
+        ic.is_internal_constant() && self.get_internal_constants().contains(ic)
     }
 }
 

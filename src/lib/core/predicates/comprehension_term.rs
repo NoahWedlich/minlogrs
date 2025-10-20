@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -75,6 +76,34 @@ impl PredicateBody for ComprehensionTerm {
         }
     }
     
+    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        let mut inner = self.body.get_type_variables();
+        
+        for var in &self.vars {
+            for tvar in var.get_type_variables() {
+                if !inner.contains(&tvar) {
+                    inner.push(tvar);
+                }
+            }
+        }
+        
+        inner
+    }
+
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        let mut inner = self.body.get_algebra_types();
+
+        for var in &self.vars {
+            for tvar in var.get_algebra_types() {
+                if !inner.contains(&tvar) {
+                    inner.push(tvar);
+                }
+            }
+        }
+
+        inner
+    }
+
     fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
         let mut inner = self.body.get_free_variables();
         
@@ -95,22 +124,26 @@ impl PredicateBody for ComprehensionTerm {
         bound_vars
     }
     
-    fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
-        self.body.get_predicate_variables()
+    fn get_polarized_pred_vars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+        self.body.get_polarized_pred_vars(current)
     }
-    
-    fn get_comprehension_terms(&self) -> Vec<Rc<MinlogPredicate>> {
-        let mut inner = self.body.get_comprehension_terms();
+
+    fn get_polarized_comp_terms(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+        let mut inner = self.body.get_polarized_comp_terms(current);
         
-        if !inner.contains(&Rc::new(MinlogPredicate::Comprehension(self.clone()))) {
-            inner.push(Rc::new(MinlogPredicate::Comprehension(self.clone())));
+        if inner.iter().all(|p| p.value.to_comprehension_term().unwrap() != self) {
+            inner.push(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
         }
         
         inner
     }
     
-    fn get_inductive_predicates(&self) -> Vec<Rc<MinlogPredicate>> {
-        self.body.get_inductive_predicates()
+    fn get_polarized_inductive_preds(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+        self.body.get_polarized_inductive_preds(current)
+    }
+    
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
+        self.body.get_polarized_prime_formulas(current)
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

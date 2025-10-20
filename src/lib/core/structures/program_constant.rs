@@ -203,7 +203,7 @@ impl ProgramConstant {
             panic!("Attempted to add a non-computation rule as a computation rule");
         }
         
-        for var in rule.pattern().minlog_type().get_type_variables() {
+        for var in rule.pattern().get_type_variables() {
             if !self.type_variables.contains(&var) {
                 panic!("Type variable '{}' in computation rule pattern not in program constant type variables", var.debug_string());
             }

@@ -13,7 +13,7 @@ impl Substitutable for Rc<MinlogType> {
     }
     
     fn valid_substitution(&self, to: &Self) -> bool {
-        self.is_variable() && !MinlogType::contains_type_variable(to, self)
+        self.is_variable() && !to.contains_type_variable(self)
     }
     
     fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self> {

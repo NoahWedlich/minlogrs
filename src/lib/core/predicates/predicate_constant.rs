@@ -32,6 +32,14 @@ impl PredicateBody for PredicateConstant {
         self.arity.clone()
     }
     
+    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        self.arity.iter().flat_map(|t| t.get_type_variables()).collect()
+    }
+    
+    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        self.arity.iter().flat_map(|t| t.get_algebra_types()).collect()
+    }
+    
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         match (from, to) {
             (PredSubstEntry::Type(from_t), PredSubstEntry::Type(to_t)) => {
