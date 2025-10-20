@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{MinlogType, TypeBody};
 
@@ -71,6 +72,32 @@ impl AlgebraType {
             .map(|(from, to)| (from.into(), to.into()))
             .collect())
     }
+    
+    pub fn references_algebra(&self, algebra: &Rc<MinlogType>) -> bool {
+        self.constructors().iter().any(|c| {
+            c.minlog_type().contains_algebra_type(algebra)
+        })
+    }
+    
+    pub fn ensure_well_founded(&self) {
+        let self_alg_type = Rc::new(MinlogType::Algebra(self.clone()));
+
+        for constructor in self.constructors().iter() {
+            let constructor_type = constructor.minlog_type();
+            
+            if let Some(arrow_type) = constructor_type.to_arrow() {
+                for arg_type in arrow_type.arguments().iter() {
+                    let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive);
+                    for polarized_alg in polarized_algs.iter() {
+                        if !polarized_alg.polarity.is_strictly_positive() &&
+                            polarized_alg.value.to_algebra().unwrap().references_algebra(&self_alg_type) {
+                            panic!("Algebra '{}' is not well-founded due to constructor '{}'", self.name(), constructor.debug_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl TypeBody for AlgebraType {
@@ -88,8 +115,28 @@ impl TypeBody for AlgebraType {
             .max().unwrap_or(0)
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        vec![Rc::new(MinlogType::Algebra(self.clone()))]
+    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        let mut result = self.constructors().iter()
+            .flat_map(|c| c.minlog_type().get_polarized_tvars(current))
+            .collect::<Vec<_>>();
+        
+        result.extend(self.parameters.iter()
+            .flat_map(|(_, to)| to.get_polarized_tvars(current)));
+        
+        result
+    }
+    
+    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        let mut result = self.constructors().iter()
+            .flat_map(|c| c.minlog_type().get_polarized_algebras(current))
+            .collect::<Vec<_>>();
+        
+        result.extend(self.parameters.iter()
+            .flat_map(|(_, to)| to.get_polarized_algebras(current)));
+        
+        result.push(Polarized::new(current, Rc::new(MinlogType::Algebra(self.clone()))));
+        
+        result
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {

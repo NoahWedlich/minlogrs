@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
@@ -33,25 +34,17 @@ impl TypeBody for StarType {
     fn level(&self) -> usize {
         self.types.iter().map(|t| t.level()).max().unwrap_or(0)
     }
-    
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = vec![];
-        
-        for t in &self.types {
-            inner.extend(t.get_type_variables());
-        }
-        
-        inner
+
+    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        self.types.iter()
+            .flat_map(|t| t.get_polarized_tvars(current))
+            .collect::<Vec<_>>()
     }
 
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = vec![];
-        
-        for t in &self.types {
-            inner.extend(t.get_algebra_types());
-        }
-        
-        inner
+    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        self.types.iter()
+            .flat_map(|t| t.get_polarized_algebras(current))
+            .collect::<Vec<_>>()
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

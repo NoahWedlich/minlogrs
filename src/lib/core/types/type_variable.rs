@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput, Substitutable};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
@@ -29,7 +30,11 @@ impl TypeBody for TypeVariable {
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
         Some(TypeVariable::create(self.name.clone()))
     }
-    
+
+    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        vec![Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))]
+    }
+
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
         if from.is_variable() && self == from.to_variable().unwrap() {
             to.clone()

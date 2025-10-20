@@ -3,6 +3,7 @@ use std::{cmp::max, rc::Rc};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
@@ -60,26 +61,24 @@ impl TypeBody for ArrowType {
         max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = vec![];
+    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        let mut result = self.arguments.iter()
+            .flat_map(|arg| arg.get_polarized_tvars(current.invert()))
+            .collect::<Vec<_>>();
         
-        for arg in &self.arguments {
-            inner.extend(arg.get_type_variables());
-        }
-
-        inner.extend(self.value.get_type_variables());
-        inner
+        result.extend(self.value.get_polarized_tvars(current));
+        
+        result
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = vec![];
+    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        let mut result = self.arguments.iter()
+            .flat_map(|arg| arg.get_polarized_algebras(current.invert()))
+            .collect::<Vec<_>>();
         
-        for arg in &self.arguments {
-            inner.extend(arg.get_algebra_types());
-        }
-
-        inner.extend(self.value.get_algebra_types());
-        inner
+        result.extend(self.value.get_polarized_algebras(current));
+        
+        result
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

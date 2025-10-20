@@ -4,6 +4,7 @@ use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
@@ -29,11 +30,11 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn get_polarized_tvars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
             vec![]
         }
         
-        pub fn get_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
+        pub fn get_polarized_algebras(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
             vec![]
         }
         
@@ -80,11 +81,21 @@ impl MinlogType {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }
     
-    pub fn contains_type_variable(minlog_type: &Rc<MinlogType>, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && minlog_type.get_type_variables().contains(var)
+    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+        self.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn contains_algebra_type(minlog_type: &Rc<MinlogType>, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && minlog_type.get_algebra_types().contains(alg)
+    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+        self.get_polarized_algebras(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect()
+    }
+    
+    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+        var.is_variable() && self.get_type_variables().contains(var)
+    }
+    
+    pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
+        alg.is_algebra() && self.get_algebra_types().contains(alg)
     }
 }
