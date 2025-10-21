@@ -76,6 +76,10 @@ impl PredicateBody for ComprehensionTerm {
         }
     }
     
+    fn depth(&self) -> usize {
+        self.body.depth() + 1
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         self.body.extracted_type()
     }

@@ -7,9 +7,10 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 
-use crate::core::predicates::predicate_constant::PredicateConstant;
+use crate::core::formulas::minlog_formula::MinlogFormula;
+use crate::core::formulas::prime_formula::PrimeFormula;
+
 use crate::core::predicates::predicate_variable::PredicateVariable;
 use crate::core::predicates::comprehension_term::ComprehensionTerm;
 
@@ -29,6 +30,10 @@ crate::wrapper_enum! {
         
         pub fn degree(&Self) -> PredicateDegree {
             PredicateDegree { positive_content: false, negative_content: false }
+        }
+        
+        pub fn depth(&Self) -> usize {
+            0
         }
         
         pub fn extracted_type(&Self) -> Rc<MinlogType>
@@ -93,7 +98,9 @@ crate::wrapper_enum! {
 
 impl MinlogPredicate {
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        todo!()
+        let free_vars = pred.get_free_variables();
+        let body = PrimeFormula::create(pred.clone(), free_vars.clone());
+        ComprehensionTerm::create(free_vars, body)
     }
     
     pub fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {

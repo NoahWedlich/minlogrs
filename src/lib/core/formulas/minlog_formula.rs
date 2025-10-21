@@ -11,6 +11,8 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
+use crate::core::formulas::prime_formula::PrimeFormula;
+
 #[derive(PartialEq, Eq, Clone)]
 pub struct FormulaOfNulltype {
     pub positive_nulltype: bool,
@@ -24,9 +26,6 @@ crate::wrapper_enum! {
         pub fn of_nulltype(&Self) -> FormulaOfNulltype {
             FormulaOfNulltype { positive_nulltype: false, negative_nulltype: false }
         }
-        
-        pub fn fold(&Self) -> Rc<MinlogFormula>
-        pub fn unfold(&Self) -> Rc<MinlogFormula>
 
         pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogFormula>
         
@@ -34,21 +33,13 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn existential_free(&Self) -> bool {
-            false
-        }
-        
-        pub fn to_nc_formula(&Self) -> Rc<MinlogFormula>
-
-        pub fn to_normal_form(&Self, eta: bool, pi: bool) -> Rc<MinlogFormula>
-        
         pub fn extracted_type(&Self) -> Rc<MinlogType>
         
-        pub fn get_polarized_tvars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
         
-        pub fn get_polarized_algebras(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+        pub fn get_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
             vec![]
         }
 
@@ -76,8 +67,6 @@ crate::wrapper_enum! {
             vec![]
         }
         
-        pub fn equivalent(&Self, other: &Rc<MinlogFormula>) -> bool
-        
         pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula>
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)>
@@ -87,7 +76,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq)]
     pub enum MinlogFormula {
-        Prime(||prime||),
+        Prime(||prime|| PrimeFormula),
         Implication(||implication||),
         AllQuantifier(||all_quantifier||),
         Tensor(||tensor||),
@@ -105,16 +94,6 @@ crate::wrapper_enum! {
 }
 
 impl MinlogFormula {
-    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        self.get_polarized_tvars(Polarity::Unknown)
-            .into_iter().map(|p| p.value).collect()
-    }
-    
-    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        self.get_polarized_algebras(Polarity::Unknown)
-            .into_iter().map(|p| p.value).collect()
-    }
-    
     pub fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
         self.get_polarized_pred_vars(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
@@ -178,31 +157,11 @@ impl PrettyPrintable for EmptyFormulaBody {
 }
 
 impl FormulaBody for EmptyFormulaBody {
-    fn fold(&self) -> Rc<MinlogFormula> {
-        unimplemented!()
-    }
-    
-    fn unfold(&self) -> Rc<MinlogFormula> {
-        unimplemented!()
-    }
-    
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogFormula> {
-        unimplemented!()
-    }
-    
-    fn to_nc_formula(&self) -> Rc<MinlogFormula> {
-        unimplemented!()
-    }
-    
-    fn to_normal_form(&self, _eta: bool, _pi: bool) -> Rc<MinlogFormula> {
         unimplemented!()
     }
 
     fn extracted_type(&self) -> Rc<MinlogType> {
-        unimplemented!()
-    }
-
-    fn equivalent(&self, _other: &Rc<MinlogFormula>) -> bool {
         unimplemented!()
     }
     
