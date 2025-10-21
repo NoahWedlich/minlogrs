@@ -12,11 +12,22 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 use crate::core::formulas::prime_formula::PrimeFormula;
+use crate::core::formulas::implication::Implication;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct FormulaOfNulltype {
     pub positive_nulltype: bool,
     pub negative_nulltype: bool,
+}
+
+impl FormulaOfNulltype {
+    pub fn has_positive(&self) -> bool {
+        self.positive_nulltype
+    }
+    
+    pub fn has_negative(&self) -> bool {
+        self.negative_nulltype
+    }
 }
 
 crate::wrapper_enum! {
@@ -77,9 +88,8 @@ crate::wrapper_enum! {
     #[derive(PartialEq, Eq)]
     pub enum MinlogFormula {
         Prime(||prime|| PrimeFormula),
-        Implication(||implication||),
+        Implication(||implication|| Implication),
         AllQuantifier(||all_quantifier||),
-        Tensor(||tensor||),
     }
     
     impl PrettyPrintable {
