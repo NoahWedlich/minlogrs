@@ -74,7 +74,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq)]
     pub enum MinlogPredicate {
-        Constant(||constant|| PredicateConstant),
+        InternalPredicate(||internal_predicate||),
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension_term|| ComprehensionTerm),
         Inductive(||inductive_predicate||),
