@@ -13,6 +13,7 @@ use crate::core::formulas::prime_formula::PrimeFormula;
 
 use crate::core::predicates::predicate_variable::PredicateVariable;
 use crate::core::predicates::comprehension_term::ComprehensionTerm;
+use crate::core::predicates::inductive_predicate::InductivePredicate;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -82,7 +83,7 @@ crate::wrapper_enum! {
         InternalPredicate(||internal_predicate||),
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension_term|| ComprehensionTerm),
-        Inductive(||inductive_predicate||),
+        InductivePredicate(||inductive_predicate|| InductivePredicate),
     }
     
     impl PrettyPrintable {

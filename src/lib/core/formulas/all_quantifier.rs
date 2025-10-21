@@ -10,7 +10,6 @@ use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 

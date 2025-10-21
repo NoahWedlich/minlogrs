@@ -152,13 +152,6 @@ impl TermBody for ProgramTerm {
             }
         }
         
-        for (from, to) in other_pterm.parameters.iter() {
-            let self_to = other_pterm.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
-            if let Some(conflict) = to.first_conflict_with(&self_to) {
-                return Some((conflict.0.into(), conflict.1.into()));
-            }
-        }
-        
         None
     }
     
