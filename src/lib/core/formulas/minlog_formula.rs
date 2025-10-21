@@ -13,6 +13,7 @@ use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 use crate::core::formulas::prime_formula::PrimeFormula;
 use crate::core::formulas::implication::Implication;
+use crate::core::formulas::all_quantifier::AllQuantifier;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct FormulaOfNulltype {
@@ -89,7 +90,7 @@ crate::wrapper_enum! {
     pub enum MinlogFormula {
         Prime(||prime|| PrimeFormula),
         Implication(||implication|| Implication),
-        AllQuantifier(||all_quantifier||),
+        AllQuantifier(||all_quantifier|| AllQuantifier),
     }
     
     impl PrettyPrintable {

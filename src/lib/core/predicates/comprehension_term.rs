@@ -155,10 +155,8 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        if let Some(tm) = from.to_term() {
-            if self.vars.contains(&tm) {
-                return Rc::new(MinlogPredicate::Comprehension(self.clone()));
-            }
+        if let Some(tm) = from.to_term() && self.vars.contains(&tm) {
+            return Rc::new(MinlogPredicate::Comprehension(self.clone()));
         }
         
         let new_vars = if let Some(tse) = from.to_term_subst_entry() {

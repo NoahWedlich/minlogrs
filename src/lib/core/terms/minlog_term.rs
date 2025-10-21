@@ -22,6 +22,16 @@ pub enum Totality {
     Partial,
 }
 
+impl Totality {
+    pub fn is_total(&self) -> bool {
+        matches!(self, Totality::Total)
+    }
+    
+    pub fn is_partial(&self) -> bool {
+        matches!(self, Totality::Partial)
+    }
+}
+
 crate::wrapper_enum! {
     
     @default { EmptyTermBody }
