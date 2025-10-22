@@ -109,7 +109,7 @@ impl TermBody for Projection {
         self.index == other.index && self.term.alpha_equivalent(&other.term, forward, backward)
     }
     
-    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
         self.term.totality(bound)
     }
     

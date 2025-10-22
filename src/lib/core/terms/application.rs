@@ -125,7 +125,7 @@ impl TermBody for Application {
                     panic!("Tried to apply an abstraction to an operand of the wrong type");
                 }
                 
-                if var.totality(&mut vec![]) == Totality::Total && op.totality(&mut vec![]) == Totality::Partial {
+                if var.totality(&mut HashSet::new()) == Totality::Total && op.totality(&mut HashSet::new()) == Totality::Partial {
                     panic!("Tried to apply an abstraction with a total variable to a partial operand");
                 }
                 
@@ -240,7 +240,7 @@ impl TermBody for Application {
             .all(|(a, b)| a.alpha_equivalent(b, forward, backward))
     }
     
-    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
         if self.operands.iter().any(|op| op.totality(bound) == Totality::Partial) {
             return Totality::Partial;
         }

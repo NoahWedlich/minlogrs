@@ -84,8 +84,7 @@ crate::wrapper_enum! {
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
 
-        //TODO: bound should be a HashSet to avoid duplicates
-        pub fn totality(&Self, _bound: &mut Vec<TermVariable>) -> Totality {
+        pub fn totality(&Self, _bound: &mut HashSet<TermVariable>) -> Totality {
             Totality::Partial
         }
         

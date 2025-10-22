@@ -99,7 +99,7 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
         if bound.contains(self) {
             Totality::Total
         } else {
@@ -154,7 +154,7 @@ impl TermBody for TermVariable {
                     return MatchOutput::Matched;
                 }
 
-                if p.totality(&mut vec![]) == Totality::Total && i.totality(&mut vec![]) == Totality::Partial {
+                if p.totality(&mut HashSet::new()) == Totality::Total && i.totality(&mut HashSet::new()) == Totality::Partial {
                     return MatchOutput::FailedMatch;
                 }
 

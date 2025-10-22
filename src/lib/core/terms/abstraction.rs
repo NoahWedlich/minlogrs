@@ -182,13 +182,13 @@ impl TermBody for Abstraction {
         self.kernel.alpha_equivalent(&other.kernel, forward, backward)
     }
     
-    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
-        let mut new_bound = vec![];
+    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
+        let mut new_bound = HashSet::new();
         for var in &self.vars {
             let var_body = var.to_variable().unwrap();
             if !bound.contains(var_body) {
-                new_bound.push(var_body.clone());
-                bound.push(var_body.clone());
+                new_bound.insert(var_body.clone());
+                bound.insert(var_body.clone());
             }
         }
         

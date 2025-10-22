@@ -113,7 +113,7 @@ impl TermBody for Tuple {
         true
     }
     
-    fn totality(&self, bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
         if self.elements.iter().any(|e| e.totality(bound) == Totality::Partial) {
             Totality::Partial
         } else {

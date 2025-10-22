@@ -94,7 +94,7 @@ impl FormulaBody for AllQuantifier {
     fn extracted_type(&self) -> Rc<MinlogType> {
         let mut bounds = self.vars.iter()
             .map(|v| v.to_variable().unwrap().clone())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         
         let var_types = self.vars.iter().map(|v| {
             if v.totality(&mut bounds).is_total() {

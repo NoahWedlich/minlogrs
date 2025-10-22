@@ -134,7 +134,7 @@ impl TermBody for ProgramTerm {
         }
     }
     
-    fn totality(&self, _bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, _bound: &mut HashSet<TermVariable>) -> Totality {
         self.pconst.totality()
     }
     

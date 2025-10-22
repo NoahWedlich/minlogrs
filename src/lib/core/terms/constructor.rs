@@ -83,7 +83,7 @@ impl TermBody for Constructor {
         }
     }
     
-    fn totality(&self, _bound: &mut Vec<TermVariable>) -> Totality {
+    fn totality(&self, _bound: &mut HashSet<TermVariable>) -> Totality {
         Totality::Total
     }
     
