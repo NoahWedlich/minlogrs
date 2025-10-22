@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -9,32 +9,22 @@ use crate::core::types::minlog_type::{MinlogType, TypeBody};
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
+use crate::core::types::type_substitution::TypeSubstitution;
 
 use crate::core::structures::algebra::Algebra;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct AlgebraType {
     algebra: Rc<Algebra>,
-    parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>,
+    parameters: TypeSubstitution,
     blocked_collection: RefCell<bool>,
 }
 
 impl AlgebraType {
-    pub fn create(algebra: Rc<Algebra>, parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>) -> Rc<MinlogType> {
-        let expected_vars = algebra.get_type_variables();
-        
-        for (from, _) in parameters.iter() {
-            if !expected_vars.iter().any(|v| v == from) {
-                panic!("Type variable '{}' not expected in parameters for algebra '{}'", from.debug_string(), algebra.name());
-            }
-        }
-        
-        for var in expected_vars {
-            if !parameters.iter().any(|(from, _)| from == var) {
-                panic!("Missing type variable '{}' in parameters for algebra '{}'", var.debug_string(), algebra.name());
-            }
-        }
+    pub fn create(algebra: Rc<Algebra>, mut parameters: TypeSubstitution) -> Rc<MinlogType> {
+        let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
+        parameters.restrict(|from| alg_tvars.contains(from));
         
         Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters, blocked_collection: RefCell::new(false) }))
     }
@@ -48,30 +38,33 @@ impl AlgebraType {
     }
     
     pub fn constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        let subst = self.substitution();
-
         self.algebra.constructors().iter()
-            .map(|c| subst.substitute(&TermSubstEntry::Term(c.clone())))
-            .map(|t| t.to_term().unwrap())
+            .map(|c| {
+                let mut constr = c.clone();
+                
+                for (from, to) in self.parameters.pairs() {
+                    constr = constr.substitute(&from.into(), &to.into());
+                }
+                
+                constr
+            })
             .collect()
     }
     
     pub fn constructor(&self, name: &String) -> Option<Rc<MinlogTerm>> {
-        let subst = self.substitution();
-
         self.algebra.constructor(name).map(|c| {
-            subst.substitute(&TermSubstEntry::Term(c.clone())).to_term().unwrap()
+            let mut constr = c.clone();
+            
+            for (from, to) in self.parameters.pairs() {
+                constr = constr.substitute(&from.into(), &to.into());
+            }
+            
+            constr
         })
     }
     
-    pub fn parameters(&self) -> &Vec<(Rc<MinlogType>, Rc<MinlogType>)> {
+    pub fn parameters(&self) -> &TypeSubstitution {
         &self.parameters
-    }
-    
-    pub fn substitution(&self) -> TermSubstitution {
-        TermSubstitution::from_pairs(self.parameters.iter()
-            .map(|(from, to)| (from.into(), to.into()))
-            .collect())
     }
     
     pub fn references_algebra(&self, algebra: &Rc<MinlogType>) -> bool {
@@ -111,74 +104,50 @@ impl TypeBody for AlgebraType {
     }
     
     fn level(&self) -> usize {
-        self.parameters.iter()
+        self.parameters.pairs().into_iter()
             .map(|(_, to)| to.level())
             .max().unwrap_or(0)
     }
     
-    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         // TODO: Get rid of this hacky fix to avoid infinite recursion
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
         
         *self.blocked_collection.borrow_mut() = true;
         
-        let mut result = self.constructors().iter()
+        let result = self.constructors().iter()
             .flat_map(|c| c.minlog_type().get_polarized_tvars(current))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         
         *self.blocked_collection.borrow_mut() = false;
-        
-        result.extend(self.parameters.iter()
-            .flat_map(|(_, to)| to.get_polarized_tvars(current)));
         
         result
     }
-    
-    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+
+    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
         
         *self.blocked_collection.borrow_mut() = true;
         
-        let mut result = self.constructors().iter()
+        let result = self.constructors().iter()
             .flat_map(|c| c.minlog_type().get_polarized_algebras(current))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         
         *self.blocked_collection.borrow_mut() = false;
-        
-        result.extend(self.parameters.iter()
-            .flat_map(|(_, to)| to.get_polarized_algebras(current)));
-        
-        result.push(Polarized::new(current, Rc::new(MinlogType::Algebra(self.clone()))));
         
         result
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        if self.parameters.iter().any(|(f, _)| f == from) {
-            let mut subst = self.substitution();
-            subst.extend((from.into(), to.into()));
-            let mut new_params = subst.pairs().iter()
-                .map(|(f, t)| (f.to_type().unwrap(), t.to_type().unwrap()))
-                .collect::<Vec<_>>();
-            
-            for (f, _) in self.parameters.iter() {
-                if !new_params.iter().any(|(nf, _)| nf == f) {
-                    new_params.push((f.clone(), f.clone()));
-                }
-            }
-            
-            if new_params.len() != self.parameters.len() {
-                panic!("Substitution changed the number of parameters in an algebra type.");
-            }
-            
-            AlgebraType::create(self.algebra.clone(), new_params)
-        } else {
-            AlgebraType::create(self.algebra.clone(), self.parameters.clone())
-        }
+        let mut new_parameters = self.parameters.clone();
+        new_parameters.extend((from.clone(), to.clone()));
+        new_parameters.restrict(|f| self.algebra.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>().contains(f));
+        AlgebraType::create(self.algebra.clone(), new_parameters)
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
@@ -192,15 +161,15 @@ impl TypeBody for AlgebraType {
             return Some((Rc::new(MinlogType::Algebra(self.clone())), other.clone()));
         }
         
-        for (from, to) in self.parameters.iter() {
-            let other_to = self.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
+        for (from, to) in self.parameters.pairs().iter() {
+            let other_to = other_alg.parameters.substitute::<Rc<MinlogType>>(from);
             if let Some(conflict) = to.first_conflict_with(&other_to) {
                 return Some(conflict);
             }
         }
         
-        for (from, to) in other_alg.parameters.iter() {
-            let self_to = other_alg.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
+        for (from, to) in other_alg.parameters.pairs().iter() {
+            let self_to = self.parameters.substitute::<Rc<MinlogType>>(from);
             if let Some(conflict) = to.first_conflict_with(&self_to) {
                 return Some(conflict);
             }
@@ -224,16 +193,7 @@ impl TypeBody for AlgebraType {
             return MatchOutput::FailedMatch;
         }
         
-        if pattern_alg.parameters.len() != instance_alg.parameters.len() {
-            return MatchOutput::FailedMatch;
-        }
-        
-        let subst = instance_alg.substitution();
-
-        for (from, to) in pattern_alg.parameters.iter() {
-            let instance_to = subst.substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
-            ctx.extend(to, &instance_to);
-        }
+        pattern_alg.parameters.add_subst_match(&instance_alg.parameters, ctx);
         
         MatchOutput::Matched
     }
@@ -241,21 +201,25 @@ impl TypeBody for AlgebraType {
 
 impl PrettyPrintable for AlgebraType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.parameters.is_empty() {
+        let tparams = self.algebra.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
+        
+        if tparams.is_empty() {
             PPElement::text(self.algebra.name().clone())
         } else {
             let params = PPElement::list(
-                self.parameters.iter().map(|(from, to)| {
-                    if detail && from != to {
+                tparams.iter().map(|param| {
+                    let substituted = self.parameters.substitute::<Rc<MinlogType>>(param);
+                    if detail && &substituted != param {
                         PPElement::group(vec![
-                            from.to_pp_element(detail),
+                            param.to_pp_element(detail),
                             PPElement::break_elem(1, 4, false),
                             PPElement::text("=".to_string()),
                             PPElement::break_elem(1, 4, false),
-                            to.to_enclosed_pp_element(detail)
+                            substituted.to_enclosed_pp_element(detail)
                         ], BreakType::Flexible, 0)
                     } else {
-                        to.to_enclosed_pp_element(detail)
+                        param.to_enclosed_pp_element(detail)
                     }
                 }).collect(),
                 PPElement::break_elem(0, 4, false),
@@ -277,5 +241,12 @@ impl PrettyPrintable for AlgebraType {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
+    }
+}
+
+impl Hash for AlgebraType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.algebra.hash(state);
+        self.parameters.hash(state);
     }
 }

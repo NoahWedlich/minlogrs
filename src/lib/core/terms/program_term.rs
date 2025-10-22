@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -9,35 +9,26 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
 use crate::core::terms::term_variable::TermVariable;
 
-use crate::core::terms::term_substitution::TermSubstitution;
-
-use crate::core::terms::term_substitution::TermSubstEntry;
+use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
 
 use crate::core::structures::program_constant::{ProgramConstant, RewriteRule};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProgramTerm {
     pconst: Rc<ProgramConstant>,
-    parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>,
+    parameters: TermSubstitution,
+    blocked_collection: RefCell<bool>,
 }
 
 impl ProgramTerm {
-    pub fn create(pconst: Rc<ProgramConstant>, parameters: Vec<(Rc<MinlogType>, Rc<MinlogType>)>) -> Rc<MinlogTerm> {
-        let expected_vars = pconst.get_type_variables();
+    pub fn create(pconst: Rc<ProgramConstant>, mut parameters: TermSubstitution) -> Rc<MinlogTerm> {
+        let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables().into_iter().map(|tv| tv.into())
+            .chain(pconst.get_free_variables().into_iter().map(|fv| fv.into()))
+            .collect::<Vec<_>>();
+        parameters.restrict(|from| pconst_vars.contains(from));
         
-        for (from, _) in parameters.iter() {
-            if !expected_vars.iter().any(|v| v == from) {
-                panic!("Type variable '{}' not expected in parameters for program constant '{}'", from.debug_string(), pconst.name());
-            }
-        }
-        
-        for var in expected_vars {
-            if !parameters.iter().any(|(from, _)| from == var) {
-                panic!("Missing type variable '{}' in parameters for program constant '{}'", var.debug_string(), pconst.name());
-            }
-        }
-        
-        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters }))
+        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters, blocked_collection: RefCell::new(false) })
+        )
     }
     
     pub fn pconst(&self) -> &Rc<ProgramConstant> {
@@ -50,31 +41,25 @@ impl ProgramTerm {
     
     pub fn computation_rules(&self) -> Vec<Rc<RewriteRule>> {
         self.pconst.computation_rules().iter()
-            .map(|r| self.substitution().substitute(r))
+            .map(|r| self.parameters.substitute(r))
             .collect()
     }
     
     pub fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>> {
         self.pconst.rewrite_rules().iter()
-            .map(|r| self.substitution().substitute(r))
+            .map(|r| self.parameters.substitute(r))
             .collect()
     }
     
-    pub fn parameters(&self) -> &Vec<(Rc<MinlogType>, Rc<MinlogType>)> {
+    pub fn parameters(&self) -> &TermSubstitution {
         &self.parameters
-    }
-    
-    pub fn substitution(&self) -> TermSubstitution {
-        TermSubstitution::from_pairs(self.parameters.iter()
-            .map(|(from, to)| (from.into(), to.into()))
-            .collect())
     }
 }
 
 impl TermBody for ProgramTerm {
     fn minlog_type(&self) -> Rc<MinlogType> {
         let pc_type = self.pconst.minlog_type();
-        self.substitution().substitute::<TermSubstEntry>(&pc_type.into()).to_type().unwrap()
+        self.parameters.substitute::<TermSubstEntry>(&pc_type.into()).to_type().unwrap()
     }
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
@@ -89,8 +74,53 @@ impl TermBody for ProgramTerm {
         0
     }
     
-    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        vec![Rc::new(MinlogTerm::ProgramTerm(self.clone()))]
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.computation_rules().iter().chain(self.rewrite_rules().iter())
+            .flat_map(|r| r.get_type_variables())
+            .collect()
+    }
+    
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.computation_rules().iter().chain(self.rewrite_rules().iter())
+            .flat_map(|r| r.get_algebra_types())
+            .collect()
+    }
+    
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        // Get rid of these hacks to prevent infinite recursion
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+        
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.computation_rules().iter().chain(self.rewrite_rules().iter())
+            .flat_map(|r| r.get_free_variables())
+            .collect();
+        
+        *self.blocked_collection.borrow_mut() = false;
+        
+        result
+    }
+    
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+        
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.computation_rules().iter().chain(self.rewrite_rules().iter())
+            .flat_map(|r| r.get_bound_variables())
+            .collect();
+        
+        *self.blocked_collection.borrow_mut() = false;
+        
+        result
+    }
+    
+    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
+        HashSet::from([Rc::new(MinlogTerm::ProgramTerm(self.clone()))])
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
@@ -110,26 +140,20 @@ impl TermBody for ProgramTerm {
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         match (from, to) {
-            (TermSubstEntry::Type(_), TermSubstEntry::Type(_)) => {
-                let mut subst = self.substitution();
-                subst.extend((from.clone(), to.clone()));
-                let mut new_params = subst.pairs().iter()
-                    .map(|(f, t)| (f.to_type().unwrap(), t.to_type().unwrap()))
-                    .collect::<Vec<_>>();
-                
-                for (f, _) in self.parameters.iter() {
-                    if !new_params.iter().any(|(nf, _)| nf == f) {
-                        new_params.push((f.clone(), f.clone()));
-                    }
-                }
-                
+            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(_))
+                if self.pconst.get_type_variables().contains(from_t) => {
+                let mut new_params = self.parameters.clone();
+                new_params.extend((from.clone(), to.clone()));
                 ProgramTerm::create(self.pconst.clone(), new_params)
             },
-            (TermSubstEntry::Term(_), TermSubstEntry::Term(_)) => {
-                ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
+            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(_))
+                if self.pconst.get_free_variables().contains(from_tm) => {
+                let mut new_params = self.parameters.clone();
+                new_params.extend((from.clone(), to.clone()));
+                ProgramTerm::create(self.pconst.clone(), new_params)
             },
             _ => {
-                panic!("Tried to substitute between incompatible TermSubstEntry types");
+                ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
             }
         }
     }
@@ -145,10 +169,22 @@ impl TermBody for ProgramTerm {
             return Some((Rc::new(MinlogTerm::ProgramTerm(self.clone())).into(), other.clone().into()));
         }
         
-        for (from, to) in self.parameters.iter() {
-            let other_to = self.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
-            if let Some(conflict) = to.first_conflict_with(&other_to) {
-                return Some((conflict.0.into(), conflict.1.into()));
+        for (from, to) in self.parameters.pairs().iter() {
+            let other_to = other_pterm.parameters.substitute::<TermSubstEntry>(from);
+            match (to, other_to) {
+                (TermSubstEntry::Type(to_t), TermSubstEntry::Type(other_to_t)) => {
+                    if let Some(conflict) = to_t.first_conflict_with(&other_to_t) {
+                        return Some((conflict.0.into(), conflict.1.into()));
+                    }
+                },
+                (TermSubstEntry::Term(to_tm), TermSubstEntry::Term(other_to_tm)) => {
+                    if let Some(conflict) = to_tm.first_conflict_with(&other_to_tm) {
+                        return Some(conflict);
+                    }
+                },
+                _ => {
+                    panic!("Tried to find conflict between incompatible TermSubstEntry types");
+                }
             }
         }
         
@@ -172,12 +208,8 @@ impl TermBody for ProgramTerm {
                     return MatchOutput::FailedMatch;
                 }
                 
-                for (from, to) in pterm_pattern.parameters.iter() {
-                    let instance_to = pterm_pattern.substitution().substitute::<TermSubstEntry>(&from.into()).to_type().unwrap();
-                    if from != &instance_to {
-                        ctx.extend(&to.into(), &instance_to.into());
-                    }
-                }
+                pterm_pattern.parameters.add_subst_match(&pterm_instance.parameters, ctx);
+                
                 MatchOutput::Matched
             },
             _ => MatchOutput::FailedMatch,
@@ -187,21 +219,28 @@ impl TermBody for ProgramTerm {
 
 impl PrettyPrintable for ProgramTerm {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.parameters.is_empty() {
+        let tvars = self.pconst.get_type_variables();
+        let tmvars = self.pconst.get_free_variables();
+        
+        let has_tvars = !tvars.is_empty();
+        let has_tmvars = !tmvars.is_empty();
+        
+        if !has_tvars && !has_tmvars {
             PPElement::text(self.pconst.name().clone())
         } else {
-            let params = PPElement::list(
-                self.parameters.iter().map(|(from, to)| {
-                    if detail && from != to {
+            let tvars = PPElement::list(
+                tvars.iter().map(|tv| {
+                    let substituted = self.parameters.substitute::<TermSubstEntry>(&tv.clone().into()).to_type().unwrap();
+                    if detail && &substituted != tv {
                         PPElement::group(vec![
-                            from.to_pp_element(detail),
+                            tv.to_pp_element(detail),
                             PPElement::break_elem(1, 4, false),
                             PPElement::text("=".to_string()),
                             PPElement::break_elem(1, 4, false),
-                            to.to_enclosed_pp_element(detail)
+                            substituted.to_enclosed_pp_element(detail)
                         ], BreakType::Flexible, 0)
                     } else {
-                        to.to_enclosed_pp_element(detail)
+                        tv.to_enclosed_pp_element(detail)
                     }
                 }).collect(),
                 PPElement::break_elem(0, 4, false),
@@ -210,11 +249,45 @@ impl PrettyPrintable for ProgramTerm {
                 BreakType::Flexible,
             );
             
+            let tmvars = PPElement::list(
+                tmvars.iter().map(|tv| {
+                    let substituted = self.parameters.substitute::<TermSubstEntry>(&tv.clone().into()).to_term().unwrap();
+                    if detail && &substituted != tv {
+                        PPElement::group(vec![
+                            tv.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            substituted.to_enclosed_pp_element(detail)
+                        ], BreakType::Flexible, 0)
+                    } else {
+                        tv.to_enclosed_pp_element(detail)
+                    }
+                }).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible,
+            );
+            
+            let mut vars = vec![];
+            
+            if has_tvars {
+                vars.push(tvars);
+                if has_tmvars {
+                    vars.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_tmvars {
+                vars.push(tmvars);
+            }
+            
             PPElement::group(vec![
                 PPElement::text(self.pconst.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                params,
+                
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
@@ -223,5 +296,12 @@ impl PrettyPrintable for ProgramTerm {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
+    }
+}
+
+impl Hash for ProgramTerm {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.pconst.hash(state);
+        self.parameters.hash(state);
     }
 }

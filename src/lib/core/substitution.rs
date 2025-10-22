@@ -1,7 +1,8 @@
 
+use std::{hash::{Hash, Hasher}, collections::HashMap};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-pub trait Substitutable: Eq + Clone + PrettyPrintable {
+pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
     fn substitute(&self, from: &Self, to: &Self) -> Self;
     
     fn first_conflict_with(&self, other: &Self) -> Option<(Self, Self)>;
@@ -23,13 +24,13 @@ pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Substitution<T: Substitutable> {
-    pairs: Vec<(T, T)>,
+    map: HashMap<T, T>,
 }
 
 impl<T: Substitutable> Substitution<T> {
     pub fn make_empty() -> Self {
         Self {
-            pairs: vec![],
+            map: HashMap::new(),
         }
     }
 
@@ -44,37 +45,34 @@ impl<T: Substitutable> Substitution<T> {
     }
     
     pub fn empty(&self) -> bool {
-        self.pairs.is_empty()
+        self.map.is_empty()
     }
     
     pub fn size(&self) -> usize {
-        self.pairs.len()
+        self.map.len()
     }
     
-    pub fn pairs(&self) -> &Vec<(T, T)> {
-        &self.pairs
+    pub fn pairs(&self) -> Vec<(T, T)> {
+        self.map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
     
     pub fn restrict<F>(&mut self, filter: F)
     where F: Fn(&T) -> bool {
-        self.pairs.retain(|(k, _)| filter(k));
+        self.map.retain(|k, _| filter(k));
     }
     
     pub fn contains(&self, key: &T) -> bool {
-        self.pairs.iter().any(|(k, _)| k == key)
+        self.map.contains_key(key)
     }
     
     pub fn apply(&self, value: &T) -> T {
-        self.pairs.iter()
-            .find(|(k, _)| k == value)
-            .map(|(_, v)| v.clone())
-            .unwrap_or(value.clone())
+        self.map.get(value).cloned().unwrap_or_else(|| value.clone())
     }
     
     pub fn substitute<U: SubstitutableWith<T>>(&self, element: &U) -> U {
         let mut result = element.clone();
         
-        for (k, v) in self.pairs.iter() {
+        for (k, v) in self.map.iter() {
             result = result.substitute_with(k, v);
         }
 
@@ -86,7 +84,7 @@ impl<T: Substitutable> Substitution<T> {
     }
     
     pub fn collapse(&mut self) {
-        self.pairs.retain(|(k, v)| k != v);
+        self.map.retain(|k, v| k != v);
     }
 
     pub fn extend(&mut self, pair: (T, T)) {
@@ -95,36 +93,22 @@ impl<T: Substitutable> Substitution<T> {
                 panic!("Invalid substitution: {} -> {}", pair.0.debug_string(), pair.1.debug_string());
             }
             
-            for (_, v) in self.pairs.iter_mut() {
+            for (_, v) in self.map.iter_mut() {
                 if v.clone().eq(&pair.0) {
                     *v = pair.1.clone();
                 }
             }
             
-            if !self.pairs.iter().any(|(k, _)| k == &pair.0) {
-                self.pairs.push(pair);
+            if !self.map.iter().any(|(k, _)| k == &pair.0) {
+                self.map.insert(pair.0, pair.1);
             }
         }
-    }
-
-    pub fn equals(&self, _other: &Self) -> bool {
-        if self.size() != _other.size() {
-            return false;
-        }
-        
-        for (k, v) in self.pairs.iter() {
-            if !_other.pairs.iter().any(|(k2, v2)| k == k2 && v == v2) {
-                return false;
-            }
-        }
-        
-        true
     }
 
     pub fn agrees(&self, _other: &Self) -> bool {
-        for (k, v) in self.pairs.iter() {
-            match _other.pairs.iter().find(|(k2, _)| k == k2) {
-                Some((_, v2)) if v != v2 => return false,
+        for (k, v) in self.map.iter() {
+            match _other.map.get(k) {
+                Some(v2) if v != v2 => return false,
                 _ => {}
             }
         }
@@ -133,15 +117,15 @@ impl<T: Substitutable> Substitution<T> {
     }
 
     pub fn compose(&mut self, _other: &Self) {
-        for (k, v) in self.pairs.iter_mut() {
-            if let Some((_, v2)) = _other.pairs.iter().find(|(k2, _)| k == k2) {
+        for (_, v) in self.map.iter_mut() {
+            if let Some(v2) = _other.map.get(v) {
                 *v = v2.clone();
             }
         }
         
-        for (k, v) in _other.pairs.iter() {
+        for (k, v) in _other.map.iter() {
             if !self.contains(k) {
-                self.pairs.push((k.clone(), v.clone()));
+                self.map.insert(k.clone(), v.clone());
             }
         }
         
@@ -264,13 +248,25 @@ impl<T: Substitutable> Substitution<T> {
     }
     
     pub fn match_subst(pattern_subst: &Self, instance_subst: &Self) -> Option<Self> {
-        let mut arguments = pattern_subst.pairs.iter().map(|(k, _)| k.clone()).collect::<Vec<T>>();
-        arguments.extend(instance_subst.pairs.iter().map(|(k, _)| k.clone()));
+        let mut arguments = pattern_subst.map.keys().cloned().collect::<Vec<T>>();
+        arguments.extend(instance_subst.map.keys().cloned());
         
         let patterns = arguments.iter().map(|a| pattern_subst.apply(a)).collect::<Vec<T>>();
         let instances = arguments.iter().map(|a| instance_subst.apply(a)).collect::<Vec<T>>();
         
         Self::match_all(&mut patterns.clone(), &mut instances.clone())
+    }
+    
+    pub fn add_subst_match(&self, other: &Self, ctx: &mut impl MatchContext<T>) {
+        let mut arguments = self.map.keys().cloned().collect::<Vec<T>>();
+        arguments.extend(other.map.keys().cloned());
+        
+        let patterns = arguments.iter().map(|a| self.apply(a)).collect::<Vec<T>>();
+        let instances = arguments.iter().map(|a| other.apply(a)).collect::<Vec<T>>();
+        
+        for (p, i) in patterns.iter().zip(instances.iter()) {
+            ctx.extend(p, i);
+        }
     }
 }
 
@@ -282,7 +278,7 @@ impl<T: Substitutable> PrettyPrintable for Substitution<T> {
         elements.push(PPElement::break_elem(1, 4, false));
         
         elements.push(PPElement::list(
-            self.pairs.iter().map(|(k, v)| {
+            self.map.iter().map(|(k, v)| {
                 PPElement::group(vec![
                     k.to_enclosed_pp_element(detail),
                     PPElement::break_elem(1, 4, false),
@@ -317,6 +313,15 @@ impl<T: Substitutable> PrettyPrintable for Substitution<T> {
     
     fn close_paren(&self) -> String {
         "}".to_string()
+    }
+}
+
+impl<T: Substitutable> Hash for Substitution<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for (k, v) in self.pairs().iter() {
+            k.hash(state);
+            v.hash(state);
+        }
     }
 }
 

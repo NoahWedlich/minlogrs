@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -12,7 +12,7 @@ use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Abstraction {
     vars: Vec<Rc<MinlogTerm>>,
     kernel: Rc<MinlogTerm>,
@@ -126,35 +126,33 @@ impl TermBody for Abstraction {
         1 + self.kernel.depth()
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = self.kernel.get_free_variables();
-        
-        inner.retain(|v| !self.vars.contains(v));
-        
-        inner
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables()
     }
     
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = self.kernel.get_bound_variables();
-        
-        for var in &self.vars {
-            if !inner.contains(var) {
-                inner.push(var.clone());
-            }
-        }
-        
-        inner
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types()
     }
     
-    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.kernel.get_free_variables().into_iter()
+            .filter(|v| !self.vars.contains(v))
+            .collect()
+    }
+    
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.kernel.get_bound_variables().union(&self.vars.iter().cloned().collect()).cloned().collect()
+    }
+    
+    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
         self.kernel.get_constructors()
     }
     
-    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
         self.kernel.get_program_terms()
     }
     
-    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
         self.kernel.get_internal_constants()
     }
     

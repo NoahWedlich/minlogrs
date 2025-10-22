@@ -6,7 +6,7 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::utils::pretty_printer::PrettyPrintable;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TermSubstEntry {
     Type(Rc<MinlogType>),
     Term(Rc<MinlogTerm>),

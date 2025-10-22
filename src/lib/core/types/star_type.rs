@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -7,7 +7,7 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct StarType {
     types: Vec<Rc<MinlogType>>,
 }
@@ -35,16 +35,16 @@ impl TypeBody for StarType {
         self.types.iter().map(|t| t.level()).max().unwrap_or(0)
     }
 
-    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         self.types.iter()
             .flat_map(|t| t.get_polarized_tvars(current))
-            .collect::<Vec<_>>()
+            .collect()
     }
 
-    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         self.types.iter()
             .flat_map(|t| t.get_polarized_algebras(current))
-            .collect::<Vec<_>>()
+            .collect()
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
@@ -137,11 +137,3 @@ impl PrettyPrintable for StarType {
         ")".to_string()
     }
 }
-
-impl PartialEq for StarType {
-    fn eq(&self, other: &Self) -> bool {
-        self.types == other.types
-    }
-}
-
-impl Eq for StarType {}

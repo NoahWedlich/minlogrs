@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::SubstitutableWith;
@@ -10,7 +10,7 @@ use crate::core::terms::minlog_term::{MinlogTerm, TermBody, Totality};
 
 use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RewriteRule {
     pattern: Rc<MinlogTerm>,
     result: Rc<MinlogTerm>,
@@ -44,13 +44,6 @@ impl RewriteRule {
             }
         } else {
             panic!("Rewrite rule must either be a program constant or a full application of a program constant");
-        }
-        
-        let pattern_free_vars = MinlogTerm::get_free_variables(&pattern);
-        for free_var in MinlogTerm::get_free_variables(&result) {
-            if !pattern_free_vars.contains(&free_var) {
-                panic!("Rewrite rule result contains free variables not present in the pattern");
-            }
         }
         
         Rc::new(RewriteRule { pattern, result })
@@ -124,6 +117,24 @@ impl RewriteRule {
             false
         }
     }
+    
+    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.result.get_type_variables().union(&self.pattern.get_type_variables()).cloned().collect()
+    }
+
+    pub fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.result.get_algebra_types().union(&self.pattern.get_algebra_types()).cloned().collect()
+    }
+
+    pub fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.result.get_free_variables().difference(&self.pattern.get_free_variables()).cloned().collect()
+    }
+    
+    pub fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.pattern.get_bound_variables()
+            .union(&self.result.get_bound_variables()).cloned().collect::<HashSet<_>>()
+            .union(&self.pattern.get_free_variables()).cloned().collect()
+    }
 }
 
 impl SubstitutableWith<TermSubstEntry> for Rc<RewriteRule> {
@@ -159,18 +170,16 @@ pub struct ProgramConstant {
     computation_rules: RefCell<Vec<Rc<RewriteRule>>>,
     rewrite_rules: RefCell<Vec<Rc<RewriteRule>>>,
     totality: RefCell<Totality>,
-    type_variables: Vec<Rc<MinlogType>>,
 }
 
 impl ProgramConstant {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>, totality: Totality, type_variables: Vec<Rc<MinlogType>>) -> Rc<ProgramConstant> {
+    pub fn create(name: String, minlog_type: Rc<MinlogType>, totality: Totality) -> Rc<ProgramConstant> {
         Rc::new(ProgramConstant {
             name,
             minlog_type,
             computation_rules: RefCell::new(vec![]),
             rewrite_rules: RefCell::new(vec![]),
             totality: RefCell::new(totality),
-            type_variables,
         })
     }
     
@@ -201,12 +210,6 @@ impl ProgramConstant {
         
         if !rule.is_computation_rule() {
             panic!("Attempted to add a non-computation rule as a computation rule");
-        }
-        
-        for var in rule.pattern().get_type_variables() {
-            if !self.type_variables.contains(&var) {
-                panic!("Type variable '{}' in computation rule pattern not in program constant type variables", var.debug_string());
-            }
         }
         
         for rule in self.computation_rules.borrow().iter() {
@@ -252,45 +255,70 @@ impl ProgramConstant {
         (term.clone(), false)
     }
     
-    pub fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = vec![];
-        
-        for rule in self.computation_rules.borrow().iter() {
-            for var in MinlogTerm::get_free_variables(&rule.pattern()) {
-                if !vars.contains(&var) {
-                    vars.push(var);
-                }
-            }
-        }
-        
-        vars
+    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+            .flat_map(|r| r.get_type_variables())
+            .collect()
     }
     
-    pub fn get_type_variables(&self) -> &Vec<Rc<MinlogType>> {
-        &self.type_variables
+    pub fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+            .flat_map(|r| r.get_free_variables())
+            .collect()
+    }
+    
+    pub fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+            .flat_map(|r| r.get_bound_variables())
+            .collect()
     }
 }
 
 impl PrettyPrintable for ProgramConstant {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         let tvars = self.get_type_variables();
+        let tmvars = self.get_free_variables();
+        
+        let has_tvars = !tvars.is_empty();
+        let has_tmvars = !tmvars.is_empty();
         
         let name = if tvars.is_empty() {
             PPElement::text(self.name.clone())
         } else {
             let tvars = PPElement::list(
-                self.get_type_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
-                PPElement::break_elem(0, 4, false),
-                PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 4, false),
+                tvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(", ".to_string()),
+                PPElement::break_elem(1, 0, false),
                 BreakType::Flexible
             );
+            
+            let tmvars = PPElement::list(
+                tmvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(", ".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Flexible
+            );
+            
+            let mut vars = vec![];
+            
+            if has_tvars {
+                vars.push(tvars);
+                if has_tmvars {
+                    vars.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_tmvars {
+                vars.push(tmvars);
+            }
             
             PPElement::group(vec![
                 PPElement::text(self.name.clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                tvars,
+                PPElement::group(vars, BreakType::Flexible, 0),
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
@@ -353,5 +381,12 @@ impl PrettyPrintable for ProgramConstant {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
+    }
+}
+
+impl Hash for ProgramConstant {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.minlog_type.hash(state);
     }
 }

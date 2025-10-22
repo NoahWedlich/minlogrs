@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, hash::Hash, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
@@ -15,7 +15,7 @@ use crate::core::types::star_type::StarType;
 crate::wrapper_enum! {
     
     @default { TypeConstant }
-    pub trait TypeBody: PrettyPrintable, Clone, PartialEq, Eq {
+    pub trait TypeBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn remove_nulls(&Self) -> Option<Rc<MinlogType>>
         
         pub fn is_object_type(&Self) -> bool {
@@ -30,12 +30,12 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn get_polarized_tvars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
-            vec![]
+        pub fn get_polarized_tvars(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+            HashSet::new()
         }
-        
-        pub fn get_polarized_algebras(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
-            vec![]
+
+        pub fn get_polarized_algebras(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+            HashSet::new()
         }
         
         pub fn substitute(&Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType>
@@ -45,7 +45,7 @@ crate::wrapper_enum! {
         pub fn match_with(&Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>>
     }
     
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogType {
         NullType(|null|),
         Atomic(|atomic|),
@@ -81,12 +81,12 @@ impl MinlogType {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }
     
-    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
         self.get_polarized_tvars(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+    pub fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
         self.get_polarized_algebras(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }

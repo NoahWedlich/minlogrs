@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -27,33 +27,13 @@ pub struct InductivePredicate {
 }
 
 impl InductivePredicate {
-    pub fn create(definition: Rc<InductiveConstant>, params: PredicateSubstitution) -> Rc<MinlogPredicate> {
-        let expected_tvars = definition.get_type_variables();
-        let expected_tmvars = definition.get_term_variables();
-        let expected_pvars = definition.get_predicate_variables();
+    pub fn create(definition: Rc<InductiveConstant>, mut params: PredicateSubstitution) -> Rc<MinlogPredicate> {
+        let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables().into_iter().map(|tv| tv.into())
+            .chain(definition.get_free_variables().into_iter().map(|tv| tv.into()))
+            .chain(definition.get_polarized_pred_vars(Polarity::Unknown).into_iter().map(|pol| pol.value.into()))
+            .collect();
         
-        for (from, _) in params.pairs() {
-            match from {
-                PredSubstEntry::Type(tv) => {
-                    if !expected_tvars.contains(tv) {
-                        panic!("Type variable '{}' not expected in parameters for inductive predicate '{}'", tv.debug_string(), definition.name());
-                    }
-                },
-                PredSubstEntry::Term(tv) => {
-                    if !expected_tmvars.contains(tv) {
-                        panic!("Term variable '{}' not expected in parameters for inductive predicate '{}'", tv.debug_string(), definition.name());
-                    }
-                },
-                PredSubstEntry::Predicate(pv) => {
-                    if !expected_pvars.contains(pv) {
-                        panic!("Predicate variable '{}' not expected in parameters for inductive predicate '{}'", pv.debug_string(), definition.name());
-                    }
-                },
-                _ => {
-                    panic!("Invalid parameter type for inductive predicate '{}'", definition.name());
-                }
-            }
-        }
+        params.restrict(|from| idp_vars.contains(from));
         
         Rc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
             definition,
@@ -94,7 +74,7 @@ impl InductivePredicate {
         );
         
         self.definition.get_algebra().map(|alg| {
-            AlgebraType::create(alg, type_subst.pairs().clone())
+            AlgebraType::create(alg.clone(), type_subst)
         })
     }
     
@@ -174,50 +154,91 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        self.definition.get_type_variables().iter()
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        // TODO: Get rid of these hacks to prevent infinite recursion
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.definition.get_type_variables().iter()
             .flat_map(|tv| {
                 self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables()
-            }).collect()
+            }).collect();
+            
+        *self.blocked_collection.borrow_mut() = false;
+        
+        result
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        self.definition.get_type_variables().iter()
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.definition.get_type_variables().iter()
             .flat_map(|tv| {
                 self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types()
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_algebra_types())
-            ).collect()
+            ).collect();
+
+        *self.blocked_collection.borrow_mut() = false;
+
+        result
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        self.definition.get_term_variables().iter()
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.definition.get_free_variables().iter()
             .flat_map(|tv| {
                 self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_free_variables()
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_free_variables())
-            ).collect()
+            ).collect();
+
+        *self.blocked_collection.borrow_mut() = false;
+
+        result
     }
     
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        self.definition.get_term_variables().iter()
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        if *self.blocked_collection.borrow() {
+            return HashSet::new();
+        }
+
+        *self.blocked_collection.borrow_mut() = true;
+        
+        let result = self.definition.get_bound_variables().iter()
             .flat_map(|tv| {
                 self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables()
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_bound_variables())
-            ).collect()
+            ).collect();
+            
+        *self.blocked_collection.borrow_mut() = false;
+        
+        result
     }
     
-    fn get_polarized_pred_vars(&self, current:Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
 
         *self.blocked_collection.borrow_mut() = true;
 
-        let result = self.definition.get_predicate_variables().iter()
-            .flat_map(|pv| {
-                self.params.substitute::<PredSubstEntry>(&pv.into()).to_predicate().unwrap()
+        let result = self.definition.get_polarized_pred_vars(current).iter()
+            .flat_map(|pol| {
+                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                     .get_polarized_pred_vars(current)
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current))
@@ -228,16 +249,16 @@ impl PredicateBody for InductivePredicate {
         result
     }
     
-    fn get_polarized_comp_terms(&self, current:Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
         
         *self.blocked_collection.borrow_mut() = true;
 
-        let result = self.definition.get_predicate_variables().iter()
-            .flat_map(|pv| {
-                self.params.substitute::<PredSubstEntry>(&pv.into()).to_predicate().unwrap()
+        let result = self.definition.get_polarized_comp_terms(current).iter()
+            .flat_map(|pol| {
+                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                     .get_polarized_comp_terms(current)
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current))
@@ -248,38 +269,38 @@ impl PredicateBody for InductivePredicate {
         result
     }
     
-    fn get_polarized_inductive_preds(&self, current:Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
 
         *self.blocked_collection.borrow_mut() = true;
 
-        let mut results = self.definition.get_predicate_variables().iter()
-            .flat_map(|pv| {
-                self.params.substitute::<PredSubstEntry>(&pv.into()).to_predicate().unwrap()
+        let mut results = self.definition.get_polarized_inductive_preds(current).iter()
+            .flat_map(|pol| {
+                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                     .get_polarized_inductive_preds(current)
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current))
-            ).collect::<Vec<_>>();
-            
-        results.push(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
+            ).collect::<HashSet<_>>();
+
+        results.insert(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
 
         *self.blocked_collection.borrow_mut() = false;
 
         results
     }
     
-    fn get_polarized_prime_formulas(&self, current:Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
         if *self.blocked_collection.borrow() {
-            return vec![];
+            return HashSet::new();
         }
         
         *self.blocked_collection.borrow_mut() = true;
 
-        let result = self.definition.get_predicate_variables().iter()
-            .flat_map(|pv| {
-                self.params.substitute::<PredSubstEntry>(&pv.into()).to_predicate().unwrap()
+        let result = self.definition.get_polarized_prime_formulas(current).iter()
+            .flat_map(|pol| {
+                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                     .get_polarized_prime_formulas(current)
             }).chain(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current))
@@ -352,44 +373,118 @@ impl PredicateBody for InductivePredicate {
 impl PrettyPrintable for InductivePredicate {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         let tparams = self.definition.get_type_variables();
-        let tmparams = self.definition.get_term_variables();
-        let pparams = self.definition.get_predicate_variables();
+        let tmparams = self.definition.get_free_variables();
+        let pparams = self.definition.get_polarized_pred_vars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
         
-        if tparams.is_empty() && tmparams.is_empty() && pparams.is_empty() {
+        let has_tparams = !tparams.is_empty();
+        let has_tmparams = !tmparams.is_empty();
+        let has_pparams = !pparams.is_empty();
+        
+        if !has_tparams && !has_tmparams && !has_pparams {
             PPElement::text(self.definition.name().clone())
         } else {
-            let params = PPElement::list(
-                tparams.iter().map(|tv| tv.into())
-                    .chain(tmparams.iter().map(|tv| tv.into()))
-                    .chain(pparams.iter().map(|pv| pv.into()))
-                    .map(|param| {
-                        let substituted = self.params.substitute::<PredSubstEntry>(&param);
-                        if detail && substituted != param {
-                            PPElement::group(vec![
-                                param.to_pp_element(detail),
-                                PPElement::break_elem(1, 4, false),
-                                PPElement::text("=".to_string()),
-                                PPElement::break_elem(1, 4, false),
-                                substituted.to_pp_element(detail),
-                            ], BreakType::Flexible, 0)
-                        } else {
-                            substituted.to_pp_element(detail)
-                        }
-                    }).collect(),
+            let tvars = PPElement::list(
+                tparams.iter().map(|tv| {
+                    let substituted = self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_type().unwrap();
+                    if detail && &substituted != tv {
+                        PPElement::group(vec![
+                            tv.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            substituted.to_enclosed_pp_element(detail)
+                        ], BreakType::Flexible, 0)
+                    } else {
+                        tv.to_enclosed_pp_element(detail)
+                    }
+                }).collect(),
                 PPElement::break_elem(0, 4, false),
                 PPElement::text(",".to_string()),
                 PPElement::break_elem(1, 4, false),
                 BreakType::Flexible,
             );
             
+            let tmvars = PPElement::list(
+                tmparams.iter().map(|tv| {
+                    let substituted = self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap();
+                    if detail && &substituted != tv {
+                        PPElement::group(vec![
+                            tv.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            substituted.to_enclosed_pp_element(detail)
+                        ], BreakType::Flexible, 0)
+                    } else {
+                        tv.to_enclosed_pp_element(detail)
+                    }
+                }).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible,
+            );
+            
+            let pvars = PPElement::list(
+                pparams.iter().map(|pv| {
+                    let substituted = self.params.substitute::<PredSubstEntry>(&pv.clone().into()).to_predicate().unwrap();
+                    if detail && &substituted != pv {
+                        PPElement::group(vec![
+                            pv.to_pp_element(detail),
+                            PPElement::break_elem(1, 4, false),
+                            PPElement::text("=".to_string()),
+                            PPElement::break_elem(1, 4, false),
+                            substituted.to_enclosed_pp_element(detail)
+                        ], BreakType::Flexible, 0)
+                    } else {
+                        pv.to_enclosed_pp_element(detail)
+                    }
+                }).collect(),
+                PPElement::break_elem(0, 4, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 4, false),
+                BreakType::Flexible,
+            );
+            
+            let mut parameters = vec![];
+            if has_tparams {
+                parameters.push(tvars);
+                if has_tmparams || has_pparams {
+                    parameters.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_tmparams {
+                parameters.push(tmvars);
+                if has_pparams {
+                    parameters.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_pparams {
+                parameters.push(pvars);
+            }
+            
             PPElement::group(vec![
                 PPElement::text(self.definition.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                params,
+                PPElement::group(parameters, BreakType::Consistent, 0),
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
         }
+    }
+    
+    fn requires_parens(&self, _detail: bool) -> bool {
+        false
+    }
+}
+
+impl Hash for InductivePredicate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.definition.hash(state);
+        self.params.hash(state);
     }
 }

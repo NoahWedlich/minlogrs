@@ -1,12 +1,14 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, hash::Hash, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
+
+use crate::core::terms::minlog_term::{MinlogTerm, Totality};
+use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::formulas::prime_formula::PrimeFormula;
@@ -17,7 +19,7 @@ use crate::core::predicates::inductive_predicate::InductivePredicate;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PredicateDegree {
     pub positive_content: bool,
     pub negative_content: bool,
@@ -26,7 +28,7 @@ pub struct PredicateDegree {
 crate::wrapper_enum! {
     
     @default { EmptyPredicateBody }
-    pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq {
+    pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn arity(&Self) -> Vec<Rc<MinlogType>>
         
         pub fn degree(&Self) -> PredicateDegree {
@@ -39,36 +41,36 @@ crate::wrapper_enum! {
         
         pub fn extracted_type(&Self) -> Rc<MinlogType>
         
-        pub fn get_type_variables(&Self) -> Vec<Rc<MinlogType>> {
-            vec![]
+        pub fn get_type_variables(&Self) -> HashSet<Rc<MinlogType>> {
+            HashSet::new()
         }
         
-        pub fn get_algebra_types(&Self) -> Vec<Rc<MinlogType>> {
-            vec![]
+        pub fn get_algebra_types(&Self) -> HashSet<Rc<MinlogType>> {
+            HashSet::new()
         }
 
-        pub fn get_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_free_variables(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_bound_variables(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_bound_variables(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_polarized_pred_vars(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-            vec![]
+        pub fn get_polarized_pred_vars(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+            HashSet::new()
         }
         
-        pub fn get_polarized_comp_terms(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-            vec![]
+        pub fn get_polarized_comp_terms(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+            HashSet::new()
         }
         
-        pub fn get_polarized_inductive_preds(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-            vec![]
+        pub fn get_polarized_inductive_preds(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+            HashSet::new()
         }
         
-        pub fn get_polarized_prime_formulas(&Self, _current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
-            vec![]
+        pub fn get_polarized_prime_formulas(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+            HashSet::new()
         }
         
         pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
@@ -78,7 +80,7 @@ crate::wrapper_enum! {
         pub fn match_with(&Self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry>
     }
     
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogPredicate {
         InternalPredicate(||internal_predicate||),
         Variable(||variable|| PredicateVariable),
@@ -99,27 +101,30 @@ crate::wrapper_enum! {
 
 impl MinlogPredicate {
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let free_vars = pred.get_free_variables();
-        let body = PrimeFormula::create(pred.clone(), free_vars.clone());
-        ComprehensionTerm::create(free_vars, body)
+        let arity = pred.arity();
+        let vars = arity.iter().enumerate().map(|(i, t)| {
+            TermVariable::create(format!("T{}", i), t.clone(), Totality::Partial)
+        }).collect::<Vec<_>>();
+        let prime_formula = PrimeFormula::create(pred.clone(), vars.clone());
+        ComprehensionTerm::create(vars, prime_formula)
     }
     
-    pub fn get_predicate_variables(&self) -> Vec<Rc<MinlogPredicate>> {
+    pub fn get_predicate_variables(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.get_polarized_pred_vars(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_comprehension_terms(&self) -> Vec<Rc<MinlogPredicate>> {
+    pub fn get_comprehension_terms(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.get_polarized_comp_terms(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_inductive_predicates(&self) -> Vec<Rc<MinlogPredicate>> {
+    pub fn get_inductive_predicates(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.get_polarized_inductive_preds(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
 
-    pub fn get_prime_formulas(&self) -> Vec<Rc<MinlogFormula>> {
+    pub fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
         self.get_polarized_prime_formulas(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
@@ -157,7 +162,7 @@ impl MinlogPredicate {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct EmptyPredicateBody;
 
 impl PrettyPrintable for EmptyPredicateBody {

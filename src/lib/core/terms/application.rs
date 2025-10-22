@@ -1,5 +1,5 @@
 
-use std::{cmp::{max, min}, rc::Rc};
+use std::{cmp::{max, min}, rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -13,7 +13,7 @@ use crate::core::terms::abstraction::Abstraction;
 
 use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Application {
     operands: Vec<Rc<MinlogTerm>>,
     operator: Rc<MinlogTerm>,
@@ -183,74 +183,42 @@ impl TermBody for Application {
         self.operator.is_constructor() && self.operands.iter().all(|op| op.constructor_pattern())
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = self.operator.get_free_variables();
-
-        for op in &self.operands {
-            for var in op.get_free_variables() {
-                if !vars.contains(&var) {
-                    vars.push(var);
-                }
-            }
-        }
-        
-        vars
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables()
+    }
+    
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types()
+    }
+    
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.operands.iter().flat_map(|op| op.get_free_variables())
+            .chain(self.operator.get_free_variables())
+            .collect()
     }
 
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = self.operator.get_bound_variables();
-
-        for op in &self.operands {
-            for var in op.get_bound_variables() {
-                if !vars.contains(&var) {
-                    vars.push(var);
-                }
-            }
-        }
-        
-        vars
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.operands.iter().flat_map(|op| op.get_bound_variables())
+            .chain(self.operator.get_bound_variables())
+            .collect()
     }
 
-    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut cons = self.operator.get_constructors();
-
-        for op in &self.operands {
-            for con in op.get_constructors() {
-                if !cons.contains(&con) {
-                    cons.push(con);
-                }
-            }
-        }
-        
-        cons
+    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.operands.iter().flat_map(|op| op.get_constructors())
+            .chain(self.operator.get_constructors())
+            .collect()
     }
 
-    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut progs = self.operator.get_program_terms();
-
-        for op in &self.operands {
-            for prog in op.get_program_terms() {
-                if !progs.contains(&prog) {
-                    progs.push(prog);
-                }
-            }
-        }
-        
-        progs
+    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.operands.iter().flat_map(|op| op.get_program_terms())
+            .chain(self.operator.get_program_terms())
+            .collect()
     }
 
-    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut consts = self.operator.get_internal_constants();
-
-        for op in &self.operands {
-            for c in op.get_internal_constants() {
-                if !consts.contains(&c) {
-                    consts.push(c);
-                }
-            }
-        }
-        
-        consts
+    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.operands.iter().flat_map(|op| op.get_internal_constants())
+            .chain(self.operator.get_internal_constants())
+            .collect()
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

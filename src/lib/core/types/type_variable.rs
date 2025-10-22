@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput, Substitutable};
@@ -7,7 +7,7 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TypeVariable {
     name: String
 }
@@ -31,8 +31,8 @@ impl TypeBody for TypeVariable {
         Some(TypeVariable::create(self.name.clone()))
     }
 
-    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
-        vec![Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))]
+    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+        HashSet::from([Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))])
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
@@ -72,11 +72,3 @@ impl PrettyPrintable for TypeVariable {
         false
     }
 }
-
-impl PartialEq for TypeVariable {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-impl Eq for TypeVariable {}

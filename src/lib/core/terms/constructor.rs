@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -11,7 +11,7 @@ use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Constructor {
     name: String,
     minlog_type: Rc<MinlogType>,
@@ -60,8 +60,16 @@ impl TermBody for Constructor {
         self.minlog_type.is_algebra()
     }
     
-    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        vec![Rc::new(MinlogTerm::Constructor(self.clone()))]
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables()
+    }
+    
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types()
+    }
+    
+    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
+        HashSet::from([Rc::new(MinlogTerm::Constructor(self.clone()))])
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

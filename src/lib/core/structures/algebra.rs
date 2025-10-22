@@ -1,6 +1,8 @@
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::*;
+
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -10,12 +12,11 @@ use crate::core::terms::minlog_term::MinlogTerm;
 pub struct Algebra {
     name: String,
     constructors: RefCell<Vec<Rc<MinlogTerm>>>,
-    type_variables: Vec<Rc<MinlogType>>,
 }
 
 impl Algebra {
-    pub fn create(name: String, type_variables: Vec<Rc<MinlogType>>) -> Rc<Algebra> {
-        Rc::new(Algebra { name, constructors: RefCell::new(vec![]), type_variables })
+    pub fn create(name: String) -> Rc<Algebra> {
+        Rc::new(Algebra { name, constructors: RefCell::new(vec![]) })
     }
     
     pub fn name(&self) -> &String {
@@ -55,27 +56,34 @@ impl Algebra {
             panic!("Constructor with name '{}' already exists in algebra '{}'", existing.to_constructor().unwrap().name(), self.name);
         }
         
-        for tvar in constructor.get_type_variables() {
-            if !self.type_variables.contains(&tvar) {
-                panic!("Constructor type contains type variable '{}' not in the algebra's type variables", tvar.debug_string());
-            }
-        }
-        
         self.constructors.borrow_mut().push(constructor);
     }
     
-    pub fn get_type_variables(&self) -> &Vec<Rc<MinlogType>> {
-        &self.type_variables
+    pub fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+        self.constructors.borrow().iter().flat_map(|constructor| {
+            constructor.minlog_type().get_polarized_tvars(current)
+        }).collect()
+    }
+    
+    pub fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+        self.constructors.borrow().iter().flat_map(|constructor| {
+            constructor.minlog_type().get_polarized_algebras(current)
+        }).collect()
     }
 }
 
 impl PrettyPrintable for Algebra {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let name = if self.get_type_variables().is_empty() {
+        let tvars = self.get_polarized_tvars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
+        
+        let has_tvars = !tvars.is_empty();
+        
+        let name = if !has_tvars {
             PPElement::text(self.name.clone())
         } else {
             let tvars = PPElement::list(
-                self.get_type_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
+                self.get_polarized_tvars(Polarity::Unknown).iter().map(|pol| pol.value.to_pp_element(detail)).collect(),
                 PPElement::break_elem(0, 4, false),
                 PPElement::text(",".to_string()),
                 PPElement::break_elem(1, 4, false),
@@ -96,8 +104,8 @@ impl PrettyPrintable for Algebra {
             let constructors = PPElement::list(
                 self.constructors.borrow().iter().map(|c| c.to_pp_element(true)).collect(),
                 PPElement::break_elem(0, 4, false),
-                PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 4, true),
+                PPElement::text(";".to_string()),
+                PPElement::break_elem(1, 0, true),
                 BreakType::Flexible,
             );
             
@@ -113,5 +121,11 @@ impl PrettyPrintable for Algebra {
         } else {
             name
         }
+    }
+}
+
+impl Hash for Algebra {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
     }
 }

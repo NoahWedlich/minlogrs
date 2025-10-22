@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -14,7 +14,7 @@ use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, 
 
 use crate::core::predicates::predicate_substitution::{PredicateSubstitution, PredSubstEntry};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ComprehensionTerm {
     vars: Vec<Rc<MinlogTerm>>,
     body: Rc<MinlogFormula>,
@@ -84,73 +84,41 @@ impl PredicateBody for ComprehensionTerm {
         self.body.extracted_type()
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = self.body.get_type_variables();
-        
-        for var in &self.vars {
-            for tvar in var.get_type_variables() {
-                if !inner.contains(&tvar) {
-                    inner.push(tvar);
-                }
-            }
-        }
-        
-        inner
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.vars.iter().flat_map(|v| v.get_type_variables()).chain(
+            self.body.get_type_variables()
+        ).collect()
     }
 
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        let mut inner = self.body.get_algebra_types();
-
-        for var in &self.vars {
-            for tvar in var.get_algebra_types() {
-                if !inner.contains(&tvar) {
-                    inner.push(tvar);
-                }
-            }
-        }
-
-        inner
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.vars.iter().flat_map(|v| v.get_algebra_types()).chain(
+            self.body.get_algebra_types()
+        ).collect()
     }
 
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut inner = self.body.get_free_variables();
-        
-        inner.retain(|v| !self.vars.contains(v));
-        
-        inner
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.body.get_free_variables().difference(&self.vars.iter().cloned().collect()).cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut bound_vars = self.body.get_bound_variables();
-        
-        for var in &self.vars {
-            if !bound_vars.contains(var) {
-                bound_vars.push(var.clone());
-            }
-        }
-        
-        bound_vars
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.body.get_bound_variables().union(&self.vars.iter().cloned().collect()).cloned().collect()
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_pred_vars(current)
     }
 
-    fn get_polarized_comp_terms(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-        let mut inner = self.body.get_polarized_comp_terms(current);
-        
-        if inner.iter().all(|p| p.value.to_comprehension_term().unwrap() != self) {
-            inner.push(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
-        }
-        
-        inner
+    fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        let mut result = self.body.get_polarized_comp_terms(current);
+        result.insert(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
+        result
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_inductive_preds(current)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
         self.body.get_polarized_prime_formulas(current)
     }
     

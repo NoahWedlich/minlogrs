@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -13,7 +13,7 @@ use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, 
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PredicateVariable {
     name: String,
     arity: Vec<Rc<MinlogType>>,
@@ -71,16 +71,19 @@ impl PredicateBody for PredicateVariable {
         TypeVariable::create(name)
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
         self.arity.iter().flat_map(|t| t.get_type_variables()).collect()
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
         self.arity.iter().flat_map(|t| t.get_algebra_types()).collect()
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-        vec![Polarized::new(current, Rc::new(MinlogPredicate::Variable(self.clone())))]
+    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        HashSet::from([Polarized {
+            polarity: current,
+            value: Rc::new(MinlogPredicate::Variable(self.clone())),
+        }])
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

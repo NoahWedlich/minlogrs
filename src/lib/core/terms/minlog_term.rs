@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, hash::Hash, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -16,7 +16,7 @@ use crate::core::terms::projection::Projection;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub enum Totality {
     Total,
     Partial,
@@ -35,7 +35,7 @@ impl Totality {
 crate::wrapper_enum! {
     
     @default { EmptyTermBody }
-    pub trait TermBody: PrettyPrintable, Clone, PartialEq, Eq {
+    pub trait TermBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn minlog_type(&Self) -> Rc<MinlogType>
         
         pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogTerm>
@@ -52,30 +52,39 @@ crate::wrapper_enum! {
             false
         }
         
-        pub fn get_free_variables(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_type_variables(&Self) -> HashSet<Rc<MinlogType>> {
+            HashSet::new()
+        }
+
+        pub fn get_algebra_types(&Self) -> HashSet<Rc<MinlogType>> {
+            HashSet::new()
+        }
+
+        pub fn get_free_variables(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_bound_variables(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_bound_variables(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_constructors(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_constructors(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_program_terms(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_program_terms(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
-        pub fn get_internal_constants(&Self) -> Vec<Rc<MinlogTerm>> {
-            vec![]
+        pub fn get_internal_constants(&Self) -> HashSet<Rc<MinlogTerm>> {
+            HashSet::new()
         }
         
         pub fn alpha_equivalent(&Self, other: &Rc<MinlogTerm>,
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
 
+        //TODO: bound should be a HashSet to avoid duplicates
         pub fn totality(&Self, _bound: &mut Vec<TermVariable>) -> Totality {
             Totality::Partial
         }
@@ -87,7 +96,7 @@ crate::wrapper_enum! {
         pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry>
     }
     
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogTerm {
         Variable(||variable|| TermVariable),
         Constructor(||constructor|| Constructor),
@@ -112,14 +121,6 @@ crate::wrapper_enum! {
 }
 
 impl MinlogTerm {
-    pub fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
-        self.minlog_type().get_type_variables()
-    }
-    
-    pub fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
-        self.minlog_type().get_algebra_types()
-    }
-    
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
         self.minlog_type().contains_type_variable(var)
     }
@@ -149,7 +150,7 @@ impl MinlogTerm {
     }
 }
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct EmptyTermBody;
 
 impl PrettyPrintable for EmptyTermBody {

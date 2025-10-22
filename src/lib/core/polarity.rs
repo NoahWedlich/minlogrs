@@ -1,7 +1,8 @@
 
+use std::hash::Hash;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Polarity {
     Negative,
     Positive,
@@ -95,5 +96,12 @@ impl<T: PrettyPrintable + Clone + PartialEq + Eq> From<(Polarity, T)> for Polari
 impl<T: PrettyPrintable + Clone + PartialEq + Eq> From<Polarized<T>> for (Polarity, T) {
     fn from(polarised: Polarized<T>) -> Self {
         (polarised.polarity, polarised.value)
+    }
+}
+
+impl<T: PrettyPrintable + Clone + PartialEq + Eq + Hash> Hash for Polarized<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.polarity.hash(state);
+        self.value.hash(state);
     }
 }

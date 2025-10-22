@@ -1,5 +1,6 @@
 
-use std::{cmp::max, rc::Rc};
+use std::hash::Hash;
+use std::{cmp::max, rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -7,7 +8,7 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ArrowType {
     arguments: Vec<Rc<MinlogType>>,
     value: Rc<MinlogType>,
@@ -61,20 +62,20 @@ impl TypeBody for ArrowType {
         max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
     }
     
-    fn get_polarized_tvars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         let mut result = self.arguments.iter()
             .flat_map(|arg| arg.get_polarized_tvars(current.invert()))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         
         result.extend(self.value.get_polarized_tvars(current));
         
         result
     }
     
-    fn get_polarized_algebras(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
         let mut result = self.arguments.iter()
             .flat_map(|arg| arg.get_polarized_algebras(current.invert()))
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         
         result.extend(self.value.get_polarized_algebras(current));
         
@@ -176,11 +177,3 @@ impl PrettyPrintable for ArrowType {
         ")".to_string()
     }
 }
-
-impl PartialEq for ArrowType {
-    fn eq(&self, other: &Self) -> bool {
-        self.arguments == other.arguments && self.value == other.value
-    }
-}
-
-impl Eq for ArrowType {}

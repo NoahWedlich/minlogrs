@@ -1,10 +1,13 @@
 
+use lib::core::types::type_substitution::TypeSubstitution;
 use lib::utils::pretty_printer::*;
 use lib::core::types::{type_variable::*, algebra_type::*, arrow_type::*, star_type::*};
 use lib::core::terms::{minlog_term::*, term_variable::*, constructor::*, program_term::*, abstraction::*, application::*,
     term_substitution::*, tuple::*, projection::*};
+use lib::core::predicates::{minlog_predicate::*, predicate_variable::*, inductive_predicate::*, predicate_substitution::*};
+use lib::core::formulas::{prime_formula::*, implication::*, all_quantifier::*};
 
-use lib::core::structures::{algebra::*, program_constant::*};
+use lib::core::structures::{algebra::*, program_constant::*, inductive_constant::*};
 
 fn main() {
     let type_var_1 = TypeVariable::create("T".to_string());
@@ -78,8 +81,8 @@ fn main() {
     println!("Substituted Normalized Application Type:");
     println!("{}", substituted_normalized_app.minlog_type().debug_string());
     
-    let nat = Algebra::create("Nat".to_string(), vec![]);
-    let nat_type = AlgebraType::create(nat.clone(), vec![]);
+    let nat = Algebra::create("Nat".to_string());
+    let nat_type = AlgebraType::create(nat.clone(), TypeSubstitution::make_empty());
     println!("Algebra Type:");
     println!("{}", nat_type.debug_string());
     
@@ -95,8 +98,8 @@ fn main() {
     println!("Algebra:");
     println!("{}", nat.debug_string());
     
-    let list = Algebra::create("List".to_string(), vec![type_var_1.clone()]);
-    let list_type = AlgebraType::create(list.clone(), vec![(type_var_1.clone(), type_var_1.clone())]);
+    let list = Algebra::create("List".to_string());
+    let list_type = AlgebraType::create(list.clone(), TypeSubstitution::make_empty());
     println!("Algebra Type:");
     println!("{}", list_type.debug_string());
     
@@ -112,7 +115,9 @@ fn main() {
     println!("Algebra:");
     println!("{}", list.debug_string());
 
-    let nat_list_type = AlgebraType::create(list.clone(), vec![(type_var_1.clone(), nat_type.clone())]);
+    let nat_list_type = AlgebraType::create(list.clone(), TypeSubstitution::from_pairs(vec![
+        (type_var_1.clone(), nat_type.clone())
+    ]));
     println!("Nat List Type:");
     println!("{}", nat_list_type.debug_string());
     
@@ -155,12 +160,12 @@ fn main() {
     println!("{}", nat_list_3.debug_string());
     
     let nat_add_type = ArrowType::create(vec![nat_type.clone(), nat_type.clone()], nat_type.clone());
-    let nat_add = ProgramConstant::create("NatAdd".to_string(), nat_add_type.clone(), Totality::Total, vec![]);
+    let nat_add = ProgramConstant::create("NatAdd".to_string(), nat_add_type.clone(), Totality::Total);
     
     let nat_var_0 = TermVariable::create("m".to_string(), nat_type.clone(), Totality::Total);
     let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone(), Totality::Total);
     
-    let nat_add_term = ProgramTerm::create(nat_add.clone(), vec![]);
+    let nat_add_term = ProgramTerm::create(nat_add.clone(), TermSubstitution::make_empty());
     println!("Program Term nat_add:");
     println!("{}", nat_add_term.debug_string());
     
@@ -205,12 +210,12 @@ fn main() {
     
     let list_concat_type = ArrowType::create(vec![list_type.clone(), list_type.clone()], list_type.clone());
     let list_concat = ProgramConstant::create("ListConcat".to_string(),
-        list_concat_type.clone(), Totality::Total, vec![type_var_1.clone()]);
-        
+        list_concat_type.clone(), Totality::Total);
+    
     let list_var_0 = TermVariable::create("l1".to_string(), list_type.clone(), Totality::Total);
     let list_var_1 = TermVariable::create("l2".to_string(), list_type.clone(), Totality::Total);
     
-    let list_concat_term = ProgramTerm::create(list_concat.clone(), vec![(type_var_1.clone(), type_var_1.clone())]);
+    let list_concat_term = ProgramTerm::create(list_concat.clone(), TermSubstitution::make_empty());
     println!("Program Term list_concat:");
     println!("{}", list_concat_term.debug_string());
     println!("Program Term list_concat Type:");
@@ -240,8 +245,10 @@ fn main() {
     
     println!("Program Constant list_concat:");
     println!("{}", list_concat.debug_string());
-    
-    let nat_list_concat = ProgramTerm::create(list_concat.clone(), vec![(type_var_1.clone(), nat_type.clone())]);
+
+    let nat_list_concat = ProgramTerm::create(list_concat.clone(), TermSubstitution::from_pairs(vec![
+        (type_var_1.clone().into(), nat_type.clone().into())
+    ]));
     println!("Program Term nat_list_concat:");
     println!("{}", nat_list_concat.debug_string());
     
@@ -252,4 +259,100 @@ fn main() {
     let normalized_nat_list_concat = nat_list_concat.normalize(true, true);
     println!("Normalized Term nat_list_concat:");
     println!("{}", normalized_nat_list_concat.debug_string());
+    
+    let pvar = PredicateVariable::create("P".to_string(), vec![type_var_1.clone()],
+        PredicateDegree { positive_content: true, negative_content: true });
+    println!("Predicate Variable P:");
+    println!("{}", pvar.debug_string());
+    
+    let exd_const = InductiveConstant::create("ExD".to_string(), vec![type_var_1.clone()]);
+    let exd_const_type = InductivePredicate::create(exd_const.clone(), PredicateSubstitution::make_empty());
+    
+    println!("Inductive Predicate ExD:");
+    println!("{}", exd_const_type.debug_string());
+    
+    let exd_clause = AllQuantifier::create(
+        vec![var_x.clone()],
+        Implication::create(
+            vec![PrimeFormula::create(
+                pvar.clone(),
+                vec![var_x.clone()]
+            )],
+            PrimeFormula::create(
+                exd_const_type.clone(),
+                vec![var_x.clone()]
+            )
+        )
+    );
+    
+    exd_const.add_clause("InitExD".to_string(), exd_clause);
+    exd_const_type.to_inductive_predicate().unwrap().ensure_well_founded();
+    
+    println!("Inductive Constant ExD:");
+    println!("{}", exd_const.debug_string());
+    
+    let yprod_alg = Algebra::create("YProd".to_string());
+    let yprod_type = AlgebraType::create(yprod_alg.clone(), TypeSubstitution::make_empty());
+    
+    println!("Algebra Type YProd:");
+    println!("{}", yprod_type.debug_string());
+    
+    exd_const.make_computational(yprod_alg, false);
+    println!("Inductive Constant ExD after making computational:");
+    println!("{}", exd_const.debug_string());
+    
+    println!("YProd Algebra:");
+    println!("{}", yprod_type.to_algebra().unwrap().algebra().debug_string());
+    
+    let exd_cterm = MinlogPredicate::to_cterm(&exd_const_type);
+    println!("Comprehension Term for ExD:");
+    println!("{}", exd_cterm.debug_string());
+    
+    let nat_eq = InductiveConstant::create("NatEq".to_string(), vec![nat_type.clone(), nat_type.clone()]);
+    let nat_eq_type = InductivePredicate::create(nat_eq.clone(), PredicateSubstitution::make_empty());
+    
+    println!("Inductive Predicate NatEq:");
+    println!("{}", nat_eq_type.debug_string());
+    
+    let nat_eq_zero_clause = PrimeFormula::create(
+        nat_eq_type.clone(),
+        vec![nat_0.clone(), nat_0.clone()]
+    );
+    nat_eq.add_clause("NatEqZero".to_string(), nat_eq_zero_clause);
+    
+    let nat_eq_succ_clause = AllQuantifier::create(
+        vec![nat_var_0.clone(), nat_var_1.clone()],
+        Implication::create(
+            vec![PrimeFormula::create(
+                nat_eq_type.clone(),
+                vec![nat_var_0.clone(), nat_var_1.clone()]
+            )],
+            PrimeFormula::create(
+                nat_eq_type.clone(),
+                vec![
+                    Application::create(nat_succ.clone(), vec![nat_var_0.clone()]),
+                    Application::create(nat_succ.clone(), vec![nat_var_1.clone()])
+                ]
+            )
+        )
+    );
+    nat_eq.add_clause("NatEqSucc".to_string(), nat_eq_succ_clause);
+    
+    nat_eq_type.to_inductive_predicate().unwrap().ensure_well_founded();
+    
+    println!("Inductive Constant NatEq:");
+    println!("{}", nat_eq.debug_string());
+    
+    let nat_eq_alg = Algebra::create("NatEqAlg".to_string());
+    nat_eq.make_computational(nat_eq_alg, false);
+    
+    println!("Inductive Constant NatEq after making computational:");
+    println!("{}", nat_eq.debug_string());
+    
+    println!("NatEqAlg Algebra:");
+    println!("{}", nat_eq_type.to_inductive_predicate().unwrap().get_algebra().unwrap().to_algebra().unwrap().algebra().debug_string());
+    
+    let nat_eq_cterm = MinlogPredicate::to_cterm(&nat_eq_type);
+    println!("Comprehension Term for NatEq:");
+    println!("{}", nat_eq_cterm.debug_string());
 }

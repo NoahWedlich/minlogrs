@@ -13,7 +13,7 @@ use crate::core::formulas::minlog_formula::MinlogFormula;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PredSubstEntry {
     Type(Rc<MinlogType>),
     Term(Rc<MinlogTerm>),

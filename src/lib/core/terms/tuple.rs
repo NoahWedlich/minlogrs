@@ -1,6 +1,5 @@
 
-use std::rc::Rc;
-use std::vec;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -13,7 +12,7 @@ use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Tuple {
     elements: Vec<Rc<MinlogTerm>>,
     minlog_type: Rc<MinlogType>,
@@ -63,74 +62,32 @@ impl TermBody for Tuple {
         1 + self.elements.iter().map(|e| e.depth()).max().unwrap_or(0)
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = vec![];
-
-        for elem in &self.elements {
-            for var in elem.get_free_variables() {
-                if !vars.contains(&var) {
-                    vars.push(var);
-                }
-            }
-        }
-        
-        vars
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables()
+    }
+    
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types()
+    }
+    
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.elements.iter().flat_map(|e| e.get_free_variables()).collect()
     }
 
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut vars = vec![];
-
-        for elem in &self.elements {
-            for var in elem.get_bound_variables() {
-                if !vars.contains(&var) {
-                    vars.push(var);
-                }
-            }
-        }
-        
-        vars
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.elements.iter().flat_map(|e| e.get_bound_variables()).collect()
     }
 
-    fn get_constructors(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut cons = vec![];
-
-        for elem in &self.elements {
-            for con in elem.get_constructors() {
-                if !cons.contains(&con) {
-                    cons.push(con);
-                }
-            }
-        }
-        
-        cons
+    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.elements.iter().flat_map(|e| e.get_constructors()).collect()
     }
 
-    fn get_program_terms(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut progs = vec![];
-
-        for elem in &self.elements {
-            for prog in elem.get_program_terms() {
-                if !progs.contains(&prog) {
-                    progs.push(prog);
-                }
-            }
-        }
-        
-        progs
+    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.elements.iter().flat_map(|e| e.get_program_terms()).collect()
     }
 
-    fn get_internal_constants(&self) -> Vec<Rc<MinlogTerm>> {
-        let mut consts = vec![];
-
-        for elem in &self.elements {
-            for c in elem.get_internal_constants() {
-                if !consts.contains(&c) {
-                    consts.push(c);
-                }
-            }
-        }
-        
-        consts
+    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.elements.iter().flat_map(|e| e.get_internal_constants()).collect()
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

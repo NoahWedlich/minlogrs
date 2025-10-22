@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -16,7 +16,7 @@ use crate::core::formulas::minlog_formula::{FormulaBody, MinlogFormula, FormulaO
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Implication {
     premises: Vec<Rc<MinlogFormula>>,
     conclusion: Rc<MinlogFormula>,
@@ -93,72 +93,60 @@ impl FormulaBody for Implication {
             .remove_nulls().unwrap_or(TypeConstant::create_null())
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
         self.premises.iter()
             .flat_map(|p| p.get_type_variables())
             .chain(self.conclusion.get_type_variables())
             .collect()
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
         self.premises.iter()
             .flat_map(|p| p.get_algebra_types())
             .chain(self.conclusion.get_algebra_types())
             .collect()
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
         self.premises.iter()
             .flat_map(|p| p.get_free_variables())
             .chain(self.conclusion.get_free_variables())
             .collect()
     }
     
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
         self.premises.iter()
             .flat_map(|p| p.get_bound_variables())
             .chain(self.conclusion.get_bound_variables())
             .collect()
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-        let mut result = self.premises.iter()
+    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.premises.iter()
             .flat_map(|p| p.get_polarized_pred_vars(current.invert()))
-            .collect::<Vec<_>>();
-        
-        result.extend(self.conclusion.get_polarized_pred_vars(current));
-        
-        result
+            .chain(self.conclusion.get_polarized_pred_vars(current))
+            .collect()
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-        let mut result = self.premises.iter()
+    fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.premises.iter()
             .flat_map(|p| p.get_polarized_comp_terms(current.invert()))
-            .collect::<Vec<_>>();
-        
-        result.extend(self.conclusion.get_polarized_comp_terms(current));
-        
-        result
+            .chain(self.conclusion.get_polarized_comp_terms(current))
+            .collect()
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
-        let mut result = self.premises.iter()
+    fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.premises.iter()
             .flat_map(|p| p.get_polarized_inductive_preds(current.invert()))
-            .collect::<Vec<_>>();
-        
-        result.extend(self.conclusion.get_polarized_inductive_preds(current));
-        
-        result
+            .chain(self.conclusion.get_polarized_inductive_preds(current))
+            .collect()
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
-        let mut result = self.premises.iter()
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+        self.premises.iter()
             .flat_map(|p| p.get_polarized_prime_formulas(current.invert()))
-            .collect::<Vec<_>>();
-        
-        result.extend(self.conclusion.get_polarized_prime_formulas(current));
-        
-        result
+            .chain(self.conclusion.get_polarized_prime_formulas(current))
+            .collect()
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {

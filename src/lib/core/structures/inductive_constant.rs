@@ -1,9 +1,9 @@
 
-use std::{rc::Rc, cell::RefCell};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
 
 use crate::utils::pretty_printer::*;
 
-use crate::core::polarity::Polarity;
+use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::structures::algebra::Algebra;
 
@@ -22,22 +22,15 @@ pub struct InductiveConstant {
     arity: Vec<Rc<MinlogType>>,
     clauses: RefCell<Vec<(String, Rc<MinlogFormula>)>>,
     algebra: RefCell<Option<Rc<Algebra>>>,
-    type_variables: Vec<Rc<MinlogType>>,
-    term_variables: Vec<Rc<MinlogTerm>>,
-    pred_variables: Vec<Rc<MinlogPredicate>>,
 }
 
 impl InductiveConstant {
-    pub fn create(name: String, arity: Vec<Rc<MinlogType>>, type_variables: Vec<Rc<MinlogType>>,
-        term_variables: Vec<Rc<MinlogTerm>>, pred_variables: Vec<Rc<MinlogPredicate>>) -> Rc<InductiveConstant> {
+    pub fn create(name: String, arity: Vec<Rc<MinlogType>>) -> Rc<InductiveConstant> {
         Rc::new(InductiveConstant {
             name,
             arity,
             clauses: RefCell::new(vec![]),
             algebra: RefCell::new(None),
-            type_variables,
-            term_variables,
-            pred_variables,
         })
     }
     
@@ -59,28 +52,6 @@ impl InductiveConstant {
             && p.value.to_inductive_predicate().unwrap().definition().as_ref() == self) {
             panic!("Clause body does not contain strictly positive occurrence of inductive constant '{}'", self.name);
         }
-
-        for tvar in clause_body.get_type_variables() {
-            if !self.type_variables.contains(&tvar) {
-                panic!("Clause body contains type variable '{}' not in the inductive constant's type variables", tvar.debug_string());
-            }
-        }
-        
-        for term_var in clause_body.get_free_variables() {
-            let var_type = term_var.minlog_type();
-            if !self.term_variables.contains(&term_var) {
-                panic!("Clause body contains free term variable '{}' of type '{}' not in the inductive constant's term variables",
-                    term_var.debug_string(), var_type.debug_string());
-            }
-        }
-        
-        for pred_var in clause_body.get_predicate_variables() {
-            let var_arity = pred_var.arity();
-            if !self.pred_variables.contains(&pred_var) {
-                panic!("Clause body contains predicate variable '{}' of arity '{:?}' not in the inductive constant's predicate variables",
-                    pred_var.debug_string(), var_arity.iter().map(|t| t.debug_string()).collect::<Vec<String>>());
-            }
-        }
         
         self.clauses.borrow_mut().push((clause_name, clause_body));
     }
@@ -90,6 +61,7 @@ impl InductiveConstant {
     }
     
     pub fn make_computational(&self, algebra: Rc<Algebra>, existing: bool) {
+        *self.algebra.borrow_mut() = Some(algebra.clone());
         for (name, body) in self.clauses.borrow().iter() {
             let et_type = body.extracted_type();
             
@@ -124,74 +96,92 @@ impl InductiveConstant {
         self.algebra.borrow().clone()
     }
     
-    pub fn get_type_variables(&self) -> &Vec<Rc<MinlogType>> {
-        &self.type_variables
+    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_type_variables()).collect()
     }
     
-    pub fn get_term_variables(&self) -> &Vec<Rc<MinlogTerm>> {
-        &self.term_variables
+    pub fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_free_variables()).collect()
     }
     
-    pub fn get_predicate_variables(&self) -> &Vec<Rc<MinlogPredicate>> {
-        &self.pred_variables
+    pub fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_bound_variables()).collect()
+    }
+    
+    pub fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current)).collect()
+    }
+
+    pub fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current)).collect()
+    }
+
+    pub fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current)).collect()
+    }
+    
+    pub fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current)).collect()
     }
 }
 
 impl PrettyPrintable for InductiveConstant {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = PPElement::list(
-            self.get_type_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 4, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 4, true),
-            BreakType::Flexible,
-        );
+        let tvars = self.get_type_variables();
+        let tmvars = self.get_free_variables();
+        let pvars = self.get_polarized_pred_vars(Polarity::Unknown)
+            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
         
-        let tmvars = PPElement::list(
-            self.get_term_variables().iter().map(|tv| tv.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 4, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 4, true),
-            BreakType::Flexible,
-        );
-        
-        let pvars = PPElement::list(
-            self.get_predicate_variables().iter().map(|pv| pv.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 4, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 4, true),
-            BreakType::Flexible,
-        );
-        
-        let has_tvars = !self.get_type_variables().is_empty();
-        let has_tmvars = !self.get_term_variables().is_empty();
-        let has_pvars = !self.get_predicate_variables().is_empty();
-        
-        let mut variables = vec![];
-        if has_tvars {
-            variables.push(tvars);
-            variables.push(PPElement::break_elem(1, 0, false));
-            if has_tmvars || has_pvars {
-                variables.push(PPElement::text("-------".to_string()));
-            }
-        }
-        
-        if has_tmvars {
-            variables.push(tmvars);
-            variables.push(PPElement::break_elem(1, 0, false));
-            if has_pvars {
-                variables.push(PPElement::text("-------".to_string()));
-            }
-        }
-        
-        if has_pvars {
-            variables.push(pvars);
-            variables.push(PPElement::break_elem(1, 0, false));
-        }
+        let has_tvars = !tvars.is_empty();
+        let has_tmvars = !tmvars.is_empty();
+        let has_pvars = !pvars.is_empty();
         
         let name = if !has_tvars && !has_tmvars && !has_pvars {
             PPElement::text(self.name.clone())
         } else {
+            let tvars = PPElement::list(
+                tvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 0, true),
+                BreakType::Flexible,
+            );
+            
+            let tmvars = PPElement::list(
+                tmvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 0, true),
+                BreakType::Flexible,
+            );
+            
+            let pvars = PPElement::list(
+                pvars.into_iter().map(|pv| pv.to_pp_element(false)).collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 0, true),
+                BreakType::Flexible,
+            );
+            
+            let mut variables = vec![];
+            if has_tvars {
+                variables.push(tvars);
+                if has_tmvars || has_pvars {
+                    variables.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_tmvars {
+                variables.push(tmvars);
+                if has_pvars {
+                    variables.push(PPElement::break_elem(4, 0, false));
+                }
+            }
+            
+            if has_pvars {
+                variables.push(pvars);
+            }
+            
             PPElement::group(vec![
                 PPElement::text(self.name.clone()),
                 PPElement::text("<".to_string()),
@@ -223,5 +213,12 @@ impl PrettyPrintable for InductiveConstant {
         } else {
             name
         }
+    }
+}
+
+impl Hash for InductiveConstant {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.arity.hash(state);
     }
 }

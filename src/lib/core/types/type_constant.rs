@@ -6,7 +6,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TypeConstant {
     NullType,
     Atomic,
@@ -102,16 +102,3 @@ impl PrettyPrintable for TypeConstant {
         false
     }
 }
-
-impl PartialEq for TypeConstant {
-    fn eq(&self, other: &Self) -> bool {
-        matches!((self, other),
-            (TypeConstant::NullType, TypeConstant::NullType)
-            | (TypeConstant::Atomic, TypeConstant::Atomic)
-            | (TypeConstant::Existential, TypeConstant::Existential)
-            | (TypeConstant::Proposition, TypeConstant::Proposition)
-        )
-    }
-}
-
-impl Eq for TypeConstant {}

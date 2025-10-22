@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -11,7 +11,7 @@ use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TermVariable {
     name: String,
     minlog_type: Rc<MinlogType>,
@@ -67,8 +67,16 @@ impl TermBody for TermVariable {
         true
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
-        vec![Rc::new(MinlogTerm::Variable(self.clone()))]
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables()
+    }
+    
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types()
+    }
+    
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+        HashSet::from([Rc::new(MinlogTerm::Variable(self.clone()))])
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

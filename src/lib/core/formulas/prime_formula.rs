@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -14,7 +14,7 @@ use crate::core::formulas::minlog_formula::{FormulaBody, MinlogFormula, FormulaO
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
     pub body: Rc<MinlogPredicate>,
     pub arguments: Vec<Rc<MinlogTerm>>,
@@ -85,52 +85,49 @@ impl FormulaBody for PrimeFormula {
         self.body.extracted_type()
     }
     
-    fn get_type_variables(&self) -> Vec<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_type_variables())
             .chain(self.body.get_type_variables())
             .collect()
     }
     
-    fn get_algebra_types(&self) -> Vec<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_algebra_types())
             .chain(self.body.get_algebra_types())
             .collect()
     }
     
-    fn get_free_variables(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_free_variables())
             .chain(self.body.get_free_variables())
             .collect()
     }
     
-    fn get_bound_variables(&self) -> Vec<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_bound_variables())
             .chain(self.body.get_bound_variables())
             .collect()
     }
     
-    fn get_polarized_pred_vars(&self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_pred_vars(_current)
     }
     
-    fn get_polarized_comp_terms(&self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_comp_terms(_current)
     }
     
-    fn get_polarized_inductive_preds(&self, _current: Polarity) -> Vec<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_inductive_preds(_current)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> Vec<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
         let mut primes = self.body.get_polarized_prime_formulas(current);
-        primes.push(Polarized {
-            polarity: current,
-            value: Rc::new(MinlogFormula::Prime(self.clone())),
-        });
+        primes.insert(Polarized::new(current, Rc::new(MinlogFormula::Prime(self.clone()))));
         primes
     }
     
