@@ -11,6 +11,7 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 use crate::core::proofs::assumption::Assumption;
 use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::theorem::Theorem;
+use crate::core::proofs::implication_intro::ImplicationIntro;
 
 crate::wrapper_enum! {
     
@@ -74,12 +75,10 @@ crate::wrapper_enum! {
         Assumption(||assumption|| Assumption),
         Axiom(||axiom|| Axiom),
         Theorem(||theorem|| Theorem),
-        ImplicationIntroduction(||implication_introduction||),
-        ImplicationElimination(||implication_elimination||),
-        ConjunctionIntroduction(||conjunction_introduction||),
-        ConjunctionElimination(||conjunction_elimination||),
-        UniversalIntroduction(||universal_introduction||),
-        UniversalElimination(||universal_elimination||),
+        ImplicationIntro(||implication_intro|| ImplicationIntro),
+        ImplicationElim(||implication_elim||),
+        UniversalIntro(||universal_intro||),
+        UniversalElim(||universal_elim||),
         CasesDistinction(||cases_distinction||),
     }
     
@@ -101,6 +100,50 @@ crate::wrapper_enum! {
 impl MinlogProof {
     pub fn is_closed(&self) -> bool {
         self.get_assumptions().is_empty()
+    }
+    
+    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+        var.is_variable() && self.get_type_variables().contains(var)
+    }
+    
+    pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
+        alg.is_algebra() && self.get_algebra_types().contains(alg)
+    }
+    
+    pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_free_variables().contains(var)
+    }
+    
+    pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+        var.is_variable() && self.get_bound_variables().contains(var)
+    }
+    
+    pub fn contains_predicate_variable(&self, pvar: &Rc<MinlogPredicate>) -> bool {
+        pvar.is_variable() && self.get_predicate_variables().contains(pvar)
+    }
+    
+    pub fn contains_comprehension_term(&self, cterm: &Rc<MinlogPredicate>) -> bool {
+        cterm.is_comprehension_term() && self.get_comprehension_terms().contains(cterm)
+    }
+    
+    pub fn contains_inductive_predicate(&self, ipred: &Rc<MinlogPredicate>) -> bool {
+        ipred.is_inductive_predicate() && self.get_inductive_predicates().contains(ipred)
+    }
+    
+    pub fn contains_prime_formula(&self, pform: &Rc<MinlogFormula>) -> bool {
+        pform.is_prime() && self.get_prime_formulas().contains(pform)
+    }
+    
+    pub fn contains_assumption(&self, asm: &Rc<MinlogProof>) -> bool {
+        asm.is_assumption() && self.get_assumptions().contains(asm)
+    }
+    
+    pub fn contains_axiom(&self, axm: &Rc<MinlogProof>) -> bool {
+        axm.is_axiom() && self.get_axioms().contains(axm)
+    }
+    
+    pub fn contains_theorem(&self, thm: &Rc<MinlogProof>) -> bool {
+        thm.is_theorem() && self.get_theorems().contains(thm)
     }
 }
 
