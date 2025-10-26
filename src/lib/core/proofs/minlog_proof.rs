@@ -12,6 +12,7 @@ use crate::core::proofs::assumption::Assumption;
 use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::theorem::Theorem;
 use crate::core::proofs::implication_intro::ImplicationIntro;
+use crate::core::proofs::implication_elim::ImplicationElim;
 
 crate::wrapper_enum! {
     
@@ -76,10 +77,9 @@ crate::wrapper_enum! {
         Axiom(||axiom|| Axiom),
         Theorem(||theorem|| Theorem),
         ImplicationIntro(||implication_intro|| ImplicationIntro),
-        ImplicationElim(||implication_elim||),
+        ImplicationElim(||implication_elim|| ImplicationElim),
         UniversalIntro(||universal_intro||),
         UniversalElim(||universal_elim||),
-        CasesDistinction(||cases_distinction||),
     }
     
     impl PrettyPrintable {

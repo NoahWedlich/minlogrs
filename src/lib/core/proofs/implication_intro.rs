@@ -138,8 +138,8 @@ impl PrettyPrintable for ImplicationIntro {
             PPElement::break_elem(1, 4, false),
             PPElement::list(
                 vec![
-                    self.assumption.to_pp_element(detail),
                     self.conclusion.to_pp_element(detail),
+                    self.assumption.to_pp_element(detail),
                 ],
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
