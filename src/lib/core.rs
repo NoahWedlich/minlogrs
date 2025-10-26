@@ -7,5 +7,6 @@ pub mod types;
 pub mod terms;
 pub mod predicates;
 pub mod formulas;
+pub mod proofs;
 
 pub mod polarity;
