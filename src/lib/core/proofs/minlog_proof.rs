@@ -9,6 +9,7 @@ use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::assumption::Assumption;
+use crate::core::proofs::axiom::Axiom;
 
 crate::wrapper_enum! {
     
@@ -70,7 +71,7 @@ crate::wrapper_enum! {
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogProof {
         Assumption(||assumption|| Assumption),
-        Axiom(||axiom||),
+        Axiom(||axiom|| Axiom),
         Theorem(||theorem||),
         ImplicationIntroduction(||implication_introduction||),
         ImplicationElimination(||implication_elimination||),
@@ -97,7 +98,9 @@ crate::wrapper_enum! {
 }
 
 impl MinlogProof {
-    
+    pub fn is_closed(&self) -> bool {
+        self.get_assumptions().is_empty()
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Hash)]

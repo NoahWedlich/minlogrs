@@ -12,48 +12,30 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Assumption {
+pub struct Axiom {
     name: String,
     formula: Rc<MinlogFormula>,
-    index: usize,
 }
 
-impl Assumption {
+impl Axiom {
     pub fn create(name: String, formula: Rc<MinlogFormula>) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Assumption(Assumption { name, formula, index: 0 }))
-    }
-    
-    pub fn unshadow(proof: &Rc<MinlogProof>) -> Rc<MinlogProof> {
-        if let Some(assump) = proof.to_assumption() {
-            Rc::new(MinlogProof::Assumption(Assumption {
-                name: assump.name.clone(),
-                formula: assump.formula.clone(),
-                index: assump.index + 1,
-            }))
-        } else {
-            panic!("Called Assumption::unshadow on a non-assumption proof");
-        }
+        Rc::new(MinlogProof::Axiom(Axiom { name, formula }))
     }
     
     pub fn name(&self) -> &str {
         &self.name
     }
-    
-    pub fn index(&self) -> usize {
-        self.index
-    }
 }
 
-impl ProofBody for Assumption {
+impl ProofBody for Axiom {
     fn proved_formula(&self) -> Rc<MinlogFormula> {
         self.formula.clone()
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Assumption(Assumption {
+        Rc::new(MinlogProof::Axiom(Axiom {
             name: self.name.clone(),
             formula: self.formula.normalize(eta, pi),
-            index: self.index,
         }))
     }
     
@@ -89,24 +71,26 @@ impl ProofBody for Assumption {
         self.formula.get_prime_formulas()
     }
     
-    fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
-        HashSet::from([Rc::new(MinlogProof::Assumption(self.clone()))])
+    fn get_axioms(&self) -> HashSet<Rc<MinlogProof>> {
+        HashSet::from([Rc::new(MinlogProof::Axiom(self.clone()))])
     }
 }
 
-impl PrettyPrintable for Assumption {
+impl PrettyPrintable for Axiom {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         PPElement::group(vec![
-            if self.index > 0 {
-                PPElement::text(format!("{}_{}", self.name, self.index))
-            } else {
-                PPElement::text(self.name.clone())
-            },
-            PPElement::break_elem(0, 0, false),
-            PPElement::text(":".to_string()),
+            PPElement::text("<".to_string()),
             PPElement::break_elem(1, 4, false),
-            self.formula.to_pp_element(detail),
-        ], BreakType::Flexible, 0)
+            PPElement::group(vec![
+                PPElement::text(self.name.clone()),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(":".to_string()),
+                PPElement::break_elem(1, 4, false),
+                self.formula.to_pp_element(detail),
+            ], BreakType::Flexible, 0),
+            PPElement::break_elem(1, 0, false),
+            PPElement::text(">".to_string()),
+        ], BreakType::Consistent, 0)
     }
     
     fn requires_parens(&self, _detail: bool) -> bool {
@@ -114,8 +98,10 @@ impl PrettyPrintable for Assumption {
     }
 }
 
-impl ProofTreeDisplayable for Assumption {
+impl ProofTreeDisplayable for Axiom {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
-        ProofTreeNode::new_leaf(self.display_string())
+        ProofTreeNode::new_node(vec![
+            ProofTreeNode::new_leaf(self.name.clone())
+        ], self.formula.display_string(), Some("Axiom".to_string()))
     }
 }
