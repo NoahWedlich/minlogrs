@@ -1,191 +1,129 @@
 
-use std::{cmp::{max, min}, collections::btree_map::Range};
+use std::{rc::Rc, cmp::{max, min}};
 
-#[derive(Clone, PartialEq, Eq)]
-pub enum OffsetFromCenter {
-    None,
-    Offset(isize),
+pub trait ProofTreeDisplayable {
+    fn to_proof_tree_node(&self) -> ProofTreeNode;
+    
+    fn render_proof_tree(&self) -> String {
+        let mut tree = self.to_proof_tree_node();
+        tree.layout();
+        tree.render()
+    }
 }
 
-impl OffsetFromCenter {
-    pub fn zero() -> Self {
-        OffsetFromCenter::Offset(0)
-    }
-    
-    pub fn invert(&self) -> OffsetFromCenter {
-        match self {
-            OffsetFromCenter::Offset(o) => OffsetFromCenter::Offset(-o),
-            OffsetFromCenter::None => OffsetFromCenter::None,
-        }
-    }
-    
-    pub fn is_none(&self) -> bool {
-        matches!(self, OffsetFromCenter::None)
-    }
-
-    pub fn offset(&self) -> isize {
-        match self {
-            OffsetFromCenter::Offset(o) => *o,
-            OffsetFromCenter::None => 0,
-        }
-    }
-
-    pub fn most_extreme(v1: &OffsetFromCenter, v2: &OffsetFromCenter) -> OffsetFromCenter {
-        match (v1, v2) {
-            (OffsetFromCenter::Offset(o1), OffsetFromCenter::Offset(o2)) => {
-                if o1.abs() >= o2.abs() {
-                    OffsetFromCenter::Offset(*o1)
-                } else {
-                    OffsetFromCenter::Offset(*o2)
-                }
-            },
-            (OffsetFromCenter::Offset(o), OffsetFromCenter::None) |
-            (OffsetFromCenter::None, OffsetFromCenter::Offset(o)) => {
-                OffsetFromCenter::Offset(*o)
-            },
-            (OffsetFromCenter::None, OffsetFromCenter::None) => {
-                OffsetFromCenter::None
-            }
-        }
-    }
-    
-    pub fn least_extreme(v1: &OffsetFromCenter, v2: &OffsetFromCenter) -> OffsetFromCenter {
-        match (v1, v2) {
-            (OffsetFromCenter::Offset(o1), OffsetFromCenter::Offset(o2)) => {
-                if o1.abs() <= o2.abs() {
-                    OffsetFromCenter::Offset(*o1)
-                } else {
-                    OffsetFromCenter::Offset(*o2)
-                }
-            },
-            (OffsetFromCenter::Offset(o), OffsetFromCenter::None) |
-            (OffsetFromCenter::None, OffsetFromCenter::Offset(o)) => {
-                OffsetFromCenter::Offset(*o)
-            },
-            (OffsetFromCenter::None, OffsetFromCenter::None) => {
-                OffsetFromCenter::None
-            }
-        }
-    }
-    
-    pub fn recenter_at(&self, new_center: OffsetFromCenter) -> OffsetFromCenter {
-        match (self, new_center) {
-            (OffsetFromCenter::Offset(off), OffsetFromCenter::Offset(new_off)) => {
-                OffsetFromCenter::Offset(off - new_off)
-            },
-            (_, _) => {
-                OffsetFromCenter::None
-            }
-        }
-    }
-    
-    pub fn offset_by(&self, offset: isize) -> OffsetFromCenter {
-        match self {
-            OffsetFromCenter::Offset(off) => {
-                OffsetFromCenter::Offset(off + offset)
-            },
-            OffsetFromCenter::None => {
-                OffsetFromCenter::None
-            }
-        }
+impl<T: ProofTreeDisplayable> ProofTreeDisplayable for Rc<T> {
+    fn to_proof_tree_node(&self) -> ProofTreeNode {
+        self.as_ref().to_proof_tree_node()
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct OffsetRange {
-    pub left: OffsetFromCenter,
-    pub right: OffsetFromCenter,
+pub struct TextSpan {
+    pub left: isize,
+    pub right: isize,
 }
 
-impl OffsetRange {
+impl TextSpan {
     pub fn empty() -> Self {
-        OffsetRange {
-            left: OffsetFromCenter::zero(),
-            right: OffsetFromCenter::zero(),
+        TextSpan {
+            left: 0,
+            right: 0,
         }
     }
     
     pub fn from_string(s: &str) -> Self {
         let half_len = (s.chars().count() as f32) / 2.0;
-        OffsetRange {
-            left: OffsetFromCenter::Offset(-(half_len.floor() as isize)),
-            right: OffsetFromCenter::Offset(half_len.ceil() as isize),
+        TextSpan {
+            left: -(half_len.floor() as isize),
+            right: half_len.ceil() as isize,
         }
     }
     
-    pub fn union(v1: &OffsetRange, v2: &OffsetRange) -> OffsetRange {
-        let lower = min(v1.left.offset(), v2.left.offset());
-        let upper = max(v1.right.offset(), v2.right.offset());
-        OffsetRange {
-            left: OffsetFromCenter::Offset(lower),
-            right: OffsetFromCenter::Offset(upper),
-        }
-    }
-
-    pub fn recenter_at(&self, new_center: OffsetFromCenter) -> OffsetRange {
-        OffsetRange {
-            left: self.left.recenter_at(new_center.clone()),
-            right: self.right.recenter_at(new_center),
+    pub fn span(v1: &TextSpan, v2: &TextSpan) -> TextSpan {
+        TextSpan {
+            left: min(v1.left, v2.left),
+            right: max(v1.right, v2.right),
         }
     }
     
-    pub fn center(&self) -> OffsetFromCenter {
-        match (&self.left, &self.right) {
-            (OffsetFromCenter::Offset(l), OffsetFromCenter::Offset(r)) => {
-                OffsetFromCenter::Offset((l + r) / 2)
-            },
-            _ => OffsetFromCenter::None,
+    pub fn span_multiple(spans: &[TextSpan]) -> TextSpan {
+        let lower = spans.iter().map(|s| s.left).min().unwrap_or(0);
+        let upper = spans.iter().map(|s| s.right).max().unwrap_or(0);
+        TextSpan {
+            left: lower,
+            right: upper,
         }
     }
     
-    pub fn offset_by(&self, offset: isize) -> OffsetRange {
-        OffsetRange {
-            left: self.left.offset_by(offset),
-            right: self.right.offset_by(offset),
+    pub fn center(&self) -> isize {
+        (self.left + self.right) / 2
+    }
+    
+    pub fn offset_by(&self, offset: isize) -> TextSpan {
+        TextSpan {
+            left: self.left + offset,
+            right: self.right + offset,
         }
     }
     
-    pub fn offset_left_by(&self, offset: isize) -> OffsetRange {
-        OffsetRange {
-            left: self.left.offset_by(offset),
-            right: self.right.clone(),
+    pub fn offset_left_by(&self, offset: isize) -> TextSpan {
+        TextSpan {
+            left: self.left + offset,
+            right: self.right,
         }
     }
     
-    pub fn offset_right_by(&self, offset: isize) -> OffsetRange {
-        OffsetRange {
-            left: self.left.clone(),
-            right: self.right.offset_by(offset),
+    pub fn offset_right_by(&self, offset: isize) -> TextSpan {
+        TextSpan {
+            left: self.left,
+            right: self.right + offset,
         }
     }
     
-    pub fn total_width(&self) -> Option<usize> {
-        match (&self.left, &self.right) {
-            (OffsetFromCenter::Offset(l), OffsetFromCenter::Offset(r)) => {
-                Some((r - l) as usize)
-            },
-            _ => None,
-        }
+    pub fn align_left_to(&self, new_left: isize) -> TextSpan {
+        let shift_amount = new_left - self.left;
+        self.offset_by(shift_amount)
     }
     
-    pub fn distance(&self, other: &OffsetRange) -> isize {
-        match (&self.right, &other.left) {
-            (OffsetFromCenter::Offset(r1), OffsetFromCenter::Offset(l2)) => {
-                l2 - r1
-            },
-            _ => 0,
-        }
+    pub fn align_right_to(&self, new_right: isize) -> TextSpan {
+        let shift_amount = new_right - self.right;
+        self.offset_by(shift_amount)
+    }
+    
+    pub fn align_center_to(&self, new_center: isize) -> TextSpan {
+        let center = self.center();
+        let shift_amount = new_center - center;
+        self.offset_by(shift_amount)
+    }
+    
+    pub fn total_width(&self) -> usize {
+        (self.right - self.left).unsigned_abs()
+    }
+    
+    pub fn distance(&self, other: &TextSpan) -> isize {
+        other.left - self.right
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct RangedString {
     pub content: String,
-    pub range: OffsetRange,
+    pub range: TextSpan,
 }
 
 impl RangedString {
-    pub fn new(content: String, range: OffsetRange) -> Self {
+    pub fn empty() -> Self {
+        RangedString {
+            content: String::new(),
+            range: TextSpan::empty(),
+        }
+    }
+
+    pub fn new(content: String, range: TextSpan) -> Self {
+        if content.chars().count() != range.total_width() {
+            panic!("Content length does not match range width");
+        }
+        
         RangedString { content, range }
     }
     
@@ -205,9 +143,9 @@ impl RangedString {
             content += &" ".repeat(distance as usize);
             content += &right.content;
 
-            let range = OffsetRange {
-                left: left.range.left.clone(),
-                right: right.range.right.clone(),
+            let range = TextSpan {
+                left: left.range.left,
+                right: right.range.right,
             };
 
             RangedString { content, range }
@@ -223,7 +161,7 @@ impl RangedString {
                 let suffix: String = right_chars.iter().skip(overlap).collect();
                 content = left_chars.into_iter().collect::<String>() + &suffix;
 
-                let range = OffsetRange::union(&left.range, &right.range);
+                let range = TextSpan::span(&left.range, &right.range);
 
                 RangedString { content, range }
             }
@@ -240,9 +178,9 @@ impl RangedString {
         result
     }
     
-    pub fn embed_into(&self, range: &OffsetRange) -> Self {
-        let left_padding = (range.left.offset() - self.range.left.offset()).unsigned_abs();
-        let right_padding = (range.right.offset() - self.range.right.offset()).unsigned_abs();
+    pub fn embed_into(&self, range: &TextSpan) -> Self {
+        let left_padding = (range.left - self.range.left).unsigned_abs();
+        let right_padding = (range.right - self.range.right).unsigned_abs();
         
         RangedString {
             content: format!(
@@ -258,146 +196,218 @@ impl RangedString {
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum ProofTreeNode {
-    Leaf(String),
+    Leaf(Vec<RangedString>),
     Node {
-        premises: Vec<(ProofTreeNode, OffsetFromCenter)>,
-        conclusion: String,
+        premises: Vec<ProofTreeNode>,
+        conclusion: Vec<RangedString>,
         label: Option<String>,
     },
 }
 
 impl ProofTreeNode {
     pub fn new_leaf(conclusion: String) -> Self {
-        ProofTreeNode::Leaf(conclusion)
+        ProofTreeNode::Leaf(conclusion.lines().rev()
+            .map(|s| RangedString::new(s.to_string(), TextSpan::from_string(s))).collect())
     }
     
     pub fn new_node(premises: Vec<ProofTreeNode>, conclusion: String, label: Option<String>) -> Self {
         ProofTreeNode::Node {
-            premises: premises.into_iter().map(|p| (p, OffsetFromCenter::zero())).collect(),
-            conclusion,
+            premises,
+            conclusion: conclusion.lines().rev()
+                .map(|s| RangedString::new(s.to_string(), TextSpan::from_string(s))).collect(),
             label,
         }
     }
     
-    pub fn get_reserved_range(&self, layer: usize) -> Option<OffsetRange> {
+    pub fn offset_by(&mut self, offset: isize) {
         match self {
             ProofTreeNode::Leaf(text) => {
-                if layer == 0 {
-                    Some(OffsetRange::from_string(text))
+                for line in text.iter_mut() {
+                    line.range = line.range.offset_by(offset);
+                }
+            },
+            ProofTreeNode::Node { premises, conclusion, .. } => {
+                for line in conclusion.iter_mut() {
+                    line.range = line.range.offset_by(offset);
+                }
+                
+                for premise in premises.iter_mut() {
+                    premise.offset_by(offset);
+                }
+            }
+        }
+    }
+    
+    pub fn max_depth(&self) -> usize {
+        match self {
+            ProofTreeNode::Leaf(text) => {
+                text.len()
+            },
+            ProofTreeNode::Node { premises, conclusion, .. } => {
+                conclusion.len() + 1 + premises.iter().map(|elem| elem.max_depth()).max().unwrap_or(0)
+            }
+        }
+    }
+    
+    pub fn get_reserved_range(&self, layer: usize) -> Option<TextSpan> {
+        match self {
+            ProofTreeNode::Leaf(text) => {
+                if layer < text.len() {
+                    Some(TextSpan::span_multiple(
+                        text.iter().map(|line| line.range.clone()).collect::<Vec<TextSpan>>().as_slice()
+                    ))
                 } else {
                     None
                 }
             },
             ProofTreeNode::Node { premises, conclusion, label } => {
-                match layer {
-                    0 => {
-                        Some(OffsetRange::from_string(conclusion))
-                    },
-                    1 => {
-                        let most_extreme_span = OffsetRange::union(
-                            &self.get_reserved_range(0).unwrap_or(OffsetRange::empty()),
-                            &self.get_reserved_range(2).unwrap_or(OffsetRange::empty())
-                        );
-                        
-                        let label_length = label.as_ref().map_or(0, |l| l.chars().count() + 1) as isize;
-                        Some(most_extreme_span.offset_right_by(label_length))
-                    },
-                    _ => {
-                        if premises.len() == 1 {
-                            premises[0].0.get_reserved_range(layer - 2)
-                        } else if premises.len() > 1 {
-                            let (left_elem, left_elem_offset) = premises.first().unwrap();
-                            let (right_elem, right_elem_offset) = premises.last().unwrap();
-                            
-                            let left_offset = left_elem.get_reserved_range(layer - 2)
-                                .map_or(OffsetFromCenter::zero(), |r| r.recenter_at(left_elem_offset.invert()).left);
-                            
-                            let right_offset = right_elem.get_reserved_range(layer - 2)
-                                .map_or(OffsetFromCenter::zero(), |r| r.recenter_at(right_elem_offset.invert()).right);
-                            
-                            Some(OffsetRange {
-                                left: left_offset,
-                                right: right_offset,
-                            })
-                        } else {
-                            None
-                        }
-                    }
+                if layer < conclusion.len() {
+                    Some(conclusion[layer].range.clone())
+                } else if layer == conclusion.len() {
+                    let line_range = TextSpan::span_multiple(
+                        &(0..conclusion.len())
+                            .filter_map(|d| self.get_reserved_range(d))
+                            .chain(std::iter::once(
+                                self.get_reserved_range(conclusion.len() + 1).unwrap_or(TextSpan::empty())
+                            )).collect::<Vec<TextSpan>>()
+                    );
+                    
+                    let label_length = label.as_ref().map_or(0, |l| l.chars().count() + 1) as isize;
+                    Some(line_range.offset_right_by(label_length))
+                } else if premises.len() > 1 {
+                    let left_elem = premises.first().unwrap();
+                    let right_elem = premises.last().unwrap();
+                    
+                    let left_offset = left_elem.get_reserved_range(layer - conclusion.len() - 1)
+                        .map_or(0, |r| r.left);
+
+                    let right_offset = right_elem.get_reserved_range(layer - conclusion.len() - 1)
+                        .map_or(0, |r| r.right);
+                    
+                    Some(TextSpan {
+                        left: left_offset,
+                        right: right_offset,
+                    })
+                } else if premises.len() == 1 {
+                    premises[0].get_reserved_range(layer - conclusion.len() - 1)
+                } else {
+                    None
                 }
             }
         }
     }
     
-    pub fn get_max_reserved_range(&self) -> OffsetRange {
-        let mut most_extreme = OffsetRange::empty();
-          
-        for d in 0..self.max_depth() {
-            let layer_range = self.get_reserved_range(d)
-                .unwrap_or(OffsetRange::empty());
-            most_extreme = OffsetRange::union(&most_extreme, &layer_range);
-        }
-
-        most_extreme
-    }
-    
-    pub fn max_depth(&self) -> usize {
-        match self {
-            ProofTreeNode::Leaf(_) => 1,
-            ProofTreeNode::Node { premises, .. } => {
-                2 + premises.iter().map(|(elem, _)| elem.max_depth()).max().unwrap_or(0)
-            }
-        }
+    pub fn get_max_reserved_range(&self) -> TextSpan {
+        TextSpan::span_multiple(
+            &(0..self.max_depth())
+                .filter_map(|d| self.get_reserved_range(d))
+                .collect::<Vec<TextSpan>>()
+        )
     }
     
     pub fn layout(&mut self) {
+        let mut left_boundaries = vec![0; self.max_depth()];
+        self.layout_recursive(&mut left_boundaries, 0);
+    }
+    
+    fn layout_recursive(&mut self, left_boundaries: &mut Vec<isize>, bottom_layer: usize) {
         match self {
-            ProofTreeNode::Leaf(_) => {},
-            ProofTreeNode::Node { premises, .. } => {
-                for (premise, _) in premises.iter_mut() {
-                    premise.layout();
-                }
+            ProofTreeNode::Leaf(text) => {
+                let mut furthest_left = text.iter()
+                    .map(|line| line.range.left)
+                    .min().unwrap_or(isize::MAX);
                 
-                let premise_count = premises.len();
-
-                for i in 0..(premise_count - 1) {
-                    let (old_premises, future_premises) = premises.split_at_mut(i + 1);
+                for i in 0..text.len() {
+                    let left_boundary = left_boundaries[bottom_layer + i];
+                    let shift_amount = (left_boundary + if left_boundary == 0 { 0 } else { 3 }).saturating_sub(furthest_left);
                     
-                    let (current_premise, current_offset) = &mut old_premises[i];
-                    for j in (i + 1)..premise_count {
-                        let (next_premise, next_offset) = &mut future_premises[j - (i + 1)];
-                        
-                        *next_offset = OffsetFromCenter::most_extreme(next_offset, current_offset);
-                        
-                        for depth in 0..max(current_premise.max_depth(), next_premise.max_depth()) {
-                            let current_range = current_premise.get_reserved_range(depth)
-                                .map(|r| r.recenter_at(current_offset.invert()));
-                            
-                            let next_range = next_premise.get_reserved_range(depth)
-                                .map(|r| r.recenter_at(next_offset.invert()));
-
-                            if let (Some(cr), Some(nr)) = (current_range, next_range) {
-                                let distance = cr.distance(&nr);
-                                if distance < 3 {
-                                    let shift_amount = 3 - distance;
-                                    *next_offset = next_offset.offset_by(shift_amount);
-                                }
-                            }
-                            
+                    if shift_amount > 0 {
+                        for line in text.iter_mut() {
+                            line.range = line.range.offset_by(shift_amount);
                         }
+                        
+                        furthest_left += shift_amount;
                     }
                 }
                 
-                let mut entire_range = OffsetRange::empty();
-                for (premise, offset) in premises.iter() {
-                    let rng = premise.get_reserved_range(0).unwrap()
-                        .recenter_at(offset.invert());
-                    entire_range = OffsetRange::union(&entire_range, &rng);
+                let furthest_right = text.iter()
+                    .map(|line| line.range.right)
+                    .max().unwrap_or(isize::MIN);
+                
+                for i in 0..text.len() {
+                    left_boundaries[bottom_layer + i] = max(left_boundaries[bottom_layer + i], furthest_right);
+                }
+            },
+            ProofTreeNode::Node { premises, conclusion, label } => {
+                for premise in premises.iter_mut() {
+                    premise.layout_recursive(left_boundaries, bottom_layer + 1 + conclusion.len());
                 }
                 
-                let center = entire_range.center();
-                for (_, offset) in premises.iter_mut() {
-                    *offset = offset.recenter_at(center.clone());
+                let mut premise_ground_range = TextSpan::span_multiple(
+                    &premises.iter()
+                        .filter_map(|p| p.get_reserved_range(0))
+                        .collect::<Vec<TextSpan>>()
+                );
+                let center = premise_ground_range.center();
+                
+                for line in conclusion.iter_mut() {
+                    line.range = line.range.align_center_to(center);
                 }
+                
+                let mut furthest_left = conclusion.iter()
+                    .map(|line| line.range.left)
+                    .min().unwrap_or(isize::MAX);
+                
+                for i in 0..conclusion.len() {
+                    let left_boundary = left_boundaries[bottom_layer + i];
+                    let shift_amount = (left_boundary + if left_boundary == 0 { 0 } else { 3 }).saturating_sub(furthest_left);
+                    
+                    if shift_amount > 0 {
+                        for line in conclusion.iter_mut() {
+                            line.range = line.range.offset_by(shift_amount);
+                        }
+                        
+                        for premise in premises.iter_mut() {
+                            premise.offset_by(shift_amount);
+                        }
+                        
+                        left_boundaries[bottom_layer + conclusion.len() + 1..].iter_mut().for_each(|b| *b += shift_amount);
+                        
+                        furthest_left += shift_amount;
+                        premise_ground_range = premise_ground_range.offset_by(shift_amount);
+                    }
+                }
+                
+                let conclusion_range = TextSpan::span_multiple(
+                    &conclusion.iter()
+                        .map(|line| line.range.clone())
+                        .collect::<Vec<TextSpan>>()
+                );
+                
+                for i in 0..conclusion.len() {
+                    left_boundaries[bottom_layer + i] = max(left_boundaries[bottom_layer + i], conclusion_range.right);
+                }
+                
+                let line_range = TextSpan::span(&premise_ground_range, &conclusion_range);
+                let left_boundary = left_boundaries[bottom_layer + conclusion.len()];
+                let shift_amount = (left_boundary + if left_boundary == 0 { 0 } else { 3 }).saturating_sub(line_range.left);
+                if shift_amount > 0 {
+                    for line in conclusion.iter_mut() {
+                        line.range = line.range.offset_by(shift_amount);
+                    }
+                    
+                    for premise in premises.iter_mut() {
+                        premise.offset_by(shift_amount);
+                    }
+                    
+                    left_boundaries[bottom_layer..].iter_mut().for_each(|b| *b += shift_amount);
+                }
+                
+                let label_length = label.as_ref().map_or(0, |l| l.chars().count() + 1) as isize;
+                left_boundaries[bottom_layer + conclusion.len()] = max(
+                    left_boundaries[bottom_layer + conclusion.len()],
+                    line_range.right + (if shift_amount > 0 { shift_amount } else { 0 }) + label_length
+                );
             }
         }
     }
@@ -405,96 +415,83 @@ impl ProofTreeNode {
     pub fn get_layer(&self, depth: usize) -> RangedString {
         match self {
             ProofTreeNode::Leaf(text) => {
-                if depth == 0 {
-                    RangedString::new(text.clone(), OffsetRange::from_string(text))
-                } else {
-                    RangedString::new(String::new(), OffsetRange::empty())
-                }
+                text.get(depth).cloned().unwrap_or(RangedString::empty())
             },
             ProofTreeNode::Node { premises, conclusion, label } => {
-                match depth {
-                    0 => {
-                        RangedString::new(conclusion.clone(), OffsetRange::from_string(conclusion))
-                    },
-                    1 => {
-                        let line_range_with_label = self.get_reserved_range(1).unwrap();
-
-                        let label_length = label.as_ref().map_or(0, |l| l.chars().count() + 1);
-                        let line_range = line_range_with_label.offset_right_by(-(label_length as isize));
-                        
-                        let conclusion_range = self.get_reserved_range(0).unwrap();
-                        let conclusion_center = conclusion_range.center();
-                        
-                        let premise_centers: Vec<isize> = premises.iter()
-                            .map(|(p, o)| {
-                                let r = p.get_reserved_range(0).unwrap();
-                                r.center().recenter_at(o.invert()).offset()
-                            })
-                            .collect();
-                        
-                        let mut line_string = String::new();
-                        for offset in line_range.left.offset()..line_range.right.offset() {
-                            if offset == conclusion_center.offset() {
-                                if premise_centers.contains(&offset) {
-                                    line_string += "╋";
+                if depth < conclusion.len() {
+                    conclusion[depth].clone()
+                } else if depth == conclusion.len() {
+                    let line_range_with_label = self.get_reserved_range(depth).unwrap();
+                    
+                    let label_length = label.as_ref().map_or(0, |l| l.chars().count() + 1);
+                    let line_range = line_range_with_label.offset_right_by(-(label_length as isize));
+                    
+                    let conclusion_range = TextSpan::span_multiple(
+                        &(0..conclusion.len())
+                            .filter_map(|d| self.get_reserved_range(d))
+                            .collect::<Vec<TextSpan>>()
+                    );
+                    let conclusion_center = conclusion_range.center();
+                    
+                    let premise_centers: Vec<isize> = premises.iter()
+                        .map(|p| {
+                            let r = p.get_reserved_range(0).unwrap();
+                            r.center()
+                        })
+                        .collect();
+                    
+                    let mut line_string = String::new();
+                    for offset in line_range.left..line_range.right {
+                        if offset == conclusion_center {
+                            if premise_centers.contains(&offset) {
+                                line_string += "╋";
+                            } else {
+                                line_string += "┳";
+                            }
+                        } else if !premise_centers.is_empty() {
+                            if offset == *premise_centers.first().unwrap() {
+                                if offset == line_range.left {
+                                    line_string += "┗";
                                 } else {
-                                    line_string += "┳";
-                                }
-                            } else if !premise_centers.is_empty() {
-                                if offset == *premise_centers.first().unwrap() {
-                                    if offset == line_range.left.offset() {
-                                        line_string += "┗";
-                                    } else {
-                                        line_string += "┻";
-                                    }
-                                } else if offset == *premise_centers.last().unwrap() {
-                                    if offset == line_range.right.offset() - 1 {
-                                        line_string += "┛";
-                                    } else {
-                                        line_string += "┻";
-                                    }
-                                } else if premise_centers.contains(&offset) {
                                     line_string += "┻";
-                                } else {
-                                    line_string += "━";
                                 }
+                            } else if offset == *premise_centers.last().unwrap() {
+                                if offset == line_range.right - 1 {
+                                    line_string += "┛";
+                                } else {
+                                    line_string += "┻";
+                                }
+                            } else if premise_centers.contains(&offset) {
+                                line_string += "┻";
                             } else {
                                 line_string += "━";
                             }
-                        }
-                        
-                        let line_string = RangedString::new(
-                            line_string,
-                            line_range.clone(),
-                        );
-                        
-                        let label_string = RangedString::new(
-                            label.as_ref().map_or(String::new(), |l| format!(" {}", l)),
-                            OffsetRange {
-                                left: line_range.right.clone(),
-                                right: line_range_with_label.right.clone(),
-                            },
-                        );
-                        
-                        RangedString::join(&line_string, &label_string)
-                    }
-                    _ => {
-                        if premises.is_empty() {
-                            RangedString::new(String::new(), OffsetRange::empty())
                         } else {
-                            let mut premise_layers = vec![];
-                            for (premise, offset) in premises.iter() {
-                                let layer = premise.get_layer(depth - 2);
-                                let recentered_range = layer.range.recenter_at(offset.invert());
-                                premise_layers.push(RangedString {
-                                    content: layer.content,
-                                    range: recentered_range,
-                                });
-                            }
-                            
-                            RangedString::join_multiple(&premise_layers)
+                            line_string += "━";
                         }
                     }
+                    
+                    if line_string.is_empty() {
+                        RangedString::empty()
+                    } else if let Some(lbl) = label {
+                        line_string += &format!(" {}", lbl);
+                        RangedString::new(
+                            line_string,
+                            line_range_with_label,
+                        )
+                    } else {
+                        RangedString::new(
+                            line_string,
+                            line_range,
+                        )
+                    }
+                } else if !premises.is_empty() {
+                    let premise_strings = premises.iter()
+                        .map(|p| p.get_layer(depth - conclusion.len() - 1))
+                        .collect::<Vec<RangedString>>();
+                    RangedString::join_multiple(&premise_strings)
+                } else {
+                    RangedString::empty()
                 }
             }
         }
@@ -516,115 +513,4 @@ impl ProofTreeNode {
         
         result
     }
-}
-
-// Example usage:
-pub fn example_proof_tree() {
-    // u0: A    u1: A -> B 
-    // ------------------- -> (-)
-    //         B    u2: B -> C
-    //         --------------- -> (-)
-    //                 C
-    //             ------ -> (+, u0)
-    //             A -> C
-    //     ------------------ -> (+, u1)
-    //     (B -> C) -> A -> C
-    // ------------------------------ -> (+, u2)
-    // (A -> B) -> (B -> C) -> A -> C
-    
-    let ass_u0 = ProofTreeNode::new_leaf("u0: A".to_string());
-    let ass_u1 = ProofTreeNode::new_leaf("u1: A -> B".to_string());
-    let ass_u2 = ProofTreeNode::new_leaf("u2: B -> C".to_string());
-
-    let node0 = ProofTreeNode::new_node(vec![ass_u0.clone(), ass_u1.clone()], "B".to_string(), Some("-> (-)".to_string()));
-    let node1 = ProofTreeNode::new_node(vec![node0.clone(), ass_u2.clone()], "C".to_string(), Some("-> (-)".to_string()));
-    let node2 = ProofTreeNode::new_node(vec![node1.clone()], "A -> C".to_string(), Some("-> (+, u0)".to_string()));
-    let node3 = ProofTreeNode::new_node(vec![node2.clone()], "(B -> C) -> A -> C".to_string(), Some("-> (+, u1)".to_string()));
-    let mut node4 = ProofTreeNode::new_node(vec![node3.clone()], "(A -> B) -> (B -> C) -> A -> C".to_string(), Some("-> (+, u2)".to_string()));
-
-    node4.layout();
-
-    println!("{}", node4.render());
-}
-
-pub fn example_proof_tree_2() {
-    let a = ProofTreeNode::new_leaf("A".to_string());
-    let b = ProofTreeNode::new_leaf("B".to_string());
-    let c = ProofTreeNode::new_leaf("C".to_string());
-    let d = ProofTreeNode::new_leaf("D".to_string());
-    let e = ProofTreeNode::new_leaf("E".to_string());
-    let f = ProofTreeNode::new_leaf("F".to_string());
-    let g = ProofTreeNode::new_leaf("G".to_string());
-    let h = ProofTreeNode::new_leaf("H".to_string());
-    let i = ProofTreeNode::new_leaf("I".to_string());
-    let j = ProofTreeNode::new_leaf("J".to_string());
-
-    // Simple pairwise combinations
-    let n_ab = ProofTreeNode::new_node(vec![a.clone(), b.clone()], "A ∧ B".to_string(), Some("∧-intro".to_string()));
-    let n_cd = ProofTreeNode::new_node(vec![c.clone(), d.clone()], "C ∧ D".to_string(), Some("∧-intro".to_string()));
-    let n_ef = ProofTreeNode::new_node(vec![e.clone(), f.clone()], "E ∧ F".to_string(), Some("∧-intro".to_string()));
-    let n_ghi = ProofTreeNode::new_node(vec![g.clone(), h.clone(), i.clone()], "G ∧ H ∧ I".to_string(), Some("∧-intro (3)".to_string()));
-
-    // Use elimination/intro steps with varied label lengths
-    let n_ab_to_x = ProofTreeNode::new_node(vec![n_ab.clone()], "X".to_string(), Some("→-elim (long label)".to_string()));
-    let n_cd_to_y = ProofTreeNode::new_node(vec![n_cd.clone()], "Y".to_string(), Some("→-elim".to_string()));
-    let n_ef_to_z = ProofTreeNode::new_node(vec![n_ef.clone()], "Z".to_string(), Some("⊃-intro".to_string()));
-
-    // Combine multiple subproofs into a wider node
-    let n_wide = ProofTreeNode::new_node(
-        vec![n_ab_to_x.clone(), n_cd_to_y.clone(), n_ef_to_z.clone()],
-        "M".to_string(),
-        Some("multi-join".to_string()),
-    );
-
-    // Nest further to increase complexity
-    let n_deeper = ProofTreeNode::new_node(
-        vec![n_wide.clone(), n_ghi.clone(), j.clone()],
-        "Final-Intermediate".to_string(),
-        Some("complex-rule (very long label to test spacing)".to_string()),
-    );
-
-    // Single-premise transformations and a final root
-    let n_single = ProofTreeNode::new_node(vec![n_deeper.clone()], "Transformer".to_string(), Some("single-step".to_string()));
-    // Include the three-branch subtree into the existing tree (no testing logic).
-    let small_left = ProofTreeNode::new_leaf("s".to_string());
-    let small_mid = ProofTreeNode::new_leaf("s".to_string());
-    let small_right = ProofTreeNode::new_leaf("s".to_string());
-
-    let long_leaf = |id: usize| {
-        ProofTreeNode::new_leaf(format!("LONG_{}_{}", id, "X".repeat(30)))
-    };
-
-    let wide_left = ProofTreeNode::new_node(
-        vec![
-            long_leaf(1),
-            long_leaf(2),
-            long_leaf(3),
-            long_leaf(4),
-        ],
-        "WLEFT".to_string(),
-        Some("wide".to_string()),
-    );
-
-    let wide_right = ProofTreeNode::new_node(
-        vec![
-            long_leaf(5),
-            long_leaf(6),
-            long_leaf(7),
-            long_leaf(8),
-        ],
-        "WRIGHT".to_string(),
-        Some("wide".to_string()),
-    );
-
-    let left_sub = ProofTreeNode::new_node(vec![small_left, wide_left], "L".to_string(), Some("l".to_string()));
-    let mid_sub = ProofTreeNode::new_node(vec![small_mid], "M".to_string(), Some("m".to_string()));
-    let right_sub = ProofTreeNode::new_node(vec![small_right, wide_right], "R".to_string(), Some("r".to_string()));
-
-    let three_branch = ProofTreeNode::new_node(vec![left_sub, mid_sub, right_sub], "ROOT".to_string(), Some("root".to_string()));
-
-    let mut root = ProofTreeNode::new_node(vec![n_single.clone(), three_branch], "Ultimate-Goal".to_string(), Some("∴".to_string()));
-    root.layout();
-    let output = root.render();
-    std::fs::write("proof_tree.txt", output).expect("Failed to write proof tree to file");
 }
