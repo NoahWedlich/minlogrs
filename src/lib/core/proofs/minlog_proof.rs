@@ -8,6 +8,8 @@ use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
+use crate::core::proofs::assumption::Assumption;
+
 crate::wrapper_enum! {
     
     @default { EmptyProofBody }
@@ -67,7 +69,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogProof {
-        Assumption(||assumption||),
+        Assumption(||assumption|| Assumption),
         Axiom(||axiom||),
         Theorem(||theorem||),
         ImplicationIntroduction(||implication_introduction||),
