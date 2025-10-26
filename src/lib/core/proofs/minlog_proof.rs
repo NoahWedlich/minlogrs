@@ -10,6 +10,7 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::assumption::Assumption;
 use crate::core::proofs::axiom::Axiom;
+use crate::core::proofs::theorem::Theorem;
 
 crate::wrapper_enum! {
     
@@ -72,7 +73,7 @@ crate::wrapper_enum! {
     pub enum MinlogProof {
         Assumption(||assumption|| Assumption),
         Axiom(||axiom|| Axiom),
-        Theorem(||theorem||),
+        Theorem(||theorem|| Theorem),
         ImplicationIntroduction(||implication_introduction||),
         ImplicationElimination(||implication_elimination||),
         ConjunctionIntroduction(||conjunction_introduction||),
