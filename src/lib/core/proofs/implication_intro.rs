@@ -161,7 +161,7 @@ impl ProofTreeDisplayable for ImplicationIntro {
         ProofTreeNode::new_node(
             vec![self.conclusion.to_proof_tree_node()],
             self.formula.display_string(),
-            Some(format!("→⁺ {}", self.assumption.to_assumption().unwrap().name()))
+            Some(format!("→⁺{}", self.assumption.to_assumption().unwrap().name()))
         )
     }
 }

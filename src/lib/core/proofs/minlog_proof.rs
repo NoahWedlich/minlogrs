@@ -13,6 +13,7 @@ use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::theorem::Theorem;
 use crate::core::proofs::implication_intro::ImplicationIntro;
 use crate::core::proofs::implication_elim::ImplicationElim;
+use crate::core::proofs::universal_intro::UniversalIntro;
 
 crate::wrapper_enum! {
     
@@ -78,7 +79,7 @@ crate::wrapper_enum! {
         Theorem(||theorem|| Theorem),
         ImplicationIntro(||implication_intro|| ImplicationIntro),
         ImplicationElim(||implication_elim|| ImplicationElim),
-        UniversalIntro(||universal_intro||),
+        UniversalIntro(||universal_intro|| UniversalIntro),
         UniversalElim(||universal_elim||),
     }
     
