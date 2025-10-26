@@ -14,10 +14,10 @@ use crate::core::proofs::theorem::Theorem;
 use crate::core::proofs::implication_intro::ImplicationIntro;
 use crate::core::proofs::implication_elim::ImplicationElim;
 use crate::core::proofs::universal_intro::UniversalIntro;
+use crate::core::proofs::universal_elim::UniversalElim;
 
 crate::wrapper_enum! {
     
-    @default { EmptyProofBody }
     pub trait ProofBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn proved_formula(&Self) -> Rc<MinlogFormula>
         
@@ -80,7 +80,7 @@ crate::wrapper_enum! {
         ImplicationIntro(||implication_intro|| ImplicationIntro),
         ImplicationElim(||implication_elim|| ImplicationElim),
         UniversalIntro(||universal_intro|| UniversalIntro),
-        UniversalElim(||universal_elim||),
+        UniversalElim(||universal_elim|| UniversalElim),
     }
     
     impl PrettyPrintable {
@@ -145,30 +145,5 @@ impl MinlogProof {
     
     pub fn contains_theorem(&self, thm: &Rc<MinlogProof>) -> bool {
         thm.is_theorem() && self.get_theorems().contains(thm)
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub struct EmptyProofBody;
-
-impl PrettyPrintable for EmptyProofBody {
-    fn to_pp_element(&self, _detail: bool) -> PPElement {
-        PPElement::text("<?>".to_string())
-    }
-}
-
-impl ProofTreeDisplayable for EmptyProofBody {
-    fn to_proof_tree_node(&self) -> ProofTreeNode {
-        ProofTreeNode::new_leaf("<?>".to_string())
-    }
-}
-
-impl ProofBody for EmptyProofBody {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
-        unimplemented!()
-    }
-    
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogProof> {
-        unimplemented!()
     }
 }

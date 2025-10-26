@@ -7,3 +7,4 @@ pub mod theorem;
 pub mod implication_intro;
 pub mod implication_elim;
 pub mod universal_intro;
+pub mod universal_elim;

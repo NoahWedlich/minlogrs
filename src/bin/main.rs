@@ -8,7 +8,15 @@ use lib::core::predicates::{minlog_predicate::*, predicate_variable::*, inductiv
 use lib::core::formulas::{prime_formula::*, implication::*, all_quantifier::*};
 
 use lib::core::structures::{algebra::*, program_constant::*, inductive_constant::*};
-use lib::utils::proof_tree_display::ProofTreeNode;
+use lib::core::proofs::{
+    assumption::Assumption,
+    implication_elim::ImplicationElim,
+    implication_intro::ImplicationIntro,
+    universal_elim::UniversalElim,
+    universal_intro::UniversalIntro,
+    theorem::Theorem,
+};
+use lib::utils::proof_tree_display::ProofTreeDisplayable;
 
 fn main() {
     let t = TypeVariable::create("T".to_string());
@@ -25,43 +33,7 @@ fn main() {
     let all_impl = AllQuantifier::create(vec![a.clone()], imp_pa_qa.clone());
     
     let all_p = AllQuantifier::create(vec![a.clone()], p_a.clone());
-    let all_q = AllQuantifier::create(vec![a.clone()], q_a.clone());
 
-    let imp_allp_allq = Implication::create(vec![all_p.clone()], all_q.clone());
-
-    let max_w = 35_usize;
-
-    let full = Implication::create(vec![all_impl.clone()], imp_allp_allq.clone());
-
-    let s_all_impl = all_impl.render(false, max_w);
-    let s_all_p = all_p.render(false, max_w);
-    let s_p_a = p_a.render(false, max_w);
-    let s_imp_pa_qa = imp_pa_qa.render(false, max_w);
-    let s_q_a = q_a.render(false, max_w);
-    let s_all_q = all_q.render(false, max_w);
-    let s_imp_allp_allq = imp_allp_allq.render(false, max_w);
-    let s_full = full.render(false, max_w);
-
-    let leaf_all_impl = ProofTreeNode::new_leaf(s_all_impl.clone());
-    let leaf_all_p = ProofTreeNode::new_leaf(s_all_p.clone());
-
-    let node_p_a = ProofTreeNode::new_node(vec![leaf_all_p.clone()], s_p_a.clone(), Some("∀-elim".to_string()));
-
-    let node_imp_pa_qa = ProofTreeNode::new_node(vec![leaf_all_impl.clone()], s_imp_pa_qa.clone(), Some("∀-elim".to_string()));
-
-    let node_q_a = ProofTreeNode::new_node(vec![node_p_a.clone(), node_imp_pa_qa.clone()], s_q_a.clone(), Some("→-elim".to_string()));
-
-    let node_all_q = ProofTreeNode::new_node(vec![node_q_a.clone()], s_all_q.clone(), Some("∀-intro".to_string()));
-
-    let node_imp_allp_allq = ProofTreeNode::new_node(vec![node_all_q.clone()], s_imp_allp_allq.clone(), Some("→-intro".to_string()));
-
-    let root = ProofTreeNode::new_node(vec![node_imp_allp_allq.clone(), leaf_all_impl.clone()], s_full.clone(), Some("→-intro".to_string()));
-
-    let mut tree = root.clone();
-    tree.layout();
-    
-    println!("\n=== Quantifier proof tree (pretty-printed) ===\n");
-    println!("{}", tree.render());
     println!("\n=== Term and Type System Test Output ===\n");
     
     let type_var_1 = TypeVariable::create("T".to_string());
@@ -409,4 +381,28 @@ fn main() {
     let nat_eq_cterm = MinlogPredicate::to_cterm(&nat_eq_type);
     println!("Comprehension Term for NatEq:");
     println!("{}", nat_eq_cterm.debug_string());
+
+    // --- Construct the formal Minlog proof for
+    // (∀x. (P(x) → Q(x))) → (∀x. P(x) → ∀x. Q(x))
+    {
+        let asm1 = Assumption::create("u1".to_string(), all_impl.clone());
+        let asm2 = Assumption::create("u2".to_string(), all_p.clone());
+
+        let p_a_pf = UniversalElim::create(asm2.clone(), a.clone());
+        let imp_pa_qa_pf = UniversalElim::create(asm1.clone(), a.clone());
+        let q_a_pf = ImplicationElim::create(imp_pa_qa_pf.clone(), p_a_pf.clone());
+        let all_q_pf = UniversalIntro::create(q_a_pf.clone(), a.clone());
+        let imp_allp_allq_pf = ImplicationIntro::create(all_q_pf.clone(), asm2.clone());
+        let full_pf = ImplicationIntro::create(imp_allp_allq_pf.clone(), asm1.clone());
+
+        // Render and print the proof tree
+        let mut proof_node = full_pf.to_proof_tree_node();
+        proof_node.layout();
+        println!("\n=== Formal Minlog proof tree ===\n");
+        println!("{}", proof_node.render());
+
+        // Optionally wrap as a named theorem and print
+        let thm = Theorem::create("quantifier_transfer".to_string(), full_pf.clone());
+        println!("\nNamed theorem:\n{}\n", thm.display_string());
+    }
 }
