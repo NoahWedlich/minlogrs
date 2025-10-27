@@ -1,6 +1,7 @@
 
 pub mod minlog_proof;
 
+pub mod goal;
 pub mod assumption;
 pub mod axiom;
 pub mod theorem;

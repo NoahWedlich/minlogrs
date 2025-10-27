@@ -8,6 +8,7 @@ use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
+use crate::core::proofs::goal::Goal;
 use crate::core::proofs::assumption::Assumption;
 use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::theorem::Theorem;
@@ -59,6 +60,10 @@ crate::wrapper_enum! {
             HashSet::new()
         }
         
+        pub fn get_goals(&Self) -> HashSet<Rc<MinlogProof>> {
+            HashSet::new()
+        }
+        
         pub fn get_assumptions(&Self) -> HashSet<Rc<MinlogProof>> {
             HashSet::new()
         }
@@ -74,6 +79,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogProof {
+        Goal(||goal|| Goal),
         Assumption(||assumption|| Assumption),
         Axiom(||axiom|| Axiom),
         Theorem(||theorem|| Theorem),

@@ -111,7 +111,13 @@ impl ProofBody for ImplicationIntro {
             .union(&self.conclusion.get_prime_formulas())
             .cloned().collect()
     }
-    
+
+    fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
+        self.conclusion.get_goals()
+            .union(&self.assumption.get_goals())
+            .cloned().collect()
+    }
+
     fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
         self.conclusion.get_assumptions()
             .difference(&HashSet::from([self.assumption.clone()]))

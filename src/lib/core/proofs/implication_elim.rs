@@ -122,7 +122,13 @@ impl ProofBody for ImplicationElim {
             .union(&self.implication.get_prime_formulas())
             .cloned().collect()
     }
-    
+
+    fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
+        self.premise.get_goals()
+            .union(&self.implication.get_goals())
+            .cloned().collect()
+    }
+
     fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
         self.premise.get_assumptions()
             .union(&self.implication.get_assumptions())

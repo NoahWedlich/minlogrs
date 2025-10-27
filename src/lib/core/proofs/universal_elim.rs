@@ -120,6 +120,10 @@ impl ProofBody for UniversalElim {
         self.proof.get_prime_formulas()
     }
     
+    fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
+        self.proof.get_goals()
+    }
+    
     fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
         self.proof.get_assumptions()
     }
