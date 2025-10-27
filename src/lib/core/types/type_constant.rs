@@ -42,12 +42,19 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn substitute(&self, _from: &Rc<MinlogType>, _to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        match self {
-            TypeConstant::NullType => TypeConstant::create_null(),
-            TypeConstant::Atomic => TypeConstant::create_atomic(),
-            TypeConstant::Existential => TypeConstant::create_existential(),
-            TypeConstant::Proposition => TypeConstant::create_proposition(),
+    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+        if (from.is_null() && matches!(self, TypeConstant::NullType)) ||
+              (from.is_atomic() && matches!(self, TypeConstant::Atomic)) ||
+              (from.is_existential() && matches!(self, TypeConstant::Existential)) ||
+              (from.is_proposition() && matches!(self, TypeConstant::Proposition)) {
+            to.clone()
+        } else {
+            match self {
+                TypeConstant::NullType => TypeConstant::create_null(),
+                TypeConstant::Atomic => TypeConstant::create_atomic(),
+                TypeConstant::Existential => TypeConstant::create_existential(),
+                TypeConstant::Proposition => TypeConstant::create_proposition(),
+            }
         }
     }
     

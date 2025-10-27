@@ -108,24 +108,21 @@ impl TermBody for TermVariable {
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        match (from, to) {
-            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
+        match from {
+            TermSubstEntry::Type(from_t) => {
                 Rc::new(MinlogTerm::Variable(TermVariable {
                     name: self.name.clone(),
-                    minlog_type: self.minlog_type.substitute(from_t, to_t),
+                    minlog_type: self.minlog_type.substitute(from_t, &to.to_type().unwrap()),
                     totality: self.totality.clone(),
                     index: self.index,
                 }))
             },
-            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(to_tm)) => {
+            TermSubstEntry::Term(from_tm) => {
                 if from_tm.is_variable() && self == from_tm.to_variable().unwrap() {
-                    to_tm.clone()
+                    to.to_term().unwrap()
                 } else {
                     Rc::new(MinlogTerm::Variable(self.clone()))
                 }
-            },
-            _ => {
-                panic!("Tried to substitute between incompatible TermSubstEntry types");
             }
         }
     }

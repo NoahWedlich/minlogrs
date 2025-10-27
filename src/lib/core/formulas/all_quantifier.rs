@@ -152,20 +152,22 @@ impl FormulaBody for AllQuantifier {
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
         if let Some(tm) = from.to_term() && self.vars.contains(&tm) {
-            return Rc::new(MinlogFormula::AllQuantifier(self.clone()));
-        }
-        
-        let new_vars = if let Some(tse) = from.to_term_subst_entry() {
-            self.vars.iter()
-                .map(|v| v.substitute(&tse, &to.to_term_subst_entry().unwrap()))
-                .collect()
+            Rc::new(MinlogFormula::AllQuantifier(self.clone()))
+        } else if let Some(formula) = from.to_formula() && formula.is_all_quantifier() && self == formula.to_all_quantifier().unwrap() {
+            to.to_formula().unwrap()
         } else {
-            self.vars.clone()
-        };
-        
-        let new_body = self.body.substitute(from, to);
-        
-        AllQuantifier::create(new_vars, new_body)
+            let new_vars = if let Some(tse) = from.to_term_subst_entry() {
+                self.vars.iter()
+                    .map(|v| v.substitute(&tse, &to.to_term_subst_entry().unwrap()))
+                    .collect()
+            } else {
+                self.vars.clone()
+            };
+            
+            let new_body = self.body.substitute(from, to);
+            
+            AllQuantifier::create(new_vars, new_body)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {

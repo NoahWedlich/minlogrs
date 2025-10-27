@@ -88,15 +88,17 @@ impl TermBody for Constructor {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        match (from, to) {
-            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
-                Constructor::create(self.name.clone(), self.minlog_type.substitute(from_t, to_t))
+        match from {
+            TermSubstEntry::Type(from_t) => {
+                let new_type = self.minlog_type.substitute(from_t, &to.to_type().unwrap());
+                Constructor::create(self.name.clone(), new_type)
             },
-            (TermSubstEntry::Term(_), TermSubstEntry::Term(_)) => {
-                Constructor::create(self.name.clone(), self.minlog_type.clone())
-            },
-            _ => {
-                panic!("Tried to substitute between incompatible TermSubstEntry types");
+            TermSubstEntry::Term(from_tm) => {
+                if from_tm.is_constructor() && self == from_tm.to_constructor().unwrap() {
+                    to.to_term().unwrap()
+                } else {
+                    Constructor::create(self.name.clone(), self.minlog_type.clone())
+                }
             }
         }
     }

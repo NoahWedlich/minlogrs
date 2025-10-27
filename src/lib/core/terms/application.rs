@@ -249,11 +249,13 @@ impl TermBody for Application {
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        let operator = self.operator.substitute(from, to);
-        
-        let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.substitute(from, to)).collect();
-        
-        Application::create(operator, operands)
+        if let Some(tm) = from.to_term() && tm.is_application() && self == tm.to_application().unwrap() {
+            to.to_term().unwrap()
+        } else {
+            let operator = self.operator.substitute(from, to);
+            let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.substitute(from, to)).collect();
+            Application::create(operator, operands)
+        }
     }
 
     fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {

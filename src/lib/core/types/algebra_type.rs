@@ -143,11 +143,18 @@ impl TypeBody for AlgebraType {
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        let mut new_parameters = self.parameters.clone();
-        new_parameters.extend((from.clone(), to.clone()));
-        new_parameters.restrict(|f| self.algebra.get_polarized_tvars(Polarity::Unknown)
-            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>().contains(f));
-        AlgebraType::create(self.algebra.clone(), new_parameters)
+        if from.is_algebra() && self == from.to_algebra().unwrap() {
+            to.clone()
+        } else {
+            let new_parameters = TypeSubstitution::from_pairs(
+                self.parameters.pairs().into_iter()
+                    .map(|(f, t)| {
+                        (f.substitute(from, to), t.substitute(from, to))
+                    })
+                    .collect()
+            );
+            AlgebraType::create(self.algebra.clone(), new_parameters)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {

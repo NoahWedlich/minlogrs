@@ -87,12 +87,11 @@ impl PredicateBody for PredicateVariable {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        match (from, to) {
-            (PredSubstEntry::Type(from_t), PredSubstEntry::Type(to_t)) => {
+        match from {
+            PredSubstEntry::Type(from_t) => {
                 let new_arity = self.arity.iter()
-                    .map(|t| t.substitute(from_t, to_t))
+                    .map(|t| t.substitute(from_t, &to.to_type().unwrap()))
                     .collect();
-                
                 Rc::new(MinlogPredicate::Variable(PredicateVariable {
                     name: self.name.clone(),
                     arity: new_arity,
@@ -100,18 +99,15 @@ impl PredicateBody for PredicateVariable {
                     index: self.index,
                 }))
             },
-            (PredSubstEntry::Term(_), PredSubstEntry::Term(_)) => {
-                Rc::new(MinlogPredicate::Variable(self.clone()))
-            },
-            (PredSubstEntry::Predicate(from_p), PredSubstEntry::Predicate(to_p)) => {
+            PredSubstEntry::Predicate(from_p) => {
                 if from_p.is_variable() && self == from_p.to_variable().unwrap() {
-                    to_p.clone()
+                    to.to_predicate().unwrap()
                 } else {
                     Rc::new(MinlogPredicate::Variable(self.clone()))
                 }
             },
             _ => {
-                panic!("Tried to substitute between incompatible PredSubstEntry types");
+                Rc::new(MinlogPredicate::Variable(self.clone()))
             }
         }
     }

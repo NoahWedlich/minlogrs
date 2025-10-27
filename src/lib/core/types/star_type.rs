@@ -64,11 +64,15 @@ impl TypeBody for StarType {
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        let new_types: Vec<Rc<MinlogType>> = self.types.iter()
-            .map(|t| t.substitute(from, to))
-            .collect();
-        
-        StarType::create(new_types)
+        if from.is_star() && self == from.to_star().unwrap() {
+            to.clone()
+        } else {
+            let new_types: Vec<Rc<MinlogType>> = self.types.iter()
+                .map(|t| t.substitute(from, to))
+                .collect();
+            
+            StarType::create(new_types)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {

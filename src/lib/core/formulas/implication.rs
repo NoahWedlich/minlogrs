@@ -150,13 +150,17 @@ impl FormulaBody for Implication {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
-        let substituted_premises: Vec<Rc<MinlogFormula>> = self.premises.iter()
-            .map(|p| p.substitute(from, to))
-            .collect();
-        
-        let substituted_conclusion = self.conclusion.substitute(from, to);
-        
-        Implication::create(substituted_premises, substituted_conclusion)
+        if let Some(fm) = from.to_formula() && fm.is_implication() && self == fm.to_implication().unwrap() {
+            to.to_formula().unwrap()
+        } else {
+            let new_premises: Vec<Rc<MinlogFormula>> = self.premises.iter()
+                .map(|p| p.substitute(from, to))
+                .collect();
+            
+            let new_conclusion = self.conclusion.substitute(from, to);
+            
+            Implication::create(new_premises, new_conclusion)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {

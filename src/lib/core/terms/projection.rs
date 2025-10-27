@@ -114,8 +114,12 @@ impl TermBody for Projection {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        let new_term = self.term.substitute(from, to);
-        Projection::create(new_term, self.index)
+        if let Some(tm) = from.to_term() && tm.is_projection() && self == tm.to_projection().unwrap() {
+            to.to_term().unwrap()
+        } else {
+            let new_term = self.term.substitute(from, to);
+            Projection::create(new_term, self.index)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {

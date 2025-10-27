@@ -122,8 +122,12 @@ impl TermBody for Tuple {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        let new_elements = self.elements.iter().map(|e| e.substitute(from, to)).collect();
-        Tuple::create(new_elements)
+        if let Some(tm) = from.to_term() && tm.is_tuple() && self == tm.to_tuple().unwrap() {
+            to.to_term().unwrap()
+        } else {
+            let new_elements = self.elements.iter().map(|e| e.substitute(from, to)).collect();
+            Tuple::create(new_elements)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
@@ -180,8 +184,6 @@ impl TermBody for Tuple {
             },
             _ => MatchOutput::FailedMatch,
         }
-        
-        
     }
 }
 

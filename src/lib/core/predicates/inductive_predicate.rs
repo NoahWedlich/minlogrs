@@ -1,6 +1,6 @@
 
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
@@ -312,10 +312,16 @@ impl PredicateBody for InductivePredicate {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        let mut new_params = self.params.clone();
-        new_params.extend((from.clone(), to.clone()));
-        new_params.restrict(|elem| self.params.contains(elem));
-        Rc::new(MinlogPredicate::InductivePredicate(self.clone()))
+        if let Some(pred) = from.to_predicate() && pred.is_inductive_predicate() && self == pred.to_inductive_predicate().unwrap() {
+            to.to_predicate().unwrap()
+        } else {
+            let new_params = PredicateSubstitution::from_pairs(
+                self.params.pairs().iter()
+                    .map(|(f, t)| (f.substitute(from, to), t.substitute(from, to)))
+                    .collect()
+            );
+            InductivePredicate::create(self.definition.clone(), new_params)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {

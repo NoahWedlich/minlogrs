@@ -132,20 +132,18 @@ impl FormulaBody for PrimeFormula {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
-        let sub_args: Vec<Rc<MinlogTerm>> = if from.is_term_subst_entry() {
-            self.arguments.iter()
-                .map(|arg| arg.substitute(
-                    &from.to_term_subst_entry().unwrap().clone(),
-                    &to.to_term_subst_entry().unwrap().clone()
-                ))
-                .collect()
+        if let Some(tse) = from.to_term_subst_entry() {
+            let new_arguments = self.arguments.iter()
+                .map(|arg| arg.substitute(&tse, &to.to_term_subst_entry().unwrap()))
+                .collect();
+            let new_body = self.body.substitute(from, to);
+            PrimeFormula::create(new_body, new_arguments)
+        } else if let Some(formula) = from.to_formula() && formula.is_prime() && self == formula.to_prime().unwrap() {
+            to.to_formula().unwrap()
         } else {
-            self.arguments.clone()
-        };
-        
-        let sub_body = self.body.substitute(from, to);
-        
-        PrimeFormula::create(sub_body, sub_args)
+            let new_body = self.body.substitute(from, to);
+            PrimeFormula::create(new_body, self.arguments.clone())
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {

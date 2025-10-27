@@ -200,26 +200,22 @@ impl TermBody for Abstraction {
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        match (from, to) {
-            (TermSubstEntry::Type(_), TermSubstEntry::Type(_)) => {
-                let new_vars = self.vars.iter()
-                    .map(|v| v.substitute(from, to)).collect::<Vec<_>>();
-                
+        if let Some(from_tm) = from.to_term() {
+            if from_tm.is_abstraction() && self == from_tm.to_abstraction().unwrap() {
+                to.to_term().unwrap()
+            } else if from_tm.is_variable() && self.vars.contains(&from_tm) {
+                Rc::new(MinlogTerm::Abstraction(self.clone()))
+            } else {
                 let new_kernel = self.kernel.substitute(from, to);
-                
-                Abstraction::create(new_vars, new_kernel)
-            },
-            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(_)) => {
-                if self.vars.contains(from_tm) {
-                    Rc::new(MinlogTerm::Abstraction(self.clone()))
-                } else {
-                    let new_kernel = self.kernel.substitute(from, to);
-                    Abstraction::create(self.vars.clone(), new_kernel)
-                }
-            },
-            _ => {
-                panic!("Tried to substitute between incompatible TermSubstEntry types");
+                Abstraction::create(self.vars.clone(), new_kernel)
             }
+        } else {
+            let new_vars = self.vars.iter()
+                .map(|v| v.substitute(from, to)).collect::<Vec<_>>();
+            
+            let new_kernel = self.kernel.substitute(from, to);
+            
+            Abstraction::create(new_vars, new_kernel)
         }
     }
     

@@ -123,21 +123,42 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        if let Some(tm) = from.to_term() && self.vars.contains(&tm) {
-            return Rc::new(MinlogPredicate::Comprehension(self.clone()));
+        match from {
+            PredSubstEntry::Type(_) => {
+                let new_vars = self.vars.iter()
+                    .map(|v| v.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
+                    .collect();
+                
+                let new_body = self.body.substitute(from, to);
+                
+                ComprehensionTerm::create(new_vars, new_body)
+            },
+            PredSubstEntry::Term(from_tm) => {
+                if from_tm.is_variable() && self.vars.contains(from_tm) {
+                    Rc::new(MinlogPredicate::Comprehension(self.clone()))
+                } else {
+                    let new_vars = self.vars.iter()
+                        .map(|v| v.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
+                        .collect();
+                    
+                    let new_body = self.body.substitute(from, to);
+                    
+                    ComprehensionTerm::create(new_vars, new_body)
+                }
+            },
+            PredSubstEntry::Predicate(from_p) => {
+                if from_p.is_comprehension_term() && self == from_p.to_comprehension_term().unwrap() {
+                    to.to_predicate().unwrap()
+                } else {
+                    let new_body = self.body.substitute(from, to);
+                    ComprehensionTerm::create(self.vars.clone(), new_body)
+                }
+            },
+            PredSubstEntry::Formula(_) => {
+                let new_body = self.body.substitute(from, to);
+                ComprehensionTerm::create(self.vars.clone(), new_body)
+            }
         }
-        
-        let new_vars = if let Some(tse) = from.to_term_subst_entry() {
-            self.vars.iter()
-                .map(|v| v.substitute(&tse, &to.to_term_subst_entry().unwrap()))
-                .collect()
-        } else {
-            self.vars.clone()
-        };
-        
-        let new_body = self.body.substitute(from, to);
-        
-        ComprehensionTerm::create(new_vars, new_body)
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {

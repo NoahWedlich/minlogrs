@@ -97,12 +97,16 @@ impl TypeBody for ArrowType {
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
-        let new_arguments = self.arguments.iter()
-            .map(|arg| arg.substitute(from, to))
-            .collect();
-        let new_value = self.value.substitute(from, to);
-        
-        ArrowType::create(new_arguments, new_value)
+        if from.is_arrow() && self == from.to_arrow().unwrap() {
+            to.clone()
+        } else {
+            let new_arguments = self.arguments.iter()
+                .map(|arg| arg.substitute(from, to))
+                .collect();
+            let new_value = self.value.substitute(from, to);
+            
+            ArrowType::create(new_arguments, new_value)
+        }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {

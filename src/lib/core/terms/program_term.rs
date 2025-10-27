@@ -1,6 +1,6 @@
 
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 
@@ -139,22 +139,15 @@ impl TermBody for ProgramTerm {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        match (from, to) {
-            (TermSubstEntry::Type(from_t), TermSubstEntry::Type(_))
-                if self.pconst.get_type_variables().contains(from_t) => {
-                let mut new_params = self.parameters.clone();
-                new_params.extend((from.clone(), to.clone()));
-                ProgramTerm::create(self.pconst.clone(), new_params)
-            },
-            (TermSubstEntry::Term(from_tm), TermSubstEntry::Term(_))
-                if self.pconst.get_free_variables().contains(from_tm) => {
-                let mut new_params = self.parameters.clone();
-                new_params.extend((from.clone(), to.clone()));
-                ProgramTerm::create(self.pconst.clone(), new_params)
-            },
-            _ => {
-                ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
-            }
+        if let Some(tm) = from.to_term() && tm.is_program_term() && self == tm.to_program_term().unwrap() {
+            to.to_term().unwrap()
+        } else {
+            let new_params = TermSubstitution::from_pairs(
+                self.parameters.pairs().iter()
+                    .map(|(f, t)| (f.substitute(from, to), t.substitute(from, to)))
+                    .collect()
+            );
+            ProgramTerm::create(self.pconst.clone(), new_params)
         }
     }
     
