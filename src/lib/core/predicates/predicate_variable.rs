@@ -132,7 +132,7 @@ impl PredicateBody for PredicateVariable {
         
         match (pattern, instance) {
             (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if p.arity() != i.arity() {
+                if p.arity().len() != i.arity().len() {
                     return MatchOutput::FailedMatch;
                 }
                 

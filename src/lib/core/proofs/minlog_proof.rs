@@ -3,10 +3,14 @@ use std::{rc::Rc, hash::Hash, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 use crate::core::proofs::goal::Goal;
 use crate::core::proofs::assumption::Assumption;
@@ -75,6 +79,12 @@ crate::wrapper_enum! {
         pub fn get_theorems(&Self) -> HashSet<Rc<MinlogProof>> {
             HashSet::new()
         }
+        
+        pub fn substitute(&Self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof>
+        
+        pub fn first_conflict_with(&Self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)>
+        
+        pub fn match_with(&Self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
@@ -139,6 +149,10 @@ impl MinlogProof {
     
     pub fn contains_prime_formula(&self, pform: &Rc<MinlogFormula>) -> bool {
         pform.is_prime() && self.get_prime_formulas().contains(pform)
+    }
+    
+    pub fn contains_goal(&self, goal: &Rc<MinlogProof>) -> bool {
+        goal.is_goal() && self.get_goals().contains(goal)
     }
     
     pub fn contains_assumption(&self, asm: &Rc<MinlogProof>) -> bool {

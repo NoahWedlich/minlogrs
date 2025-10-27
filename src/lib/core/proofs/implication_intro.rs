@@ -4,6 +4,8 @@ use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
@@ -13,6 +15,8 @@ use crate::core::formulas::implication::Implication;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImplicationIntro {
@@ -134,6 +138,60 @@ impl ProofBody for ImplicationIntro {
         self.assumption.get_theorems()
             .union(&self.conclusion.get_theorems())
             .cloned().collect()
+    }
+    
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+        if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_implication_intro() && self == from_proof.to_implication_intro().unwrap() {
+            to.to_proof().unwrap()
+        } else {
+            ImplicationIntro::create(
+                self.conclusion.substitute(from, to),
+                self.assumption.substitute(from, to),
+            )
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+        if let MinlogProof::ImplicationIntro(other_intro) = other.as_ref() {
+            if let Some(conflict) = self.assumption.first_conflict_with(&other_intro.assumption) {
+                return Some(conflict);
+            }
+            
+            if let Some(conflict) = self.conclusion.first_conflict_with(&other_intro.conclusion) {
+                return Some(conflict);
+            }
+            
+            None
+        } else {
+            Some((Rc::new(MinlogProof::ImplicationIntro(self.clone())).into(), other.clone().into()))
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
+                if !p.is_implication_intro() || !i.is_implication_intro() {
+                    return MatchOutput::FailedMatch;
+                }
+                
+                let intro_pattern = p.to_implication_intro().unwrap();
+                let intro_instance = i.to_implication_intro().unwrap();
+                
+                if intro_pattern.assumption != intro_instance.assumption {
+                    ctx.extend(&intro_pattern.assumption.clone().into(), &intro_instance.assumption.clone().into());
+                }
+                
+                if intro_pattern.conclusion != intro_instance.conclusion {
+                    ctx.extend(&intro_pattern.conclusion.clone().into(), &intro_instance.conclusion.clone().into());
+                }
+                
+                MatchOutput::Matched
+            },
+            _ => MatchOutput::FailedMatch,
+        }
     }
 }
 

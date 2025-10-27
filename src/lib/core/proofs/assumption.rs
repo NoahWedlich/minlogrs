@@ -4,12 +4,16 @@ use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Assumption {
@@ -91,6 +95,49 @@ impl ProofBody for Assumption {
     
     fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
         HashSet::from([Rc::new(MinlogProof::Assumption(self.clone()))])
+    }
+    
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+        if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_assumption() && self == from_proof.to_assumption().unwrap() {
+            to.to_proof().unwrap()
+        } else {
+            Assumption::create(
+                self.name.clone(),
+                self.formula.substitute_with(from, to),
+            )
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+        if let Some(conflict) = self.formula.first_conflict_with(&other.proved_formula()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
+        if other.is_assumption() && self == other.to_assumption().unwrap() {
+            None
+        } else {
+            Some((Rc::new(MinlogProof::Assumption(self.clone())).into(), other.clone().into()))
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
+                if !p.is_assumption() || !i.is_assumption() {
+                    return MatchOutput::FailedMatch;
+                }
+                
+                if p.proved_formula() != i.proved_formula() {
+                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
+                }
+                
+                MatchOutput::Matched
+            },
+            _ => MatchOutput::FailedMatch,
+        }
     }
 }
 

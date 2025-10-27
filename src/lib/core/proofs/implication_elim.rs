@@ -4,6 +4,8 @@ use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
@@ -13,6 +15,8 @@ use crate::core::formulas::implication::Implication;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImplicationElim {
@@ -145,6 +149,60 @@ impl ProofBody for ImplicationElim {
         self.premise.get_theorems()
             .union(&self.implication.get_theorems())
             .cloned().collect()
+    }
+    
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+        if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_implication_elim() && self == from_proof.to_implication_elim().unwrap() {
+            to.to_proof().unwrap()
+        } else {
+            ImplicationElim::create(
+                self.implication.substitute(from, to),
+                self.premise.substitute(from, to),
+            )
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+        if let Some(imp_elim) = other.to_implication_elim() {
+            if let Some(conflict) = self.implication.first_conflict_with(&imp_elim.implication) {
+                return Some(conflict);
+            }
+            
+            if let Some(conflict) = self.premise.first_conflict_with(&imp_elim.premise) {
+                return Some(conflict);
+            }
+            
+            None
+        } else {
+            Some((Rc::new(MinlogProof::ImplicationElim(self.clone())).into(), other.clone().into()))
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
+                if !p.is_implication_elim() || !i.is_implication_elim() {
+                    return MatchOutput::FailedMatch;
+                }
+                
+                let imp_elim_pattern = p.to_implication_elim().unwrap();
+                let imp_elim_instance = i.to_implication_elim().unwrap();
+                
+                if imp_elim_pattern.implication != imp_elim_instance.implication {
+                    ctx.extend(&imp_elim_pattern.implication.clone().into(), &imp_elim_instance.implication.clone().into());
+                }
+                
+                if imp_elim_pattern.premise != imp_elim_instance.premise {
+                    ctx.extend(&imp_elim_pattern.premise.clone().into(), &imp_elim_instance.premise.clone().into());
+                }
+                
+                MatchOutput::Matched
+            },
+            _ => MatchOutput::FailedMatch,
+        }
     }
 }
 

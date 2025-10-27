@@ -233,6 +233,12 @@ impl<T: MatchContext<TermSubstEntry>> MatchContext<Rc<MinlogType>> for T {
     }
 }
 
+impl SubstitutableWith<TermSubstEntry> for Rc<MinlogTerm> {
+    fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
+        self.substitute(from, to)
+    }
+}
+
 impl<T: SubstitutableWith<Rc<MinlogType>>> SubstitutableWith<TermSubstEntry> for T {
     fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
         match (from, to) {

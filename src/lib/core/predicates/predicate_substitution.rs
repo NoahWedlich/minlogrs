@@ -355,6 +355,18 @@ impl<T: MatchContext<PredSubstEntry>> MatchContext<TermSubstEntry> for T {
     }
 }
 
+impl SubstitutableWith<PredSubstEntry> for Rc<MinlogPredicate> {
+    fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
+        self.substitute(from, to)
+    }
+}
+
+impl SubstitutableWith<PredSubstEntry> for Rc<MinlogFormula> {
+    fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
+        self.substitute(from, to)
+    }
+}
+
 impl <T: SubstitutableWith<TermSubstEntry>> SubstitutableWith<PredSubstEntry> for T {
     fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
         match (from, to) {

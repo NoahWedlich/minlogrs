@@ -4,12 +4,16 @@ use std::{rc::Rc, hash::{Hash, Hasher}, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Goal {
@@ -99,6 +103,53 @@ impl ProofBody for Goal {
     
     fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
         HashSet::from([Rc::new(MinlogProof::Goal(self.clone()))])
+    }
+    
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+        if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_goal() && self == from_proof.to_goal().unwrap() {
+            to.to_proof().unwrap()
+        } else {
+            Rc::new(MinlogProof::Goal(Goal {
+                name: self.name.clone(),
+                formula: self.formula.substitute_with(from, to),
+                vars: self.vars.iter().map(|v| v.substitute_with(from, to)).collect(),
+                assumptions: self.assumptions.iter()
+                    .map(|a| a.substitute(from, to))
+                    .collect(),
+            }))
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+        if let Some(conflict) = self.formula.first_conflict_with(&other.proved_formula()) {
+            return Some((conflict.0.into(), conflict.1.into()));
+        }
+        
+        if other.is_goal() && self == other.to_goal().unwrap() {
+            None
+        } else {
+            Some((Rc::new(MinlogProof::Goal(self.clone())).into(), other.clone().into()))
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
+                if !p.is_goal() {
+                    return MatchOutput::FailedMatch;
+                }
+                
+                if p.proved_formula() != i.proved_formula() {
+                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
+                }
+                
+                MatchOutput::Substitution(p.into(), i.into())
+            },
+            _ => MatchOutput::FailedMatch,
+        }
     }
 }
 

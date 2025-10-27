@@ -4,6 +4,8 @@ use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
+use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
@@ -13,6 +15,8 @@ use crate::core::formulas::all_quantifier::AllQuantifier;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
+
+use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct UniversalElim {
@@ -134,6 +138,60 @@ impl ProofBody for UniversalElim {
     
     fn get_theorems(&self) -> HashSet<Rc<MinlogProof>> {
         self.proof.get_theorems()
+    }
+    
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+        if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_universal_elim() && self == from_proof.to_universal_elim().unwrap() {
+            to.to_proof().unwrap()
+        } else {
+            UniversalElim::create(
+                self.proof.substitute(from, to),
+                self.term.substitute_with(from, to),
+            )
+        }
+    }
+    
+    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+        if let MinlogProof::UniversalElim(other_universal_elim) = other.as_ref() {
+            if let Some(conflict) = self.proof.first_conflict_with(&other_universal_elim.proof) {
+                return Some(conflict);
+            }
+            
+            if let Some(conflict) = self.term.first_conflict_with(&other_universal_elim.term) {
+                return Some((conflict.0.into(), conflict.1.into()));
+            }
+            
+            None
+        } else {
+            Some((Rc::new(MinlogProof::UniversalElim(self.clone())).into(), other.clone().into()))
+        }
+    }
+    
+    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
+        let pattern = ctx.next_pattern().unwrap();
+        let instance = ctx.next_instance().unwrap();
+        
+        match (pattern, instance) {
+            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
+                if !p.is_universal_elim() || !i.is_universal_elim() {
+                    return MatchOutput::FailedMatch;
+                }
+                
+                let ue_pattern = p.to_universal_elim().unwrap();
+                let ue_instance = i.to_universal_elim().unwrap();
+                
+                if ue_pattern.term != ue_instance.term {
+                    ctx.extend(&ue_pattern.term.clone().into(), &ue_instance.term.clone().into());
+                }
+                
+                if ue_pattern.proof != ue_instance.proof {
+                    ctx.extend(&ue_pattern.proof.clone().into(), &ue_instance.proof.clone().into());
+                }
+                
+                MatchOutput::Matched
+            },
+            _ => MatchOutput::FailedMatch,
+        }
     }
 }
 
