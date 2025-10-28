@@ -61,6 +61,15 @@ impl AllQuantifier {
         }
     }
     
+    pub fn closure(minlog_formula: &Rc<MinlogFormula>) -> Rc<MinlogFormula> {
+        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables().into_iter().collect();
+        if free_vars.is_empty() {
+            minlog_formula.clone()
+        } else {
+            AllQuantifier::create(free_vars, minlog_formula.clone())
+        }
+    }
+    
     pub fn vars(&self) -> &Vec<Rc<MinlogTerm>> {
         &self.vars
     }
@@ -92,12 +101,8 @@ impl FormulaBody for AllQuantifier {
     }
     
     fn extracted_type(&self) -> Rc<MinlogType> {
-        let mut bounds = self.vars.iter()
-            .map(|v| v.to_variable().unwrap().clone())
-            .collect::<HashSet<_>>();
-        
         let var_types = self.vars.iter().map(|v| {
-            if v.totality(&mut bounds).is_total() {
+            if v.totality(&mut HashSet::new()).is_total() {
                 v.minlog_type()
             } else {
                 TypeConstant::create_null()

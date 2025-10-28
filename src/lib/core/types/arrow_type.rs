@@ -86,14 +86,20 @@ impl TypeBody for ArrowType {
         let mut new_arguments = vec![];
         
         for arg in &self.arguments {
-            if let Some(new_arg) = MinlogType::remove_nulls(arg) {
+            if let Some(new_arg) = arg.remove_nulls() {
                 new_arguments.push(new_arg);
-            } else {
-                return None;
             }
         }
         
-        MinlogType::remove_nulls(&self.value).map(|new_value| ArrowType::create(new_arguments, new_value))
+        if let Some(new_value) = self.value.remove_nulls() {
+            if new_arguments.is_empty() {
+                Some(new_value)
+            } else {
+                Some(ArrowType::create(new_arguments, new_value))
+            }
+        } else {
+            None
+        }
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
