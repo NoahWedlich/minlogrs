@@ -13,7 +13,7 @@ use crate::core::{
         algebra::Algebra,
         inductive_constant::InductiveConstant
     }, terms::{
-        minlog_term::{MinlogTerm, Totality}, term_variable::TermVariable, application::Application
+        application::Application, minlog_term::{MinlogTerm, Totality}, projection::Projection, term_variable::TermVariable
     }, types::{
         algebra_type::AlgebraType, minlog_type::MinlogType, type_substitution::TypeSubstitution
     }
@@ -68,7 +68,7 @@ fn constructor_to_totality_clause(
             }).collect::<Vec<_>>();
             
             let var_clauses = vars.iter().filter_map(|var| {
-                var_to_totality_condition(var.clone(), totalities, &mut var_index)
+                term_to_totality_condition(var.clone(), totalities, &mut var_index)
             }).collect::<Vec<_>>();
 
             let value = Application::create(
@@ -96,22 +96,22 @@ fn constructor_to_totality_clause(
     }
 }
 
-fn var_to_totality_condition(
-    var: Rc<MinlogTerm>,
+fn term_to_totality_condition(
+    term: Rc<MinlogTerm>,
     totalities: &mut HashMap<Rc<MinlogType>, Rc<MinlogPredicate>>,
     var_index: &mut usize
 ) -> Option<Rc<MinlogFormula>> {
-    match var.minlog_type().as_ref() {
+    match term.minlog_type().as_ref() {
         MinlogType::Variable(_) => {
-            if let Some(totality) = totalities.get(&var.minlog_type()) {
-                Some(PrimeFormula::create(totality.clone(), vec![var]))
+            if let Some(totality) = totalities.get(&term.minlog_type()) {
+                Some(PrimeFormula::create(totality.clone(), vec![term]))
             } else {
                 panic!("No totality predicate found for type variable");
             }
         },
         MinlogType::Algebra(alg_type) => {
             let totality = extract_totality(alg_type.algebra(), totalities);
-            Some(PrimeFormula::create(totality, vec![var]))
+            Some(PrimeFormula::create(totality, vec![term]))
         },
         MinlogType::Arrow(arrow_type) => {
             let argument_vars = arrow_type.arguments().iter().map(|arg_type| {
@@ -121,11 +121,11 @@ fn var_to_totality_condition(
             }).collect::<Vec<_>>();
             
             let argument_clauses = argument_vars.iter().filter_map(|arg_var| {
-                var_to_totality_condition(arg_var.clone(), totalities, var_index)
+                term_to_totality_condition(arg_var.clone(), totalities, var_index)
             }).collect::<Vec<_>>();
             
             let value = Application::create(
-                var.clone(),
+                term.clone(),
                 argument_vars.iter().map(|v| v.clone() as Rc<MinlogTerm>).collect()
             );
             
@@ -144,8 +144,22 @@ fn var_to_totality_condition(
                 panic!("No totality predicate found for arrow type return type");
             }
         },
-        MinlogType::Star(_) => {
-            panic!("Star types are not supported, as there are no conjunctions yet");
+        MinlogType::Star(star_type) => {
+            let conditions = star_type.types().iter().enumerate().filter_map(|(index, _)| {
+                let proj = Projection::create(term.clone(), index);
+                term_to_totality_condition(proj, totalities, var_index)
+            }).collect::<Vec<_>>();
+            
+            if conditions.is_empty() {
+                None
+            } else if conditions.len() == 1 {
+                Some(conditions.into_iter().next().unwrap())
+            } else {
+                Some(Implication::create(
+                    conditions[..conditions.len()-1].to_vec(), 
+                    conditions[conditions.len()-1].clone()
+                ))
+            }
         },
         _ => None,
     }
