@@ -338,7 +338,7 @@ impl PrettyPrintable for Application {
         );
         
         PPElement::group(vec![
-            self.operator.to_enclosed_pp_element(detail),
+            self.operator.to_pp_element(detail),
             PPElement::text(" (".to_string()),
             PPElement::break_elem(1, 4, false),
             operands,
@@ -347,8 +347,8 @@ impl PrettyPrintable for Application {
         ], BreakType::Consistent, 0)
     }
     
-    fn requires_parens(&self, _detail: bool) -> bool {
-        true
+    fn requires_parens(&self, detail: bool) -> bool {
+        self.operator.requires_parens(detail)
     }
     
     fn open_paren(&self) -> String {

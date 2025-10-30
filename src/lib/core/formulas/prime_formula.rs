@@ -213,7 +213,7 @@ impl PrettyPrintable for PrimeFormula {
         );
         
         PPElement::group(vec![
-            self.body.to_enclosed_pp_element(detail),
+            self.body.to_pp_element(detail),
             PPElement::text(" (".to_string()),
             PPElement::break_elem(1, 4, false),
             arguments,
@@ -222,8 +222,8 @@ impl PrettyPrintable for PrimeFormula {
         ], BreakType::Consistent, 0)
     }
     
-    fn requires_parens(&self, _detail: bool) -> bool {
-        true
+    fn requires_parens(&self, detail: bool) -> bool {
+        self.body.requires_parens(detail)
     }
     
     fn open_paren(&self) -> String {

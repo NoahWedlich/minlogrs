@@ -337,6 +337,10 @@ impl ProofTreeNode {
                 for i in 0..text.len() {
                     left_boundaries[bottom_layer + i] = max(left_boundaries[bottom_layer + i], furthest_right);
                 }
+                
+                for line in text.iter_mut() {
+                    line.range = line.range.align_left_to(furthest_left);
+                }
             },
             ProofTreeNode::Node { premises, conclusion, label } => {
                 for premise in premises.iter_mut() {
@@ -383,6 +387,10 @@ impl ProofTreeNode {
                         .map(|line| line.range.clone())
                         .collect::<Vec<TextSpan>>()
                 );
+                
+                for line in conclusion.iter_mut() {
+                    line.range = line.range.align_left_to(furthest_left);
+                }
                 
                 for i in 0..conclusion.len() {
                     left_boundaries[bottom_layer + i] = max(left_boundaries[bottom_layer + i], conclusion_range.right);
