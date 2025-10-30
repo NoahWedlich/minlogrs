@@ -1,8 +1,9 @@
 
 use std::collections::HashMap;
-use lib::builtin::totality::extract_totality;
+use lib::builtin::{totality::extract_totality, elimination::extract_elimination_axiom};
 use lib::core::types::type_substitution::TypeSubstitution;
 use lib::utils::pretty_printer::*;
+use lib::utils::proof_tree_display::*;
 use lib::core::types::{algebra_type::*, arrow_type::*};
 use lib::core::terms::constructor::*;
 
@@ -30,4 +31,9 @@ fn main() {
     let nat_total = extract_totality(&nat, &mut HashMap::new());
     println!("Totality Predicate:");
     println!("{}", nat_total.to_inductive_predicate().unwrap().definition().debug_string());
+    
+    let nat_total_elim = extract_elimination_axiom(&nat_total);
+    println!("Totality Elimination Axiom:");
+    println!("{}", nat_total_elim.debug_string());
+    println!("{}", nat_total_elim.render_proof_tree());
 }

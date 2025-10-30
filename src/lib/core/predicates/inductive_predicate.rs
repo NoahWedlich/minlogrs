@@ -79,6 +79,10 @@ impl InductivePredicate {
     }
     
     pub fn references_idp(&self, idp: &Rc<MinlogPredicate>) -> bool {
+        if self == idp.to_inductive_predicate().unwrap() {
+            return true;
+        }
+        
         if self.clauses().iter().any(|(_, body)| body.contains_inductive_predicate(idp)) {
             return true;
         }

@@ -1,5 +1,4 @@
 
-use core::panic;
 use std::{rc::Rc, collections::HashMap};
 
 use crate::core::{
@@ -35,7 +34,7 @@ pub fn extract_totality(algebra: &Rc<Algebra>, totalities: &mut HashMap<Rc<Minlo
         totalities.insert(alg_type.clone(), totality_pred.clone());
         
         for constructor in algebra.constructors() {
-            let clause = constructor_to_totality_clause(constructor.clone(), totalities);
+            let clause = constructor_to_totality_clause(&constructor, totalities);
             totality_def.add_clause(format!("{}Total", constructor.to_constructor().unwrap().name()), clause);
         }
         
@@ -46,7 +45,7 @@ pub fn extract_totality(algebra: &Rc<Algebra>, totalities: &mut HashMap<Rc<Minlo
 }
 
 fn constructor_to_totality_clause(
-    constructor: Rc<MinlogTerm>,
+    constructor: &Rc<MinlogTerm>,
     totalities: &mut HashMap<Rc<MinlogType>, Rc<MinlogPredicate>>
 ) -> Rc<MinlogFormula> {
     if !constructor.is_constructor() {
