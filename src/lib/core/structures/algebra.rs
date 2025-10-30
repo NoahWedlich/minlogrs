@@ -103,9 +103,9 @@ impl PrettyPrintable for Algebra {
         if detail {
             let constructors = PPElement::list(
                 self.constructors.borrow().iter().map(|c| c.to_pp_element(true)).collect(),
-                PPElement::break_elem(0, 4, false),
+                PPElement::break_elem(0, 0, false),
                 PPElement::text(";".to_string()),
-                PPElement::break_elem(1, 0, true),
+                PPElement::break_elem(1, 4, true),
                 BreakType::Flexible,
             );
             

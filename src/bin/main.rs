@@ -30,32 +30,4 @@ fn main() {
     let nat_total = extract_totality(&nat, &mut HashMap::new());
     println!("Totality Predicate:");
     println!("{}", nat_total.to_inductive_predicate().unwrap().definition().debug_string());
-    
-    let ord = Algebra::create("Ord".to_string());
-    let ord_type = AlgebraType::create(ord.clone(), TypeSubstitution::make_empty());
-    println!("Ordinal Type:");
-    println!("{}", ord_type.debug_string());
-    
-    let zero_ord = Constructor::create("Zero".to_string(), ord_type.clone());
-    ord.add_constructor(zero_ord);
-    
-    let succ_ord_type = ArrowType::create(vec![ord_type.clone()], ord_type.clone());
-    let succ_ord = Constructor::create("Succ".to_string(), succ_ord_type.clone());
-    ord.add_constructor(succ_ord);
-    
-    let lim_ord_type = ArrowType::create(
-        vec![ArrowType::create(vec![nat_type.clone()], ord_type.clone())],
-        ord_type.clone()
-    );
-    let lim_ord = Constructor::create("Lim".to_string(), lim_ord_type.clone());
-    ord.add_constructor(lim_ord);
-    
-    ord_type.to_algebra().unwrap().ensure_well_founded();
-    
-    println!("Ordinal Algebra:");
-    println!("{}", ord.debug_string());
-    
-    let ord_total = extract_totality(&ord, &mut HashMap::new());
-    println!("Ordinal Totality Predicate:");
-    println!("{}", ord_total.to_inductive_predicate().unwrap().definition().debug_string());
 }
