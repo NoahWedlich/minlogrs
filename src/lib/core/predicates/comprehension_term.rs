@@ -7,6 +7,8 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
+use crate::core::types::tuple_type::TupleType;
+
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::formulas::minlog_formula::MinlogFormula;
 
@@ -18,7 +20,7 @@ use crate::core::predicates::predicate_substitution::{PredicateSubstitution, Pre
 pub struct ComprehensionTerm {
     vars: Vec<Rc<MinlogTerm>>,
     body: Rc<MinlogFormula>,
-    arity: Vec<Rc<MinlogType>>,
+    arity: Rc<MinlogType>,
 }
 
 impl ComprehensionTerm {
@@ -35,7 +37,7 @@ impl ComprehensionTerm {
             }
         }
         
-        let arity = vars.iter().map(|v| v.minlog_type()).collect();
+        let arity = TupleType::create(vars.iter().map(|v| v.minlog_type()).collect());
         Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm { vars, body, arity }))
     }
     
@@ -64,7 +66,7 @@ impl ComprehensionTerm {
 }
 
 impl PredicateBody for ComprehensionTerm {
-    fn arity(&self) -> Vec<Rc<MinlogType>> {
+    fn arity(&self) -> Rc<MinlogType> {
         self.arity.clone()
     }
     
@@ -162,9 +164,7 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
-        if let Some(conflict) = self.arity.iter().find_map(|t| {
-            other.arity().iter().find_map(|ot| t.first_conflict_with(ot))
-        }) {
+        if let Some(conflict) = self.arity.first_conflict_with(&other.arity()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
         
@@ -202,10 +202,8 @@ impl PredicateBody for ComprehensionTerm {
                     return MatchOutput::FailedMatch;
                 }
                 
-                for (pt, it) in p.arity().iter().zip(i.arity().iter()) {
-                    if pt != it {
-                        ctx.extend(&PredSubstEntry::Type(pt.clone()), &PredSubstEntry::Type(it.clone()));
-                    }
+                if p.arity() != i.arity() {
+                    ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
                 }
                 
                 let cterm_pattern = p.to_comprehension_term().unwrap();

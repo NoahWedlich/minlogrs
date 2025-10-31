@@ -16,13 +16,13 @@ use crate::core::predicates::predicate_substitution::PredSubstEntry;
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PredicateVariable {
     name: String,
-    arity: Vec<Rc<MinlogType>>,
+    arity: Rc<MinlogType>,
     degree: PredicateDegree,
     index: usize,
 }
 
 impl PredicateVariable {
-    pub fn create(name: String, arity: Vec<Rc<MinlogType>>, degree: PredicateDegree) -> Rc<MinlogPredicate> {
+    pub fn create(name: String, arity: Rc<MinlogType>, degree: PredicateDegree) -> Rc<MinlogPredicate> {
         Rc::new(MinlogPredicate::Variable(PredicateVariable { name, arity, degree, index: 0 }))
     }
     
@@ -53,7 +53,7 @@ impl PredicateVariable {
 }
 
 impl PredicateBody for PredicateVariable {
-    fn arity(&self) -> Vec<Rc<MinlogType>> {
+    fn arity(&self) -> Rc<MinlogType> {
         self.arity.clone()
     }
     
@@ -72,11 +72,11 @@ impl PredicateBody for PredicateVariable {
     }
     
     fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.arity.iter().flat_map(|t| t.get_type_variables()).collect()
+        self.arity().get_type_variables()
     }
     
     fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.arity.iter().flat_map(|t| t.get_algebra_types()).collect()
+        self.arity.get_algebra_types()
     }
     
     fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
@@ -89,9 +89,7 @@ impl PredicateBody for PredicateVariable {
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         match from {
             PredSubstEntry::Type(from_t) => {
-                let new_arity = self.arity.iter()
-                    .map(|t| t.substitute(from_t, &to.to_type().unwrap()))
-                    .collect();
+                let new_arity = self.arity.substitute(from_t, &to.to_type().unwrap());
                 Rc::new(MinlogPredicate::Variable(PredicateVariable {
                     name: self.name.clone(),
                     arity: new_arity,
@@ -113,9 +111,7 @@ impl PredicateBody for PredicateVariable {
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
-        if let Some(conflict) = self.arity.iter().find_map(|t| {
-            other.arity().iter().find_map(|ot| t.first_conflict_with(ot))
-        }) {
+        if let Some(conflict) = self.arity.first_conflict_with(&other.arity()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
         
@@ -132,14 +128,8 @@ impl PredicateBody for PredicateVariable {
         
         match (pattern, instance) {
             (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if p.arity().len() != i.arity().len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (pt, it) in p.arity().iter().zip(i.arity().iter()) {
-                    if pt != it {
-                        ctx.extend(&PredSubstEntry::Type(pt.clone()), &PredSubstEntry::Type(it.clone()));
-                    }
+                if p.arity() != i.arity() {
+                    ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
                 }
                 
                 match (p.degree(), i.degree()) {
@@ -160,14 +150,6 @@ impl PredicateBody for PredicateVariable {
 impl PrettyPrintable for PredicateVariable {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         if detail {
-            let types = PPElement::list(
-                self.arity.iter().map(|t| t.to_pp_element(true)).collect(),
-                PPElement::break_elem(0, 0, false),
-                PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 0, false),
-                BreakType::Flexible,
-            );
-            
             PPElement::group(vec![
                 PPElement::text(if self.index > 0 {
                     format!("{}_{}", self.name, self.index)
@@ -178,7 +160,7 @@ impl PrettyPrintable for PredicateVariable {
                 PPElement::group(vec![
                     PPElement::text("[".to_string()),
                     PPElement::break_elem(1, 4, false),
-                    types,
+                    self.arity.to_enclosed_pp_element(detail),
                     PPElement::break_elem(1, 0, false),
                     PPElement::text("]".to_string()),
                 ], BreakType::Consistent, 0),

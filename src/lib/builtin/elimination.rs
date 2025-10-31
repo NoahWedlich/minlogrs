@@ -22,8 +22,12 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
         inductive_predicate.degree()
     );
     
-    let arguments = (0..inductive_predicate.arity().len()).map(|i| {
-        TermVariable::create(format!("x{}", i), inductive_predicate.arity()[i].clone(), Totality::Partial)
+    let arguments = (0..inductive_predicate.unpacked_arity().len()).map(|i| {
+        TermVariable::create(
+            format!("x{}", i),
+            inductive_predicate.unpacked_arity()[i].clone(),
+            Totality::Partial
+        )
     }).collect::<Vec<_>>();
     
     let mut elimination_clauses = vec![PrimeFormula::create(inductive_predicate.clone(), arguments.clone())];

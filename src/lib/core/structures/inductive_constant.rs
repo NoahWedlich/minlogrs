@@ -19,13 +19,13 @@ use crate::core::formulas::minlog_formula::MinlogFormula;
 #[derive(Clone, PartialEq, Eq)]
 pub struct InductiveConstant {
     name: String,
-    arity: Vec<Rc<MinlogType>>,
+    arity: Rc<MinlogType>,
     clauses: RefCell<Vec<(String, Rc<MinlogFormula>)>>,
     algebra: RefCell<Option<Rc<Algebra>>>,
 }
 
 impl InductiveConstant {
-    pub fn create(name: String, arity: Vec<Rc<MinlogType>>) -> Rc<InductiveConstant> {
+    pub fn create(name: String, arity: Rc<MinlogType>) -> Rc<InductiveConstant> {
         Rc::new(InductiveConstant {
             name,
             arity,
@@ -38,7 +38,7 @@ impl InductiveConstant {
         &self.name
     }
     
-    pub fn arity(&self) -> &Vec<Rc<MinlogType>> {
+    pub fn arity(&self) -> &Rc<MinlogType> {
         &self.arity
     }
     

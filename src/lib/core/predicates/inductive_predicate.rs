@@ -119,10 +119,8 @@ impl InductivePredicate {
 }
 
 impl PredicateBody for InductivePredicate {
-    fn arity(&self) -> Vec<Rc<MinlogType>> {
-        self.definition.arity().iter()
-            .map(|t| self.params.substitute::<PredSubstEntry>(&t.into()).to_type().unwrap())
-            .collect()
+    fn arity(&self) -> Rc<MinlogType> {
+        self.params.substitute::<PredSubstEntry>(&self.definition.arity().into()).to_type().unwrap()
     }
     
     fn degree(&self) -> PredicateDegree {

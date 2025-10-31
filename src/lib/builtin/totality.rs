@@ -24,7 +24,7 @@ pub fn extract_totality(algebra: &Rc<Algebra>, totalities: &mut HashMap<Rc<Minlo
     if let Some(pred) = totalities.get(&alg_type) {
         pred.clone()
     } else {
-        let totality_def = InductiveConstant::create("Total".to_string(), vec![alg_type.clone()]);
+        let totality_def = InductiveConstant::create("Total".to_string(), alg_type.clone());
         
         let totality_pred = InductivePredicate::create(
             totality_def.clone(), 

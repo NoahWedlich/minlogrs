@@ -288,7 +288,7 @@ impl PredicateSubstitution {
         for pred_var in predicate.get_predicate_variables() {
             let substituted = self.apply(&PredSubstEntry::Predicate(pred_var.clone()));
             if let PredSubstEntry::Predicate(p) = substituted {
-                if self.substitute_all(&pred_var.arity()) != p.arity() {
+                if self.substitute(&pred_var.arity()) != p.arity() {
                     return false;
                 }
             } else {

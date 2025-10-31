@@ -29,7 +29,7 @@ crate::wrapper_enum! {
     
     @default { EmptyPredicateBody }
     pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn arity(&Self) -> Vec<Rc<MinlogType>>
+        pub fn arity(&Self) -> Rc<MinlogType>
         
         pub fn degree(&Self) -> PredicateDegree {
             PredicateDegree { positive_content: false, negative_content: false }
@@ -100,8 +100,20 @@ crate::wrapper_enum! {
 }
 
 impl MinlogPredicate {
+    pub fn unpacked_arity(&self) -> Vec<Rc<MinlogType>> {
+        if let Some(tuple_type) = self.arity().to_tuple() {
+            tuple_type.types().clone()
+        } else {
+            vec![self.arity().clone()]
+        }
+    }
+    
+    pub fn is_formula(&self) -> bool {
+        self.unpacked_arity().is_empty()
+    }
+    
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let arity = pred.arity();
+        let arity = pred.unpacked_arity();
         let vars = arity.iter().enumerate().map(|(i, t)| {
             TermVariable::create(format!("T{}", i), t.clone(), Totality::Partial)
         }).collect::<Vec<_>>();
@@ -172,7 +184,7 @@ impl PrettyPrintable for EmptyPredicateBody {
 }
 
 impl PredicateBody for EmptyPredicateBody {
-    fn arity(&self) -> Vec<Rc<MinlogType>> {
+    fn arity(&self) -> Rc<MinlogType> {
         unimplemented!()
     }
     

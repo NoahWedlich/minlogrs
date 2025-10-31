@@ -22,11 +22,11 @@ pub struct PrimeFormula {
 
 impl PrimeFormula {
     pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogFormula> {
-        if body.arity().len() != arguments.len() {
+        if body.unpacked_arity().len() != arguments.len() {
             panic!("Number of arguments does not match predicate arity");
         }
-        
-        for (arg, expected_type) in arguments.iter().zip(body.arity().iter()) {
+
+        for (arg, expected_type) in arguments.iter().zip(body.unpacked_arity().iter()) {
             if arg.minlog_type() != *expected_type {
                 panic!("Argument type does not match predicate arity type");
             }
