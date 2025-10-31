@@ -77,6 +77,14 @@ impl MinlogType {
             | MinlogType::Proposition(_))
     }
     
+    pub fn is_unit(&self) -> bool {
+        if let MinlogType::Tuple(tup) = self {
+            tup.types().is_empty()
+        } else {
+            false
+        }
+    }
+    
     pub fn is_ground_type(&self) -> bool {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }

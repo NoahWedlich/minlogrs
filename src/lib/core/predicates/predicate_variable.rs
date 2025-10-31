@@ -153,7 +153,7 @@ impl PredicateBody for PredicateVariable {
 
 impl PrettyPrintable for PredicateVariable {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if detail {
+        if detail && !self.arity.is_unit() {
             PPElement::group(vec![
                 PPElement::text(if self.index > 0 {
                     format!("{}_{}", self.name, self.index)

@@ -90,7 +90,11 @@ fn clause_to_elimination_clauses(
             AllQuantifier::create(all.vars().clone(), body_clause)
         },
         _ => {
-            panic!("Expected formula, but got non-nullary predicate.")
+            if !clause.is_formula() {
+                panic!("Expected formula, but got non-nullary predicate: {}", clause.debug_string());
+            }
+            
+            clause_to_elimination_clauses(&PrimeFormula::create(clause.clone(), vec![]), rel_idp, pvars)
         }
     }
 }

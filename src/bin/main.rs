@@ -1,12 +1,17 @@
 
 use std::collections::HashMap;
 use lib::builtin::{totality::extract_totality, elimination::extract_elimination_axiom};
+use lib::core::predicates::all_quantifier::AllQuantifier;
 use lib::core::predicates::implication::Implication;
 use lib::core::predicates::minlog_predicate::PredicateDegree;
 use lib::core::predicates::predicate_substitution::PredicateSubstitution;
 use lib::core::predicates::predicate_variable::PredicateVariable;
 use lib::core::predicates::inductive_predicate::InductivePredicate;
+use lib::core::predicates::prime_formula::PrimeFormula;
 use lib::core::structures::inductive_constant::InductiveConstant;
+use lib::core::terms::minlog_term::Totality;
+use lib::core::terms::term_variable::TermVariable;
+use lib::core::types::tuple_type::TupleType;
 use lib::core::types::type_substitution::TypeSubstitution;
 use lib::core::types::type_variable::TypeVariable;
 use lib::utils::pretty_printer::*;
@@ -45,6 +50,7 @@ fn main() {
     println!("{}", nat_total_elim.render_proof_tree());
     
     let tvar = TypeVariable::create("T".to_string());
+    let tmvar = TermVariable::create("x".to_string(), tvar.clone(), Totality::Total);
     let pred_var_1 = PredicateVariable::create("P".to_string(), tvar.clone(), PredicateDegree {
         positive_content: false, negative_content: false
     });
@@ -79,5 +85,43 @@ fn main() {
     println!("And ET-Type:");
     println!("{}", and_pred.extracted_type().debug_string());
     
+    let ex_def = InductiveConstant::create("Ex".to_string(), TupleType::create_unit());
+    let ex_pred = InductivePredicate::create(ex_def.clone(), PredicateSubstitution::make_empty());
     
+    println!("Ex Predicate:");
+    println!("{}", ex_pred.debug_string());
+    
+    let ex_clause = AllQuantifier::create(
+        vec![tmvar.clone()],
+        Implication::create(
+            vec![
+                PrimeFormula::create(
+                    pred_var_1.clone(),
+                    vec![tmvar.clone()]
+                )
+            ],
+            ex_pred.clone()
+        )
+    );
+    ex_def.add_clause("ExInit".to_string(), ex_clause);
+    
+    ex_pred.to_inductive_predicate().unwrap().ensure_well_founded();
+    
+    println!("Ex Constant:");
+    println!("{}", ex_def.debug_string());
+    
+    let ex_alg = Algebra::create("ExAlg".to_string());
+    ex_def.make_computational(ex_alg, false);
+    
+    println!("Ex Algebra:");
+    println!("{}", ex_pred.to_inductive_predicate().unwrap().get_algebra().unwrap()
+        .to_algebra().unwrap().algebra().debug_string());
+    
+    println!("Ex ET-Type:");
+    println!("{}", ex_pred.extracted_type().debug_string());
+    
+    let ex_elim = extract_elimination_axiom(&ex_pred);
+    println!("Ex Elimination Axiom:");
+    println!("{}", ex_elim.debug_string());
+    println!("{}", ex_elim.render_proof_tree());
 }
