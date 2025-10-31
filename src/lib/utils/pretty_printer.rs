@@ -34,11 +34,11 @@ pub trait PrettyPrintable {
     }
     
     fn debug_string(&self) -> String {
-        self.render(true, 80)
+        self.render(true, 100)
     }
     
     fn display_string(&self) -> String {
-        self.render(false, 80)
+        self.render(false, 100)
     }
 }
 

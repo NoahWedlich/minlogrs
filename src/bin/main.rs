@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use lib::builtin::{totality::extract_totality, elimination::extract_elimination_axiom};
+use lib::builtin::{totality::extract_totality, elimination::{extract_elimination_proof, extract_elimination_axiom}};
 use lib::core::predicates::all_quantifier::AllQuantifier;
 use lib::core::predicates::implication::Implication;
 use lib::core::predicates::minlog_predicate::PredicateDegree;
@@ -48,6 +48,11 @@ fn main() {
     println!("Totality Elimination Axiom:");
     println!("{}", nat_total_elim.debug_string());
     println!("{}", nat_total_elim.render_proof_tree());
+    
+    let nat_total_elim_proof = extract_elimination_proof(&nat_total);
+    println!("Totality Elimination Proof:");
+    println!("{}", nat_total_elim_proof.debug_string());
+    println!("{}", nat_total_elim_proof.render_proof_tree());
     
     let tvar = TypeVariable::create("T".to_string());
     let tmvar = TermVariable::create("x".to_string(), tvar.clone(), Totality::Total);
@@ -124,4 +129,10 @@ fn main() {
     println!("Ex Elimination Axiom:");
     println!("{}", ex_elim.debug_string());
     println!("{}", ex_elim.render_proof_tree());
+    
+    let ex_elim_proof = extract_elimination_proof(&ex_pred);
+    println!("Ex Elimination Proof:");
+    println!("{}", ex_elim_proof.debug_string());
+    println!("Proof Tree:");
+    println!("{}", ex_elim_proof.render_proof_tree());
 }

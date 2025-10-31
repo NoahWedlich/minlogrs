@@ -233,7 +233,7 @@ impl ProofTreeDisplayable for ImplicationElim {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
         ProofTreeNode::new_node(
             vec![self.implication.to_proof_tree_node(), self.premise.to_proof_tree_node()],
-            self.premise.display_string(),
+            self.proved_formula().display_string(),
             Some("→⁻".to_string())
         )
     }

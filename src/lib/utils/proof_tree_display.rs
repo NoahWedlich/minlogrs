@@ -244,7 +244,7 @@ impl ProofTreeNode {
                 text.len()
             },
             ProofTreeNode::Node { premises, conclusion, .. } => {
-                conclusion.len() + 1 + premises.iter().map(|elem| elem.max_depth()).max().unwrap_or(0)
+                conclusion.len() + 1 + premises.iter().map(|elem| elem.max_depth()).max().unwrap_or(1)
             }
         }
     }
@@ -290,6 +290,19 @@ impl ProofTreeNode {
                     })
                 } else if premises.len() == 1 {
                     premises[0].get_reserved_range(layer - conclusion.len() - 1)
+                } else if layer == conclusion.len() + 1 {
+                    let max_conclusion_range = TextSpan::span_multiple(
+                        &(0..conclusion.len())
+                            .filter_map(|d| self.get_reserved_range(d))
+                            .collect::<Vec<TextSpan>>()
+                    );
+                    
+                    let center = max_conclusion_range.center();
+                    
+                    Some(TextSpan {
+                        left: center,
+                        right: center + 1,
+                    })
                 } else {
                     None
                 }

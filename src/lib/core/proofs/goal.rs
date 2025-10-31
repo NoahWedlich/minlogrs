@@ -83,6 +83,7 @@ impl ProofBody for Goal {
     
     fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
         self.formula.get_free_variables()
+            .union(&self.vars).cloned().collect()
     }
     
     fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
@@ -107,6 +108,10 @@ impl ProofBody for Goal {
     
     fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
         HashSet::from([Rc::new(MinlogProof::Goal(self.clone()))])
+    }
+    
+    fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
+        self.assumptions.clone()
     }
     
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
@@ -170,7 +175,19 @@ impl PrettyPrintable for Goal {
                 self.formula.to_pp_element(detail),
             ], BreakType::Flexible, 0),
             PPElement::break_elem(1, 0, false),
-            PPElement::text("}".to_string()),
+            PPElement::text("} (".to_string()),
+            PPElement::break_elem(1, 4, false),
+            PPElement::list(
+                self.vars.iter().map(|v| v.to_pp_element(detail))
+                    .chain(self.assumptions.iter().map(|a| a.to_pp_element(detail)))
+                    .collect(),
+                PPElement::break_elem(0, 0, false),
+                PPElement::text(",".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Consistent
+            ),
+            PPElement::break_elem(1, 0, false),
+            PPElement::text(")".to_string()),
         ], BreakType::Consistent, 0)
     }
     
@@ -181,9 +198,19 @@ impl PrettyPrintable for Goal {
 
 impl ProofTreeDisplayable for Goal {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
+        let v_ell_left_offset = self.name.chars().count() / 2;
+        let v_ell_right_offset = self.name.chars().count() - v_ell_left_offset - 1;
+        let v_ell = format!("{}⋮{}", " ".repeat(v_ell_left_offset), " ".repeat(v_ell_right_offset));
+        
         ProofTreeNode::new_node(vec![
-            ProofTreeNode::new_leaf(format!("{}\n⋮", self.name.clone()))
-        ], self.formula.display_string(), Some("Goal".to_string()))
+            ProofTreeNode::new_node(
+                self.vars.iter().map(|v| ProofTreeNode::new_leaf(v.display_string()))
+                    .chain(self.assumptions.iter().map(|a| a.to_proof_tree_node()))
+                    .collect(),
+                format!("{}\n{}\n{}", v_ell.clone(), self.name, v_ell),
+                None
+            )
+        ], self.formula.display_string(), None)
     }
 }
 

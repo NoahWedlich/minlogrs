@@ -19,6 +19,7 @@ use crate::core::proofs::implication_intro::ImplicationIntro;
 use crate::core::proofs::implication_elim::ImplicationElim;
 use crate::core::proofs::universal_intro::UniversalIntro;
 use crate::core::proofs::universal_elim::UniversalElim;
+use crate::core::proofs::bundled_proof::BundledProof;
 
 crate::wrapper_enum! {
     
@@ -96,6 +97,7 @@ crate::wrapper_enum! {
         ImplicationElim(||implication_elim|| ImplicationElim),
         UniversalIntro(||universal_intro|| UniversalIntro),
         UniversalElim(||universal_elim|| UniversalElim),
+        BundledProof(||bundled_proof|| BundledProof),
     }
     
     impl PrettyPrintable {
