@@ -12,8 +12,6 @@ use crate::core::types::algebra_type::AlgebraType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate, PredicateDegree};
 
-use crate::core::formulas::minlog_formula::MinlogFormula;
-
 use crate::core::types::type_substitution::TypeSubstitution;
 use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
 
@@ -54,11 +52,11 @@ impl InductivePredicate {
         self.definition.name()
     }
     
-    pub fn clauses(&self) -> Vec<(String, Rc<MinlogFormula>)> {
+    pub fn clauses(&self) -> Vec<(String, Rc<MinlogPredicate>)> {
         self.definition.clauses().iter()
             .map(|(name, body)| (
                 name.clone(),
-                self.params.substitute::<PredSubstEntry>(&body.into()).to_formula().unwrap()
+                self.params.substitute::<PredSubstEntry>(&body.into()).to_predicate().unwrap()
             )).collect()
     }
     
@@ -90,8 +88,6 @@ impl InductivePredicate {
         self.params.pairs().iter().any(|(_, to)| {
             if let PredSubstEntry::Predicate(pred) = to {
                 pred.contains_inductive_predicate(idp)
-            } else if let PredSubstEntry::Formula(fm) = to {
-                fm.contains_inductive_predicate(idp)
             } else {
                 false
             }
@@ -137,12 +133,15 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
+    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
+        Rc::new(MinlogPredicate::InductivePredicate(self.clone()))
+    }
+    
     fn depth(&self) -> usize {
         1 + self.params.pairs().iter()
             .map(|(_, to)| match to {
                 PredSubstEntry::Term(tmv) => tmv.depth(),
                 PredSubstEntry::Predicate(pv) => pv.depth(),
-                PredSubstEntry::Formula(fm) => fm.depth(),
                 _ => 0,
             }).chain(self.clauses().iter().map(|(_, body)| body.depth()))
             .max().unwrap_or(0)
@@ -293,7 +292,7 @@ impl PredicateBody for InductivePredicate {
         results
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         if *self.blocked_collection.borrow() {
             return HashSet::new();
         }

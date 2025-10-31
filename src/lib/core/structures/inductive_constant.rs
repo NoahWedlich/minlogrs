@@ -14,13 +14,11 @@ use crate::core::terms::constructor::Constructor;
 
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
-use crate::core::formulas::minlog_formula::MinlogFormula;
-
 #[derive(Clone, PartialEq, Eq)]
 pub struct InductiveConstant {
     name: String,
     arity: Rc<MinlogType>,
-    clauses: RefCell<Vec<(String, Rc<MinlogFormula>)>>,
+    clauses: RefCell<Vec<(String, Rc<MinlogPredicate>)>>,
     algebra: RefCell<Option<Rc<Algebra>>>,
 }
 
@@ -42,7 +40,11 @@ impl InductiveConstant {
         &self.arity
     }
     
-    pub fn add_clause(&self, clause_name: String, clause_body: Rc<MinlogFormula>) {
+    pub fn add_clause(&self, clause_name: String, clause_body: Rc<MinlogPredicate>) {
+        if !clause_body.is_formula() {
+            panic!("Clause '{}' should habe unit arity, but has arity {}", clause_name, clause_body.arity().debug_string())
+        }
+        
         if self.clauses.borrow().iter().any(|(n, _)| n == &clause_name) {
             panic!("Clause with name '{}' already exists in inductive constant '{}'", clause_name, self.name);
         }
@@ -56,7 +58,7 @@ impl InductiveConstant {
         self.clauses.borrow_mut().push((clause_name, clause_body));
     }
     
-    pub fn clauses(&self) -> Vec<(String, Rc<MinlogFormula>)> {
+    pub fn clauses(&self) -> Vec<(String, Rc<MinlogPredicate>)> {
         self.clauses.borrow().clone()
     }
     
@@ -120,7 +122,7 @@ impl InductiveConstant {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current)).collect()
     }
     
-    pub fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    pub fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current)).collect()
     }
 }

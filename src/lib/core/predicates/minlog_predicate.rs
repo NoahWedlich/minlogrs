@@ -10,12 +10,12 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::{MinlogTerm, Totality};
 use crate::core::terms::term_variable::TermVariable;
 
-use crate::core::formulas::minlog_formula::MinlogFormula;
-use crate::core::formulas::prime_formula::PrimeFormula;
-
 use crate::core::predicates::predicate_variable::PredicateVariable;
 use crate::core::predicates::comprehension_term::ComprehensionTerm;
 use crate::core::predicates::inductive_predicate::InductivePredicate;
+use crate::core::predicates::prime_formula::PrimeFormula;
+use crate::core::predicates::implication::Implication;
+use crate::core::predicates::all_quantifier::AllQuantifier;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -34,6 +34,8 @@ crate::wrapper_enum! {
         pub fn degree(&Self) -> PredicateDegree {
             PredicateDegree { positive_content: false, negative_content: false }
         }
+        
+        pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogPredicate>
         
         pub fn depth(&Self) -> usize {
             0
@@ -69,7 +71,7 @@ crate::wrapper_enum! {
             HashSet::new()
         }
         
-        pub fn get_polarized_prime_formulas(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+        pub fn get_polarized_prime_formulas(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
             HashSet::new()
         }
         
@@ -86,6 +88,9 @@ crate::wrapper_enum! {
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension_term|| ComprehensionTerm),
         InductivePredicate(||inductive_predicate|| InductivePredicate),
+        Prime(||prime|| PrimeFormula),
+        Implication(||implication|| Implication),
+        AllQuantifier(||all_quantifier|| AllQuantifier),
     }
     
     impl PrettyPrintable {
@@ -136,7 +141,7 @@ impl MinlogPredicate {
             .into_iter().map(|p| p.value).collect()
     }
 
-    pub fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    pub fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.get_polarized_prime_formulas(Polarity::Unknown)
             .into_iter().map(|p| p.value).collect()
     }
@@ -169,7 +174,7 @@ impl MinlogPredicate {
         ipred.is_inductive_predicate() && self.get_inductive_predicates().contains(ipred)
     }
     
-    pub fn contains_prime_formula(&self, pform: &Rc<MinlogFormula>) -> bool {
+    pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
         pform.is_prime() && self.get_prime_formulas().contains(pform)
     }
 }
@@ -185,6 +190,10 @@ impl PrettyPrintable for EmptyPredicateBody {
 
 impl PredicateBody for EmptyPredicateBody {
     fn arity(&self) -> Rc<MinlogType> {
+        unimplemented!()
+    }
+    
+    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
         unimplemented!()
     }
     

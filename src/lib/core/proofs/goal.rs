@@ -8,7 +8,6 @@ use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
@@ -18,15 +17,20 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 #[derive(Clone, PartialEq, Eq)]
 pub struct Goal {
     name: String,
-    formula: Rc<MinlogFormula>,
+    formula: Rc<MinlogPredicate>,
     vars: HashSet<Rc<MinlogTerm>>,
     assumptions: HashSet<Rc<MinlogProof>>,
 }
 
 impl Goal {
-    pub fn create(name: String, formula: Rc<MinlogFormula>,
-        vars: HashSet<Rc<MinlogTerm>>, assumptions: HashSet<Rc<MinlogProof>>) -> Rc<MinlogProof> {
-            
+    pub fn create(name: String, formula: Rc<MinlogPredicate>,
+        vars: HashSet<Rc<MinlogTerm>>, assumptions: HashSet<Rc<MinlogProof>>
+    ) -> Rc<MinlogProof> {
+
+        if !formula.is_formula() {
+            panic!("Can only create goals of nullary predicates")
+        }
+
         for var in &vars {
             if !var.is_variable() {
                 panic!("Goal::create called with a non-variable term in vars");
@@ -56,7 +60,7 @@ impl Goal {
 }
 
 impl ProofBody for Goal {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
+    fn proved_formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
     
@@ -97,7 +101,7 @@ impl ProofBody for Goal {
         self.formula.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.formula.get_prime_formulas()
     }
     

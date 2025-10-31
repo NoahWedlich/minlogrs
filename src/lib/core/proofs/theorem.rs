@@ -8,7 +8,6 @@ use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
@@ -18,7 +17,7 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Theorem {
     name: String,
-    formula: Rc<MinlogFormula>,
+    formula: Rc<MinlogPredicate>,
     proof: Rc<MinlogProof>,
 }
 
@@ -36,13 +35,13 @@ impl Theorem {
         self.proof.clone()
     }
     
-    pub fn formula(&self) -> Rc<MinlogFormula> {
+    pub fn formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
 }
 
 impl ProofBody for Theorem {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
+    fn proved_formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
     
@@ -82,7 +81,7 @@ impl ProofBody for Theorem {
         self.formula.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.formula.get_prime_formulas()
     }
     

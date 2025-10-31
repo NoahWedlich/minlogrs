@@ -9,10 +9,8 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::formulas::minlog_formula::MinlogFormula;
-use crate::core::formulas::implication::Implication;
-
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
+use crate::core::predicates::implication::Implication;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
 
@@ -22,7 +20,7 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 pub struct ImplicationElim {
     premise: Rc<MinlogProof>,
     implication: Rc<MinlogProof>,
-    formula: Rc<MinlogFormula>,
+    formula: Rc<MinlogPredicate>,
 }
 
 impl ImplicationElim {
@@ -67,7 +65,7 @@ impl ImplicationElim {
 }
 
 impl ProofBody for ImplicationElim {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
+    fn proved_formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
     
@@ -121,7 +119,7 @@ impl ProofBody for ImplicationElim {
             .cloned().collect()
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.premise.get_prime_formulas()
             .union(&self.implication.get_prime_formulas())
             .cloned().collect()

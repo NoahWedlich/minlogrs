@@ -9,7 +9,6 @@ use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -18,7 +17,6 @@ pub enum PredSubstEntry {
     Type(Rc<MinlogType>),
     Term(Rc<MinlogTerm>),
     Predicate(Rc<MinlogPredicate>),
-    Formula(Rc<MinlogFormula>),
 }
 
 impl PredSubstEntry {
@@ -32,10 +30,6 @@ impl PredSubstEntry {
     
     pub fn is_predicate(&self) -> bool {
         matches!(self, PredSubstEntry::Predicate(_))
-    }
-
-    pub fn is_formula(&self) -> bool {
-        matches!(self, PredSubstEntry::Formula(_))
     }
     
     pub fn is_term_subst_entry(&self) -> bool {
@@ -66,14 +60,6 @@ impl PredSubstEntry {
         }
     }
     
-    pub fn to_formula(&self) -> Option<Rc<MinlogFormula>> {
-        if let PredSubstEntry::Formula(f) = self {
-            Some(f.clone())
-        } else {
-            None
-        }
-    }
-    
     pub fn to_term_subst_entry(&self) -> Option<TermSubstEntry> {
         match self {
             PredSubstEntry::Type(t) => Some(TermSubstEntry::Type(t.clone())),
@@ -95,9 +81,6 @@ impl Substitutable for PredSubstEntry {
             (PredSubstEntry::Predicate(p), _, _) => {
                 PredSubstEntry::Predicate(p.substitute(from, to))
             },
-            (PredSubstEntry::Formula(f), _, _) => {
-                PredSubstEntry::Formula(f.substitute(from, to))
-            },
             _ => {
                 panic!("Tried to substitute between incompatible PredSubstEntry types");
             }
@@ -114,9 +97,6 @@ impl Substitutable for PredSubstEntry {
             },
             (PredSubstEntry::Predicate(p1), PredSubstEntry::Predicate(p2)) => {
                 p1.first_conflict_with(p2)
-            },
-            (PredSubstEntry::Formula(f1), PredSubstEntry::Formula(f2)) => {
-                f1.first_conflict_with(f2)
             },
             _ => {
                 panic!("Tried to find conflict between incompatible PredSubstEntry types");
@@ -145,9 +125,6 @@ impl Substitutable for PredSubstEntry {
             PredSubstEntry::Predicate(p) => {
                 p.match_with(ctx)
             },
-            PredSubstEntry::Formula(f) => {
-                f.match_with(ctx)
-            },
             _ if self.is_term_subst_entry() => {
                 match self.to_term_subst_entry().unwrap().match_with(ctx) {
                     MatchOutput::Substitution(p, i) => {
@@ -168,7 +145,6 @@ impl PrettyPrintable for PredSubstEntry {
             PredSubstEntry::Type(t) => t.to_pp_element(detail),
             PredSubstEntry::Term(tm) => tm.to_pp_element(detail),
             PredSubstEntry::Predicate(p) => p.to_pp_element(detail),
-            PredSubstEntry::Formula(f) => f.to_pp_element(detail),
         }
     }
     
@@ -177,7 +153,6 @@ impl PrettyPrintable for PredSubstEntry {
             PredSubstEntry::Type(t) => t.requires_parens(detail),
             PredSubstEntry::Term(tm) => tm.requires_parens(detail),
             PredSubstEntry::Predicate(p) => p.requires_parens(detail),
-            PredSubstEntry::Formula(f) => f.requires_parens(detail),
         }
     }
     
@@ -186,7 +161,6 @@ impl PrettyPrintable for PredSubstEntry {
             PredSubstEntry::Type(t) => t.open_paren(),
             PredSubstEntry::Term(tm) => tm.open_paren(),
             PredSubstEntry::Predicate(p) => p.open_paren(),
-            PredSubstEntry::Formula(f) => f.open_paren(),
         }
     }
     
@@ -195,7 +169,6 @@ impl PrettyPrintable for PredSubstEntry {
             PredSubstEntry::Type(t) => t.close_paren(),
             PredSubstEntry::Term(tm) => tm.close_paren(),
             PredSubstEntry::Predicate(p) => p.close_paren(),
-            PredSubstEntry::Formula(f) => f.close_paren(),
         }
     }
 }
@@ -233,18 +206,6 @@ impl From<Rc<MinlogPredicate>> for PredSubstEntry {
 impl From<&Rc<MinlogPredicate>> for PredSubstEntry {
     fn from(p: &Rc<MinlogPredicate>) -> Self {
         PredSubstEntry::Predicate(Rc::clone(p))
-    }
-}
-
-impl From<Rc<MinlogFormula>> for PredSubstEntry {
-    fn from(f: Rc<MinlogFormula>) -> Self {
-        PredSubstEntry::Formula(f)
-    }
-}
-
-impl From<&Rc<MinlogFormula>> for PredSubstEntry {
-    fn from(f: &Rc<MinlogFormula>) -> Self {
-        PredSubstEntry::Formula(Rc::clone(f))
     }
 }
 
@@ -356,12 +317,6 @@ impl<T: MatchContext<PredSubstEntry>> MatchContext<TermSubstEntry> for T {
 }
 
 impl SubstitutableWith<PredSubstEntry> for Rc<MinlogPredicate> {
-    fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
-        self.substitute(from, to)
-    }
-}
-
-impl SubstitutableWith<PredSubstEntry> for Rc<MinlogFormula> {
     fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
         self.substitute(from, to)
     }

@@ -7,7 +7,6 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::proof_substitution::ProofSubstEntry;
@@ -24,7 +23,7 @@ use crate::core::proofs::universal_elim::UniversalElim;
 crate::wrapper_enum! {
     
     pub trait ProofBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn proved_formula(&Self) -> Rc<MinlogFormula>
+        pub fn proved_formula(&Self) -> Rc<MinlogPredicate>
         
         pub fn length(&Self) -> usize {
             1
@@ -60,7 +59,7 @@ crate::wrapper_enum! {
             HashSet::new()
         }
         
-        pub fn get_prime_formulas(&Self) -> HashSet<Rc<MinlogFormula>> {
+        pub fn get_prime_formulas(&Self) -> HashSet<Rc<MinlogPredicate>> {
             HashSet::new()
         }
         
@@ -147,7 +146,7 @@ impl MinlogProof {
         ipred.is_inductive_predicate() && self.get_inductive_predicates().contains(ipred)
     }
     
-    pub fn contains_prime_formula(&self, pform: &Rc<MinlogFormula>) -> bool {
+    pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
         pform.is_prime() && self.get_prime_formulas().contains(pform)
     }
     

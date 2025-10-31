@@ -9,7 +9,6 @@ use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::proofs::minlog_proof::MinlogProof;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -20,7 +19,6 @@ pub enum ProofSubstEntry {
     Type(Rc<MinlogType>),
     Term(Rc<MinlogTerm>),
     Predicate(Rc<MinlogPredicate>),
-    Formula(Rc<MinlogFormula>),
     Proof(Rc<MinlogProof>),
 }
 
@@ -35,10 +33,6 @@ impl ProofSubstEntry {
     
     pub fn is_predicate(&self) -> bool {
         matches!(self, ProofSubstEntry::Predicate(_))
-    }
-    
-    pub fn is_formula(&self) -> bool {
-        matches!(self, ProofSubstEntry::Formula(_))
     }
     
     pub fn is_proof(&self) -> bool {
@@ -74,13 +68,6 @@ impl ProofSubstEntry {
         }
     }
 
-    pub fn to_formula(&self) -> Option<Rc<MinlogFormula>> {
-        match self {
-            ProofSubstEntry::Formula(f) => Some(f.clone()),
-            _ => None,
-        }
-    }
-
     pub fn to_proof(&self) -> Option<Rc<MinlogProof>> {
         match self {
             ProofSubstEntry::Proof(p) => Some(p.clone()),
@@ -101,7 +88,6 @@ impl ProofSubstEntry {
             ProofSubstEntry::Type(t) => Some(PredSubstEntry::Type(t.clone())),
             ProofSubstEntry::Term(t) => Some(PredSubstEntry::Term(t.clone())),
             ProofSubstEntry::Predicate(p) => Some(PredSubstEntry::Predicate(p.clone())),
-            ProofSubstEntry::Formula(f) => Some(PredSubstEntry::Formula(f.clone())),
             _ => None,
         }
     }
@@ -118,9 +104,6 @@ impl Substitutable for ProofSubstEntry {
             },
             ProofSubstEntry::Predicate(p) if from.is_pred_subst_entry() && to.is_pred_subst_entry() => {
                 ProofSubstEntry::Predicate(p.substitute(&from.to_pred_subst_entry().unwrap(), &to.to_pred_subst_entry().unwrap()))
-            },
-            ProofSubstEntry::Formula(f) if from.is_pred_subst_entry() && to.is_pred_subst_entry() => {
-                ProofSubstEntry::Formula(f.substitute(&from.to_pred_subst_entry().unwrap(), &to.to_pred_subst_entry().unwrap()))
             },
             ProofSubstEntry::Proof(pr) => {
                 ProofSubstEntry::Proof(pr.substitute(from, to))
@@ -141,9 +124,6 @@ impl Substitutable for ProofSubstEntry {
             },
             (ProofSubstEntry::Predicate(p1), ProofSubstEntry::Predicate(p2)) => {
                 p1.first_conflict_with(p2).map(|(c1, c2)| (c1.into(), c2.into()))
-            },
-            (ProofSubstEntry::Formula(f1), ProofSubstEntry::Formula(f2)) => {
-                f1.first_conflict_with(f2).map(|(c1, c2)| (c1.into(), c2.into()))
             },
             (ProofSubstEntry::Proof(p1), ProofSubstEntry::Proof(p2)) => {
                 p1.first_conflict_with(p2)
@@ -195,7 +175,6 @@ impl PrettyPrintable for ProofSubstEntry {
             ProofSubstEntry::Type(t) => t.to_pp_element(detail),
             ProofSubstEntry::Term(tm) => tm.to_pp_element(detail),
             ProofSubstEntry::Predicate(p) => p.to_pp_element(detail),
-            ProofSubstEntry::Formula(f) => f.to_pp_element(detail),
             ProofSubstEntry::Proof(pr) => pr.to_pp_element(detail),
         }
     }
@@ -205,7 +184,6 @@ impl PrettyPrintable for ProofSubstEntry {
             ProofSubstEntry::Type(t) => t.requires_parens(detail),
             ProofSubstEntry::Term(tm) => tm.requires_parens(detail),
             ProofSubstEntry::Predicate(p) => p.requires_parens(detail),
-            ProofSubstEntry::Formula(f) => f.requires_parens(detail),
             ProofSubstEntry::Proof(pr) => pr.requires_parens(detail),
         }
     }
@@ -215,7 +193,6 @@ impl PrettyPrintable for ProofSubstEntry {
             ProofSubstEntry::Type(t) => t.open_paren(),
             ProofSubstEntry::Term(tm) => tm.open_paren(),
             ProofSubstEntry::Predicate(p) => p.open_paren(),
-            ProofSubstEntry::Formula(f) => f.open_paren(),
             ProofSubstEntry::Proof(pr) => pr.open_paren(),
         }
     }
@@ -225,7 +202,6 @@ impl PrettyPrintable for ProofSubstEntry {
             ProofSubstEntry::Type(t) => t.close_paren(),
             ProofSubstEntry::Term(tm) => tm.close_paren(),
             ProofSubstEntry::Predicate(p) => p.close_paren(),
-            ProofSubstEntry::Formula(f) => f.close_paren(),
             ProofSubstEntry::Proof(pr) => pr.close_paren(),
         }
     }
@@ -267,18 +243,6 @@ impl From<&Rc<MinlogPredicate>> for ProofSubstEntry {
     }
 }
 
-impl From<Rc<MinlogFormula>> for ProofSubstEntry {
-    fn from(f: Rc<MinlogFormula>) -> Self {
-        ProofSubstEntry::Formula(f)
-    }
-}
-
-impl From<&Rc<MinlogFormula>> for ProofSubstEntry {
-    fn from(f: &Rc<MinlogFormula>) -> Self {
-        ProofSubstEntry::Formula(f.clone())
-    }
-}
-
 impl From<Rc<MinlogProof>> for ProofSubstEntry {
     fn from(pr: Rc<MinlogProof>) -> Self {
         ProofSubstEntry::Proof(pr)
@@ -315,7 +279,6 @@ impl From<PredSubstEntry> for ProofSubstEntry {
             PredSubstEntry::Type(t) => ProofSubstEntry::Type(t),
             PredSubstEntry::Term(tm) => ProofSubstEntry::Term(tm),
             PredSubstEntry::Predicate(p) => ProofSubstEntry::Predicate(p),
-            PredSubstEntry::Formula(f) => ProofSubstEntry::Formula(f),
         }
     }
 }
@@ -326,7 +289,6 @@ impl From<&PredSubstEntry> for ProofSubstEntry {
             PredSubstEntry::Type(t) => ProofSubstEntry::Type(t.clone()),
             PredSubstEntry::Term(tm) => ProofSubstEntry::Term(tm.clone()),
             PredSubstEntry::Predicate(p) => ProofSubstEntry::Predicate(p.clone()),
-            PredSubstEntry::Formula(f) => ProofSubstEntry::Formula(f.clone()),
         }
     }
 }

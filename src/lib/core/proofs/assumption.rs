@@ -8,7 +8,6 @@ use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
@@ -18,12 +17,16 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Assumption {
     name: String,
-    formula: Rc<MinlogFormula>,
+    formula: Rc<MinlogPredicate>,
     index: usize,
 }
 
 impl Assumption {
-    pub fn create(name: String, formula: Rc<MinlogFormula>) -> Rc<MinlogProof> {
+    pub fn create(name: String, formula: Rc<MinlogPredicate>) -> Rc<MinlogProof> {
+        if !formula.is_formula() {
+            panic!("Only assumptions of nullary predicates are allowed.")
+        }
+        
         Rc::new(MinlogProof::Assumption(Assumption { name, formula, index: 0 }))
     }
     
@@ -49,7 +52,7 @@ impl Assumption {
 }
 
 impl ProofBody for Assumption {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
+    fn proved_formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
     
@@ -89,7 +92,7 @@ impl ProofBody for Assumption {
         self.formula.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.formula.get_prime_formulas()
     }
     

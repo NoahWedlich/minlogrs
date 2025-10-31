@@ -1,18 +1,18 @@
-
 use std::{rc::Rc, collections::HashSet};
+
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
+use crate::core::types::tuple_type::TupleType;
 
-use crate::core::formulas::minlog_formula::{FormulaBody, MinlogFormula, FormulaOfNulltype};
+use crate::core::terms::minlog_term::MinlogTerm;
+
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
-
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
@@ -21,7 +21,7 @@ pub struct PrimeFormula {
 }
 
 impl PrimeFormula {
-    pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogFormula> {
+    pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogPredicate> {
         if body.unpacked_arity().len() != arguments.len() {
             panic!("Number of arguments does not match predicate arity");
         }
@@ -32,7 +32,7 @@ impl PrimeFormula {
             }
         }
         
-        Rc::new(MinlogFormula::Prime(PrimeFormula { body, arguments }))
+        Rc::new(MinlogPredicate::Prime(PrimeFormula { body, arguments }))
     }
     
     pub fn body(&self) -> &Rc<MinlogPredicate> {
@@ -52,16 +52,16 @@ impl PrimeFormula {
     }
 }
 
-impl FormulaBody for PrimeFormula {
-    fn of_nulltype(&self) -> FormulaOfNulltype {
-        let pred_degree = self.body.degree();
-        FormulaOfNulltype {
-            positive_nulltype: !pred_degree.positive_content,
-            negative_nulltype: !pred_degree.negative_content,
-        }
+impl PredicateBody for PrimeFormula {
+    fn arity(&self) -> Rc<MinlogType> {
+        TupleType::create_unit()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogFormula> {
+    fn degree(&self) -> PredicateDegree {
+        self.body.degree()
+    }
+    
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
         let norm_args: Vec<Rc<MinlogTerm>> = self.arguments.iter()
             .map(|arg| arg.normalize(eta, pi))
             .collect();
@@ -125,31 +125,31 @@ impl FormulaBody for PrimeFormula {
         self.body.get_polarized_inductive_preds(_current)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         let mut primes = self.body.get_polarized_prime_formulas(current);
-        primes.insert(Polarized::new(current, Rc::new(MinlogFormula::Prime(self.clone()))));
+        primes.insert(Polarized::new(current, Rc::new(MinlogPredicate::Prime(self.clone()))));
         primes
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         if let Some(tse) = from.to_term_subst_entry() {
             let new_arguments = self.arguments.iter()
                 .map(|arg| arg.substitute(&tse, &to.to_term_subst_entry().unwrap()))
                 .collect();
             let new_body = self.body.substitute(from, to);
             PrimeFormula::create(new_body, new_arguments)
-        } else if let Some(formula) = from.to_formula() && formula.is_prime() && self == formula.to_prime().unwrap() {
-            to.to_formula().unwrap()
+        } else if let Some(pred) = from.to_predicate() && pred.is_prime() && self == pred.to_prime().unwrap() {
+            to.to_predicate().unwrap()
         } else {
             let new_body = self.body.substitute(from, to);
             PrimeFormula::create(new_body, self.arguments.clone())
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let Some(other_prime) = other.to_prime() {
             if self.arguments.len() != other_prime.arguments.len() {
-                return Some((Rc::new(MinlogFormula::Prime(self.clone())).into(), other.clone().into()));
+                return Some((Rc::new(MinlogPredicate::Prime(self.clone())).into(), other.clone().into()));
             }
             
             for (arg_self, arg_other) in self.arguments.iter().zip(other_prime.arguments.iter()) {
@@ -160,7 +160,7 @@ impl FormulaBody for PrimeFormula {
             
             self.body.first_conflict_with(&other_prime.body)
         } else {
-            Some((Rc::new(MinlogFormula::Prime(self.clone())).into(), other.clone().into()))
+            Some((Rc::new(MinlogPredicate::Prime(self.clone())).into(), other.clone().into()))
         }
     }
     
@@ -169,7 +169,7 @@ impl FormulaBody for PrimeFormula {
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
-            (PredSubstEntry::Formula(p), PredSubstEntry::Formula(i)) => {
+            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
                 if !p.is_prime() || !i.is_prime() {
                     return MatchOutput::FailedMatch;
                 }

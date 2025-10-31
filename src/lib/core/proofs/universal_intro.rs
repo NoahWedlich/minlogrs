@@ -9,10 +9,8 @@ use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::formulas::minlog_formula::MinlogFormula;
-use crate::core::formulas::all_quantifier::AllQuantifier;
-
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
+use crate::core::predicates::all_quantifier::AllQuantifier;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
 
@@ -22,7 +20,7 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 pub struct UniversalIntro {
     proof: Rc<MinlogProof>,
     variable: Rc<MinlogTerm>,
-    formula: Rc<MinlogFormula>,
+    formula: Rc<MinlogPredicate>,
 }
 
 impl UniversalIntro {
@@ -51,7 +49,7 @@ impl UniversalIntro {
 }
 
 impl ProofBody for UniversalIntro {
-    fn proved_formula(&self) -> Rc<MinlogFormula> {
+    fn proved_formula(&self) -> Rc<MinlogPredicate> {
         self.formula.clone()
     }
     
@@ -95,7 +93,7 @@ impl ProofBody for UniversalIntro {
         self.proof.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogFormula>> {
+    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
         self.proof.get_prime_formulas()
     }
 

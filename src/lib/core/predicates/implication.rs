@@ -1,5 +1,5 @@
-
 use std::{rc::Rc, collections::HashSet};
+
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -10,24 +10,29 @@ use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
-use crate::core::formulas::minlog_formula::{FormulaBody, MinlogFormula, FormulaOfNulltype};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Implication {
-    premises: Vec<Rc<MinlogFormula>>,
-    conclusion: Rc<MinlogFormula>,
+    premises: Vec<Rc<MinlogPredicate>>,
+    conclusion: Rc<MinlogPredicate>,
 }
 
 impl Implication {
-    pub fn create(premises: Vec<Rc<MinlogFormula>>, conclusion: Rc<MinlogFormula>) -> Rc<MinlogFormula> {
-        Implication::collapse(&Rc::new(MinlogFormula::Implication(Implication { premises, conclusion })))
+    pub fn create(premises: Vec<Rc<MinlogPredicate>>, conclusion: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        for premise in &premises {
+            if premise.arity() != conclusion.arity() {
+                panic!("All premises and conclusion of an Implication must have the same arity");
+            }
+        }
+        
+        Implication::collapse(&Rc::new(MinlogPredicate::Implication(Implication { premises, conclusion })))
     }
     
-    pub fn collapse(minlog_formula: &Rc<MinlogFormula>) -> Rc<MinlogFormula> {
+    pub fn collapse(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         if !minlog_formula.is_implication() || !minlog_formula.to_implication().unwrap().conclusion.is_implication() {
             minlog_formula.clone()
         } else {
@@ -44,31 +49,34 @@ impl Implication {
         }
     }
     
-    pub fn premises(&self) -> &Vec<Rc<MinlogFormula>> {
+    pub fn premises(&self) -> &Vec<Rc<MinlogPredicate>> {
         &self.premises
     }
     
-    pub fn premise(&self, index: usize) -> Option<&Rc<MinlogFormula>> {
+    pub fn premise(&self, index: usize) -> Option<&Rc<MinlogPredicate>> {
         self.premises.get(index)
     }
     
-    pub fn conclusion(&self) -> &Rc<MinlogFormula> {
+    pub fn conclusion(&self) -> &Rc<MinlogPredicate> {
         &self.conclusion
     }
 }
 
-impl FormulaBody for Implication {
-    fn of_nulltype(&self) -> FormulaOfNulltype {
-        FormulaOfNulltype {
-            positive_nulltype: self.premises.iter().all(|p| p.of_nulltype().has_negative())
-                && self.conclusion.of_nulltype().has_positive(),
-            negative_nulltype: self.premises.iter().all(|p| p.of_nulltype().has_positive())
-                && self.conclusion.of_nulltype().has_negative(),
+impl PredicateBody for Implication {
+    fn arity(&self) -> Rc<MinlogType> {
+        self.conclusion.arity()
+    }
+    
+    fn degree(&self) -> PredicateDegree {
+        PredicateDegree {
+            positive_content: self.conclusion.degree().positive_content,
+            negative_content: self.premises.iter().any(|p| p.degree().positive_content)
+                || self.conclusion.degree().negative_content,
         }
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogFormula> {
-        let normalized_premises: Vec<Rc<MinlogFormula>> = self.premises.iter()
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+        let normalized_premises: Vec<Rc<MinlogPredicate>> = self.premises.iter()
             .map(|p| p.normalize(eta, pi))
             .collect();
         
@@ -142,18 +150,18 @@ impl FormulaBody for Implication {
             .collect()
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.premises.iter()
             .flat_map(|p| p.get_polarized_prime_formulas(current.invert()))
             .chain(self.conclusion.get_polarized_prime_formulas(current))
             .collect()
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
-        if let Some(fm) = from.to_formula() && fm.is_implication() && self == fm.to_implication().unwrap() {
-            to.to_formula().unwrap()
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+        if let Some(pred) = from.to_predicate() && pred.is_implication() && self == pred.to_implication().unwrap() {
+            to.to_predicate().unwrap()
         } else {
-            let new_premises: Vec<Rc<MinlogFormula>> = self.premises.iter()
+            let new_premises: Vec<Rc<MinlogPredicate>> = self.premises.iter()
                 .map(|p| p.substitute(from, to))
                 .collect();
             
@@ -163,10 +171,10 @@ impl FormulaBody for Implication {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {
-        if let MinlogFormula::Implication(other_implication) = other.as_ref() {
+    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+        if let MinlogPredicate::Implication(other_implication) = other.as_ref() {
             if self.premises.len() != other_implication.premises.len() {
-                return Some((Rc::new(MinlogFormula::Implication(self.clone())).into(), other.clone().into()));
+                return Some((Rc::new(MinlogPredicate::Implication(self.clone())).into(), other.clone().into()));
             }
             
             for (p1, p2) in self.premises.iter().zip(other_implication.premises.iter()) {
@@ -177,7 +185,7 @@ impl FormulaBody for Implication {
             
             self.conclusion.first_conflict_with(&other_implication.conclusion)
         } else {
-            Some((Rc::new(MinlogFormula::Implication(self.clone())).into(), other.clone().into()))
+            Some((Rc::new(MinlogPredicate::Implication(self.clone())).into(), other.clone().into()))
         }
     }
     
@@ -186,7 +194,7 @@ impl FormulaBody for Implication {
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
-            (PredSubstEntry::Formula(p), PredSubstEntry::Formula(i)) => {
+            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
                 if !p.is_implication() || !i.is_implication() {
                     return MatchOutput::FailedMatch;
                 }

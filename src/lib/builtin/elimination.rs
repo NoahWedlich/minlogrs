@@ -5,11 +5,12 @@ use crate::core::proofs::minlog_proof::MinlogProof;
 use crate::utils::pretty_printer::*;
 
 use crate::core::{
-    formulas::{
-        all_quantifier::AllQuantifier, implication::Implication, minlog_formula::MinlogFormula, prime_formula::PrimeFormula
-    }, predicates::{
+    predicates::{
         minlog_predicate::MinlogPredicate,
-        predicate_variable::PredicateVariable
+        predicate_variable::PredicateVariable,
+        prime_formula::PrimeFormula,
+        implication::Implication,
+        all_quantifier::AllQuantifier
     }, terms::{
         minlog_term::Totality, term_variable::TermVariable
     }
@@ -50,12 +51,12 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
 }
 
 fn clause_to_elimination_clauses(
-    clause: &Rc<MinlogFormula>,
+    clause: &Rc<MinlogPredicate>,
     rel_idp: &Rc<MinlogPredicate>,
     pvars: &mut HashMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
-) -> Rc<MinlogFormula> {
+) -> Rc<MinlogPredicate> {
     match clause.as_ref() {
-        MinlogFormula::Prime(prime) => {
+        MinlogPredicate::Prime(prime) => {
             if let Some(idp) = prime.body().to_inductive_predicate() && idp.references_idp(rel_idp) {
                 let pvar = if let Some(existing) = pvars.get(prime.body()) {
                     existing.clone()
@@ -75,7 +76,7 @@ fn clause_to_elimination_clauses(
                 panic!("Clause must result in IDP, but found: {}", clause.debug_string());
             }
         },
-        MinlogFormula::Implication(imp) => {
+        MinlogPredicate::Implication(imp) => {
             let premise_clauses = imp.premises().iter().flat_map(|arg| {
                 inner_clause_to_elimination_clauses(arg, rel_idp, pvars)
             }).collect::<Vec<_>>();
@@ -84,20 +85,23 @@ fn clause_to_elimination_clauses(
             
             Implication::create(premise_clauses, conclusion_clause)
         },
-        MinlogFormula::AllQuantifier(all) => {
+        MinlogPredicate::AllQuantifier(all) => {
             let body_clause = clause_to_elimination_clauses(all.body(), rel_idp, pvars);
             AllQuantifier::create(all.vars().clone(), body_clause)
+        },
+        _ => {
+            panic!("Expected formula, but got non-nullary predicate.")
         }
     }
 }
 
 fn inner_clause_to_elimination_clauses(
-    clause: &Rc<MinlogFormula>,
+    clause: &Rc<MinlogPredicate>,
     rel_idp: &Rc<MinlogPredicate>,
     pvars: &mut HashMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
-) -> Vec<Rc<MinlogFormula>> {
+) -> Vec<Rc<MinlogPredicate>> {
     match clause.as_ref() {
-        MinlogFormula::Prime(prime) => {
+        MinlogPredicate::Prime(prime) => {
             if let Some(idp) = prime.body().to_inductive_predicate() && idp.references_idp(rel_idp) {
                 let pvar = if let Some(existing) = pvars.get(prime.body()) {
                     existing.clone()
@@ -120,7 +124,7 @@ fn inner_clause_to_elimination_clauses(
                 vec![clause.clone()]
             }
         },
-        MinlogFormula::Implication(imp) => {
+        MinlogPredicate::Implication(imp) => {
             let premise_clauses = imp.premises().iter().filter_map(|arg| {
                 let clauses = inner_clause_to_elimination_clauses(arg, rel_idp, pvars);
                 if clauses.len() > 1 {
@@ -136,11 +140,14 @@ fn inner_clause_to_elimination_clauses(
                 Implication::create(premise_clauses.clone(), concl)
             }).collect()
         },
-        MinlogFormula::AllQuantifier(all) => {
+        MinlogPredicate::AllQuantifier(all) => {
             let body_clauses = inner_clause_to_elimination_clauses(all.body(), rel_idp, pvars);
             body_clauses.into_iter().map(|body| {
                 AllQuantifier::create(all.vars().clone(), body)
             }).collect()
         },
+        _ => {
+            panic!("Expected formula, but got non-nullary predicate.")
+        }
     }
 }

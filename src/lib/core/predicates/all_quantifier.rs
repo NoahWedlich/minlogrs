@@ -1,5 +1,5 @@
-
 use std::{rc::Rc, collections::HashSet};
+
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -11,20 +11,18 @@ use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
-use crate::core::formulas::minlog_formula::{FormulaBody, MinlogFormula, FormulaOfNulltype};
-
-use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
+use crate::core::predicates::predicate_substitution::{PredicateSubstitution, PredSubstEntry};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AllQuantifier {
     vars: Vec<Rc<MinlogTerm>>,
-    body: Rc<MinlogFormula>,
+    body: Rc<MinlogPredicate>,
 }
 
 impl AllQuantifier {
-    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogFormula>) -> Rc<MinlogFormula> {
+    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         if vars.is_empty() {
             return body;
         }
@@ -41,10 +39,10 @@ impl AllQuantifier {
             }
         }
         
-        AllQuantifier::collapse(&Rc::new(MinlogFormula::AllQuantifier(AllQuantifier { vars, body })))
+        AllQuantifier::collapse(&Rc::new(MinlogPredicate::AllQuantifier(AllQuantifier { vars, body })))
     }
     
-    pub fn collapse(minlog_formula: &Rc<MinlogFormula>) -> Rc<MinlogFormula> {
+    pub fn collapse(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         if !minlog_formula.is_all_quantifier() || !minlog_formula.to_all_quantifier().unwrap().body.is_all_quantifier() {
             minlog_formula.clone()
         } else {
@@ -61,7 +59,7 @@ impl AllQuantifier {
         }
     }
     
-    pub fn closure(minlog_formula: &Rc<MinlogFormula>) -> Rc<MinlogFormula> {
+    pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables().into_iter().collect();
         if free_vars.is_empty() {
             minlog_formula.clone()
@@ -78,20 +76,26 @@ impl AllQuantifier {
         self.vars.get(index)
     }
     
-    pub fn body(&self) -> &Rc<MinlogFormula> {
+    pub fn body(&self) -> &Rc<MinlogPredicate> {
         &self.body
     }
 }
 
-impl FormulaBody for AllQuantifier {
-    fn of_nulltype(&self) -> FormulaOfNulltype {
-        FormulaOfNulltype {
-            positive_nulltype: self.body.of_nulltype().positive_nulltype,
-            negative_nulltype: false,
+impl PredicateBody for AllQuantifier {
+    fn arity(&self) -> Rc<MinlogType> {
+        self.body.arity()
+    }
+    
+    fn degree(&self) -> PredicateDegree {
+        PredicateDegree {
+            positive_content: self.body.degree().positive_content,
+            negative_content: self.vars.iter().any(
+                |v| v.totality(&mut HashSet::new()).is_total()
+            )
         }
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogFormula> {
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
         let normalized_body = self.body.normalize(eta, pi);
         AllQuantifier::create(self.vars.clone(), normalized_body)
     }
@@ -151,15 +155,15 @@ impl FormulaBody for AllQuantifier {
         self.body.get_polarized_inductive_preds(current)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_prime_formulas(current)
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogFormula> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         if let Some(tm) = from.to_term() && self.vars.contains(&tm) {
-            Rc::new(MinlogFormula::AllQuantifier(self.clone()))
-        } else if let Some(formula) = from.to_formula() && formula.is_all_quantifier() && self == formula.to_all_quantifier().unwrap() {
-            to.to_formula().unwrap()
+            Rc::new(MinlogPredicate::AllQuantifier(self.clone()))
+        } else if let Some(pred) = from.to_predicate() && pred.is_all_quantifier() && self == pred.to_all_quantifier().unwrap() {
+            to.to_predicate().unwrap()
         } else {
             let new_vars = if let Some(tse) = from.to_term_subst_entry() {
                 self.vars.iter()
@@ -175,10 +179,10 @@ impl FormulaBody for AllQuantifier {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogFormula>) -> Option<(PredSubstEntry, PredSubstEntry)> {
-        if let MinlogFormula::AllQuantifier(other_aq) = other.as_ref() {
+    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+        if let MinlogPredicate::AllQuantifier(other_aq) = other.as_ref() {
             if self.vars.len() != other_aq.vars.len() {
-                return Some((Rc::new(MinlogFormula::AllQuantifier(self.clone())).into(), other.clone().into()));
+                return Some((Rc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()));
             }
             
             let mut subst = PredicateSubstitution::make_empty();
@@ -194,9 +198,9 @@ impl FormulaBody for AllQuantifier {
             }
             
             let substituted_body = subst.substitute::<PredSubstEntry>(&other_aq.body().into());
-            self.body.first_conflict_with(&substituted_body.to_formula().unwrap())
+            self.body.first_conflict_with(&substituted_body.to_predicate().unwrap())
         } else {
-            Some((Rc::new(MinlogFormula::AllQuantifier(self.clone())).into(), other.clone().into()))
+            Some((Rc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()))
         }
     }
     
@@ -205,7 +209,7 @@ impl FormulaBody for AllQuantifier {
         let instance = ctx.next_instance().unwrap();
         
         match (pattern, instance) {
-            (PredSubstEntry::Formula(p), PredSubstEntry::Formula(i)) => {
+            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
                 if !p.is_all_quantifier() || !i.is_all_quantifier() {
                     return MatchOutput::FailedMatch;
                 }

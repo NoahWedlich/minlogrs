@@ -2,12 +2,13 @@
 use std::{rc::Rc, collections::HashMap};
 
 use crate::core::{
-    formulas::{
-        all_quantifier::AllQuantifier, implication::Implication, minlog_formula::MinlogFormula, prime_formula::PrimeFormula
-    }, predicates::{
+    predicates::{
         inductive_predicate::InductivePredicate,
         minlog_predicate::MinlogPredicate,
-        predicate_substitution::PredicateSubstitution
+        predicate_substitution::PredicateSubstitution,
+        prime_formula::PrimeFormula,
+        implication::Implication,
+        all_quantifier::AllQuantifier
     }, structures::{
         algebra::Algebra,
         inductive_constant::InductiveConstant
@@ -47,7 +48,7 @@ pub fn extract_totality(algebra: &Rc<Algebra>, totalities: &mut HashMap<Rc<Minlo
 fn constructor_to_totality_clause(
     constructor: &Rc<MinlogTerm>,
     totalities: &mut HashMap<Rc<MinlogType>, Rc<MinlogPredicate>>
-) -> Rc<MinlogFormula> {
+) -> Rc<MinlogPredicate> {
     if !constructor.is_constructor() {
         panic!("constructor_to_totality_clause called with a non-constructor term");
     }
@@ -99,7 +100,7 @@ fn term_to_totality_condition(
     term: Rc<MinlogTerm>,
     totalities: &mut HashMap<Rc<MinlogType>, Rc<MinlogPredicate>>,
     var_index: &mut usize
-) -> Option<Rc<MinlogFormula>> {
+) -> Option<Rc<MinlogPredicate>> {
     match term.minlog_type().as_ref() {
         MinlogType::Variable(_) => {
             if let Some(totality) = totalities.get(&term.minlog_type()) {

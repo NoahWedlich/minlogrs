@@ -10,7 +10,6 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::tuple_type::TupleType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::formulas::minlog_formula::MinlogFormula;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
@@ -19,12 +18,12 @@ use crate::core::predicates::predicate_substitution::{PredicateSubstitution, Pre
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ComprehensionTerm {
     vars: Vec<Rc<MinlogTerm>>,
-    body: Rc<MinlogFormula>,
+    body: Rc<MinlogPredicate>,
     arity: Rc<MinlogType>,
 }
 
 impl ComprehensionTerm {
-    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogFormula>) -> Rc<MinlogPredicate> {
+    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         if vars.iter().any(|v| !v.is_variable()) {
             panic!("Tried to create comprehension term with non-variable bound terms");
         }
@@ -41,7 +40,7 @@ impl ComprehensionTerm {
         Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm { vars, body, arity }))
     }
     
-    pub fn closure(minlog_formula: &Rc<MinlogFormula>) -> Rc<MinlogPredicate> {
+    pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let mut vars = vec![];
         for free_var in minlog_formula.get_free_variables() {
             if free_var.is_variable() && !vars.contains(&free_var) {
@@ -60,7 +59,7 @@ impl ComprehensionTerm {
         self.vars.get(index)
     }
     
-    pub fn body(&self) -> &Rc<MinlogFormula> {
+    pub fn body(&self) -> &Rc<MinlogPredicate> {
         &self.body
     }
 }
@@ -71,11 +70,15 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn degree(&self) -> PredicateDegree {
-        let body_of_nulltype = self.body.of_nulltype();
-        PredicateDegree {
-            positive_content: body_of_nulltype.positive_nulltype,
-            negative_content: body_of_nulltype.negative_nulltype,
-        }
+        self.body.degree()
+    }
+    
+    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+        Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm {
+            vars: self.vars.clone(),
+            body: self.body.normalize(eta, pi),
+            arity: self.arity.clone(),
+        }))
     }
     
     fn depth(&self) -> usize {
@@ -120,7 +123,7 @@ impl PredicateBody for ComprehensionTerm {
         self.body.get_polarized_inductive_preds(current)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogFormula>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         self.body.get_polarized_prime_formulas(current)
     }
     
@@ -156,10 +159,6 @@ impl PredicateBody for ComprehensionTerm {
                     ComprehensionTerm::create(self.vars.clone(), new_body)
                 }
             },
-            PredSubstEntry::Formula(_) => {
-                let new_body = self.body.substitute(from, to);
-                ComprehensionTerm::create(self.vars.clone(), new_body)
-            }
         }
     }
     
@@ -186,7 +185,7 @@ impl PredicateBody for ComprehensionTerm {
             }
             
             let substituted_body = subst.substitute::<PredSubstEntry>(&other_cterm.body().into());
-            self.body.first_conflict_with(&substituted_body.to_formula().unwrap())
+            self.body.first_conflict_with(&substituted_body.to_predicate().unwrap())
         } else {
             Some((Rc::new(MinlogPredicate::Comprehension(self.clone())).into(), other.clone().into()))
         }

@@ -57,6 +57,10 @@ impl PredicateBody for PredicateVariable {
         self.arity.clone()
     }
     
+    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
+        Rc::new(MinlogPredicate::Variable(self.clone()))
+    }
+    
     fn degree(&self) -> PredicateDegree {
         self.degree.clone()
     }
