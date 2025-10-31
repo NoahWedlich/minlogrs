@@ -143,8 +143,8 @@ fn term_to_totality_condition(
                 panic!("No totality predicate found for arrow type return type");
             }
         },
-        MinlogType::Star(star_type) => {
-            let conditions = star_type.types().iter().enumerate().filter_map(|(index, _)| {
+        MinlogType::Tuple(tuple_type) => {
+            let conditions = tuple_type.types().iter().enumerate().filter_map(|(index, _)| {
                 let proj = Projection::create(term.clone(), index);
                 term_to_totality_condition(proj, totalities, var_index)
             }).collect::<Vec<_>>();

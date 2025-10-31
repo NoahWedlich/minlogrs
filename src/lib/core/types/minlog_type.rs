@@ -10,7 +10,7 @@ use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
 use crate::core::types::algebra_type::AlgebraType;
 use crate::core::types::arrow_type::ArrowType;
-use crate::core::types::star_type::StarType;
+use crate::core::types::tuple_type::TupleType;
 
 crate::wrapper_enum! {
     
@@ -54,7 +54,7 @@ crate::wrapper_enum! {
         Variable(||variable|| TypeVariable),
         Algebra(||algebra|| AlgebraType),
         Arrow(||arrow|| ArrowType),
-        Star(||star|| StarType),
+        Tuple(||tuple|| TupleType),
     }
     
     impl PrettyPrintable {

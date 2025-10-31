@@ -20,15 +20,15 @@ pub struct Projection {
 
 impl Projection {
     pub fn create(term: Rc<MinlogTerm>, index: usize) -> Rc<MinlogTerm> {
-        if !term.minlog_type().is_star() {
+        if !term.minlog_type().is_tuple() {
             panic!("Tried to create projection from non-tuple term.");
         }
         
-        if index >= term.minlog_type().to_star().unwrap().types().len() {
+        if index >= term.minlog_type().to_tuple().unwrap().types().len() {
             panic!("Tried to create projection with out-of-bounds index.");
         }
         
-        let minlog_type = term.minlog_type().to_star().unwrap().type_at(index).unwrap().clone();
+        let minlog_type = term.minlog_type().to_tuple().unwrap().type_at(index).unwrap().clone();
         Rc::new(MinlogTerm::Projection(Projection { term, index, minlog_type }))
     }
     

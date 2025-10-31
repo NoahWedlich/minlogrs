@@ -5,7 +5,7 @@ use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
-use crate::core::types::star_type::StarType;
+use crate::core::types::tuple_type::TupleType;
 
 use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
 use crate::core::terms::term_variable::TermVariable;
@@ -21,7 +21,7 @@ pub struct Tuple {
 impl Tuple {
     pub fn create(elements: Vec<Rc<MinlogTerm>>) -> Rc<MinlogTerm> {
         let element_types: Vec<Rc<MinlogType>> = elements.iter().map(|e| e.minlog_type()).collect();
-        let minlog_type = StarType::create(element_types);
+        let minlog_type = TupleType::create(element_types);
         Rc::new(MinlogTerm::Tuple(Tuple { elements, minlog_type }))
     }
     
