@@ -41,10 +41,6 @@ impl InductiveConstant {
     }
     
     pub fn add_clause(&self, clause_name: String, clause_body: Rc<MinlogPredicate>) {
-        if !clause_body.is_formula() {
-            panic!("Clause '{}' should habe unit arity, but has arity {}", clause_name, clause_body.arity().debug_string())
-        }
-        
         if self.clauses.borrow().iter().any(|(n, _)| n == &clause_name) {
             panic!("Clause with name '{}' already exists in inductive constant '{}'", clause_name, self.name);
         }
@@ -145,7 +141,7 @@ impl PrettyPrintable for InductiveConstant {
                 tvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 0, true),
+                PPElement::break_elem(1, 0, false),
                 BreakType::Flexible,
             );
             
@@ -153,7 +149,7 @@ impl PrettyPrintable for InductiveConstant {
                 tmvars.into_iter().map(|tv| tv.to_pp_element(false)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 0, true),
+                PPElement::break_elem(1, 0, false),
                 BreakType::Flexible,
             );
             
@@ -161,34 +157,28 @@ impl PrettyPrintable for InductiveConstant {
                 pvars.into_iter().map(|pv| pv.to_pp_element(false)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
-                PPElement::break_elem(1, 0, true),
+                PPElement::break_elem(1, 0, false),
                 BreakType::Flexible,
             );
             
-            let mut variables = vec![];
-            if has_tvars {
-                variables.push(tvars);
-                if has_tmvars || has_pvars {
-                    variables.push(PPElement::break_elem(4, 0, false));
-                }
-            }
+            let mut variable_list = vec![];
+            if has_tvars { variable_list.push(tvars) };
+            if has_tmvars { variable_list.push(tmvars) };
+            if has_pvars { variable_list.push(pvars) };
             
-            if has_tmvars {
-                variables.push(tmvars);
-                if has_pvars {
-                    variables.push(PPElement::break_elem(4, 0, false));
-                }
-            }
-            
-            if has_pvars {
-                variables.push(pvars);
-            }
+            let variables = PPElement::list(
+                variable_list,
+                PPElement::break_elem(1, 0, false),
+                PPElement::text("|".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Consistent
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.name.clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(variables, BreakType::Consistent, 0),
+                variables,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)

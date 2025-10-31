@@ -263,24 +263,23 @@ impl PrettyPrintable for ProgramTerm {
                 BreakType::Flexible,
             );
             
-            let mut vars = vec![];
+            let mut variable_list = vec![];
+            if has_tvars { variable_list.push(tvars) };
+            if has_tmvars { variable_list.push(tmvars) };
             
-            if has_tvars {
-                vars.push(tvars);
-                if has_tmvars {
-                    vars.push(PPElement::break_elem(4, 0, false));
-                }
-            }
-            
-            if has_tmvars {
-                vars.push(tmvars);
-            }
+            let variables = PPElement::list(
+                variable_list,
+                PPElement::break_elem(1, 0, false),
+                PPElement::text("|".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Consistent
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.pconst.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                
+                variables,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)

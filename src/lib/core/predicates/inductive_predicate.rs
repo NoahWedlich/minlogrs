@@ -13,6 +13,7 @@ use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate, PredicateDegree};
 
 use crate::core::types::type_substitution::TypeSubstitution;
+use crate::core::terms::term_substitution::TermSubstEntry;
 use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
 
 use crate::core::structures::inductive_constant::InductiveConstant;
@@ -393,7 +394,7 @@ impl PrettyPrintable for InductivePredicate {
         } else {
             let tvars = PPElement::list(
                 tparams.iter().map(|tv| {
-                    let substituted = self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_type().unwrap();
+                    let substituted = self.params.substitute(&tv.clone());
                     if detail && &substituted != tv {
                         PPElement::group(vec![
                             tv.to_pp_element(detail),
@@ -414,7 +415,7 @@ impl PrettyPrintable for InductivePredicate {
             
             let tmvars = PPElement::list(
                 tmparams.iter().map(|tv| {
-                    let substituted = self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap();
+                    let substituted = self.params.substitute::<TermSubstEntry>(&tv.clone().into()).to_term().unwrap();
                     if detail && &substituted != tv {
                         PPElement::group(vec![
                             tv.to_pp_element(detail),
@@ -454,30 +455,24 @@ impl PrettyPrintable for InductivePredicate {
                 BreakType::Flexible,
             );
             
-            let mut parameters = vec![];
-            if has_tparams {
-                parameters.push(tvars);
-                if has_tmparams || has_pparams {
-                    parameters.push(PPElement::break_elem(4, 0, false));
-                }
-            }
-            
-            if has_tmparams {
-                parameters.push(tmvars);
-                if has_pparams {
-                    parameters.push(PPElement::break_elem(4, 0, false));
-                }
-            }
-            
-            if has_pparams {
-                parameters.push(pvars);
-            }
+            let mut param_list = vec![];
+            if has_tparams { param_list.push(tvars) };
+            if has_tmparams { param_list.push(tmvars) };
+            if has_pparams { param_list.push(pvars) };
+
+            let parameters = PPElement::list(
+                param_list,
+                PPElement::break_elem(1, 0, false),
+                PPElement::text("|".to_string()),
+                PPElement::break_elem(1, 0, false),
+                BreakType::Consistent
+            );
             
             PPElement::group(vec![
                 PPElement::text(self.definition.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
-                PPElement::group(parameters, BreakType::Consistent, 0),
+                parameters,
                 PPElement::break_elem(1, 0, false),
                 PPElement::text(">".to_string())
             ], BreakType::Consistent, 0)
