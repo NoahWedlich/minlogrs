@@ -56,7 +56,7 @@ impl TextSpan {
     }
     
     pub fn center(&self) -> isize {
-        (self.left + self.right) / 2
+        self.left + ((self.right - self.left) / 2)
     }
     
     pub fn offset_by(&self, offset: isize) -> TextSpan {
@@ -388,7 +388,9 @@ impl ProofTreeNode {
                             premise.offset_by(shift_amount);
                         }
                         
-                        left_boundaries[bottom_layer + conclusion.len() + 1..].iter_mut().for_each(|b| *b += shift_amount);
+                        for i in 0..premises.iter().map(|p| p.max_depth()).max().unwrap_or(0) {
+                            left_boundaries[bottom_layer + conclusion.len() + 1 + i] += shift_amount;
+                        }
                         
                         furthest_left += shift_amount;
                         premise_ground_range = premise_ground_range.offset_by(shift_amount);
