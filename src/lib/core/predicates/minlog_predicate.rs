@@ -26,8 +26,6 @@ pub struct PredicateDegree {
 }
 
 crate::wrapper_enum! {
-    
-    @default { EmptyPredicateBody }
     pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn arity(&Self) -> Rc<MinlogType>
         
@@ -84,7 +82,6 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogPredicate {
-        InternalPredicate(||internal_predicate||),
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension_term|| ComprehensionTerm),
         InductivePredicate(||inductive_predicate|| InductivePredicate),
@@ -176,40 +173,5 @@ impl MinlogPredicate {
     
     pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
         pform.is_prime() && self.get_prime_formulas().contains(pform)
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub struct EmptyPredicateBody;
-
-impl PrettyPrintable for EmptyPredicateBody {
-    fn to_pp_element(&self, _detail: bool) -> PPElement {
-        PPElement::text("<<empty predicate>>".to_string())
-    }
-}
-
-impl PredicateBody for EmptyPredicateBody {
-    fn arity(&self) -> Rc<MinlogType> {
-        unimplemented!()
-    }
-    
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
-        unimplemented!()
-    }
-    
-    fn extracted_type(&self) -> Rc<MinlogType> {
-        unimplemented!()
-    }
-    
-    fn substitute(&self, _from: &PredSubstEntry, _to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        unimplemented!()
-    }
-    
-    fn first_conflict_with(&self, _other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
-        unimplemented!()
-    }
-    
-    fn match_with(&self, _ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        unimplemented!()
     }
 }

@@ -66,13 +66,7 @@ impl PredicateBody for PrimeFormula {
             .map(|arg| arg.normalize(eta, pi))
             .collect();
         
-        let norm_body = if self.body.is_internal_predicate() {
-            todo!() // Compute normalized internal predicate
-        } else {
-            self.body.clone()
-        };
-        
-        PrimeFormula::create(norm_body, norm_args)
+        PrimeFormula::create(self.body.normalize(eta, pi), norm_args)
     }
     
     fn depth(&self) -> usize {

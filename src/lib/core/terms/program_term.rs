@@ -27,8 +27,7 @@ impl ProgramTerm {
             .collect::<Vec<_>>();
         parameters.restrict(|from| pconst_vars.contains(from));
         
-        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters, blocked_collection: RefCell::new(false) })
-        )
+        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters, blocked_collection: RefCell::new(false) }))
     }
     
     pub fn pconst(&self) -> &Rc<ProgramConstant> {
