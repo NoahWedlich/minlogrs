@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
     Substitutable, SubstitutableWith, Substitution};
 use crate::core::types::minlog_type::MinlogType;
@@ -157,7 +157,7 @@ pub type TermMatchContext = MatchContextImpl<TermSubstEntry>;
 
 impl TermSubstitution {
     pub fn admissible(&self, term: &Rc<MinlogTerm>) -> bool {
-        for free_var in term.get_free_variables() {
+        for free_var in term.get_free_variables(&mut HashSet::new()) {
             let substituted = self.apply(&TermSubstEntry::Term(free_var.clone()));
             if let TermSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {

@@ -68,32 +68,57 @@ impl TermBody for Projection {
         1 + self.term.depth()
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.term.get_free_variables()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Projection(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Projection(self.clone()));
+            self.term.get_free_variables(visited)
+        }
     }
 
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.term.get_bound_variables()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Projection(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Projection(self.clone()));
+            self.term.get_bound_variables(visited)
+        }
     }
     
-    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.term.get_constructors()
+    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Projection(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Projection(self.clone()));
+            self.term.get_constructors(visited)
+        }
     }
 
-    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.term.get_program_terms()
+    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Projection(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Projection(self.clone()));
+            self.term.get_program_terms(visited)
+        }
     }
     
-    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.term.get_internal_constants()
+    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Projection(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Projection(self.clone()));
+            self.term.get_internal_constants(visited)
+        }
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

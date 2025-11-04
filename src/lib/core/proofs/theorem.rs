@@ -53,39 +53,39 @@ impl ProofBody for Theorem {
         }))
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.formula.get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        self.formula.get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.formula.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        self.formula.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.formula.get_free_variables()
+    fn get_free_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        self.formula.get_free_variables(&mut HashSet::new())
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.formula.get_bound_variables()
+    fn get_bound_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        self.formula.get_bound_variables(&mut HashSet::new())
     }
     
-    fn get_predicate_variables(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_predicate_variables()
+    fn get_predicate_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        self.formula.get_predicate_variables(&mut HashSet::new())
     }
     
-    fn get_comprehension_terms(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_comprehension_terms()
+    fn get_comprehension_terms(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        self.formula.get_comprehension_terms(&mut HashSet::new())
     }
     
-    fn get_inductive_predicates(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_inductive_predicates()
+    fn get_inductive_predicates(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        self.formula.get_inductive_predicates(&mut HashSet::new())
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_prime_formulas()
+    fn get_prime_formulas(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        self.formula.get_prime_formulas(&mut HashSet::new())
     }
     
-    fn get_theorems(&self) -> HashSet<Rc<MinlogProof>> {
+    fn get_theorems(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
         HashSet::from([Rc::new(MinlogProof::Theorem(self.clone()))])
     }
     

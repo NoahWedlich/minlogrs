@@ -1,6 +1,5 @@
 
-use std::rc::Rc;
-
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::PrettyPrintable;
 
 use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
@@ -82,7 +81,7 @@ impl Substitutable for PredSubstEntry {
                 PredSubstEntry::Predicate(p.substitute(from, to))
             },
             _ => {
-                panic!("Tried to substitute between incompatible PredSubstEntry types");
+                self.clone()
             }
         }
     }
@@ -232,7 +231,7 @@ pub type PredicateMatchContext = MatchContextImpl<PredSubstEntry>;
 
 impl PredicateSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
-        for free_var in term.get_free_variables() {
+        for free_var in term.get_free_variables(&mut HashSet::new()) {
             let substituted = self.apply(&PredSubstEntry::Term(free_var.clone()));
             if let PredSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
@@ -246,7 +245,7 @@ impl PredicateSubstitution {
     }
     
     pub fn admissible(&self, predicate: &Rc<MinlogPredicate>) -> bool {
-        for pred_var in predicate.get_predicate_variables() {
+        for pred_var in predicate.get_predicate_variables(&mut HashSet::new()) {
             let substituted = self.apply(&PredSubstEntry::Predicate(pred_var.clone()));
             if let PredSubstEntry::Predicate(p) = substituted {
                 if self.substitute(&pred_var.arity()) != p.arity() {

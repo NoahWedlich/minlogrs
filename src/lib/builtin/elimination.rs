@@ -35,7 +35,7 @@ pub fn extract_elimination_proof(inductive_predicate: &Rc<MinlogPredicate>) -> R
     
     while let Some(imp) = proof.proved_formula().to_implication() {
         let premise = imp.premises()[0].clone();
-        let provided_vars = arguments.intersection(&premise.get_free_variables()).cloned().collect::<HashSet<_>>();
+        let provided_vars = arguments.intersection(&premise.get_free_variables(&mut HashSet::new())).cloned().collect::<HashSet<_>>();
         
         let mut reduced_premise = premise.clone();
         

@@ -118,22 +118,22 @@ impl RewriteRule {
         }
     }
     
-    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.result.get_type_variables().union(&self.pattern.get_type_variables()).cloned().collect()
+    pub fn get_type_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.result.get_type_variables(visited).union(&self.pattern.get_type_variables(visited)).cloned().collect()
     }
 
-    pub fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.result.get_algebra_types().union(&self.pattern.get_algebra_types()).cloned().collect()
+    pub fn get_algebra_types(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.result.get_algebra_types(visited).union(&self.pattern.get_algebra_types(visited)).cloned().collect()
     }
 
-    pub fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.result.get_free_variables().difference(&self.pattern.get_free_variables()).cloned().collect()
+    pub fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        self.result.get_free_variables(visited).difference(&self.pattern.get_free_variables(visited)).cloned().collect()
     }
-    
-    pub fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.pattern.get_bound_variables()
-            .union(&self.result.get_bound_variables()).cloned().collect::<HashSet<_>>()
-            .union(&self.pattern.get_free_variables()).cloned().collect()
+
+    pub fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        self.pattern.get_bound_variables(visited)
+            .union(&self.result.get_bound_variables(visited)).cloned().collect::<HashSet<_>>()
+            .union(&self.pattern.get_free_variables(visited)).cloned().collect()
     }
 }
 
@@ -255,29 +255,29 @@ impl ProgramConstant {
         (term.clone(), false)
     }
     
-    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
+    pub fn get_type_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
         self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
-            .flat_map(|r| r.get_type_variables())
+            .flat_map(|r| r.get_type_variables(visited))
             .collect()
     }
     
-    pub fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+    pub fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
         self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
-            .flat_map(|r| r.get_free_variables())
+            .flat_map(|r| r.get_free_variables(visited))
             .collect()
     }
     
-    pub fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
+    pub fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
         self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
-            .flat_map(|r| r.get_bound_variables())
+            .flat_map(|r| r.get_bound_variables(visited))
             .collect()
     }
 }
 
 impl PrettyPrintable for ProgramConstant {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.get_type_variables();
-        let tmvars = self.get_free_variables();
+        let tvars = self.get_type_variables(&mut HashSet::new());
+        let tmvars = self.get_free_variables(&mut HashSet::new());
         
         let has_tvars = !tvars.is_empty();
         let has_tmvars = !tmvars.is_empty();

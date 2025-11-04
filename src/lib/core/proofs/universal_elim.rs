@@ -80,62 +80,134 @@ impl ProofBody for UniversalElim {
         }))
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.proof.get_type_variables()
-            .union(&self.term.get_type_variables())
-            .cloned().collect()
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_type_variables(visited)
+                .union(&self.term.get_type_variables(&mut HashSet::new()))
+                .cloned().collect()
+        }
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.proof.get_algebra_types()
-            .union(&self.term.get_algebra_types())
-            .cloned().collect()
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_algebra_types(visited)
+                .union(&self.term.get_algebra_types(&mut HashSet::new()))
+                .cloned().collect()
+        }
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.proof.get_free_variables()
-            .union(&self.term.get_free_variables())
-            .cloned().collect()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_free_variables(visited)
+                .union(&self.term.get_free_variables(&mut HashSet::new()))
+                .cloned().collect()
+        }
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.proof.get_bound_variables()
-            .union(&self.term.get_bound_variables())
-            .cloned().collect::<HashSet<_>>()
-            .difference(&HashSet::from([self.replaced_variable.clone()]))
-            .cloned().collect()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_bound_variables(visited)
+                .union(&self.term.get_bound_variables(&mut HashSet::new()))
+                .cloned().collect::<HashSet<_>>()
+                .difference(&HashSet::from([self.replaced_variable.clone()]))
+                .cloned().collect()
+        }
     }
     
-    fn get_predicate_variables(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_predicate_variables()
+    fn get_predicate_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_predicate_variables(visited)
+        }
     }
     
-    fn get_comprehension_terms(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_comprehension_terms()
+    fn get_comprehension_terms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_comprehension_terms(visited)
+        }
     }
     
-    fn get_inductive_predicates(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_inductive_predicates()
+    fn get_inductive_predicates(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_inductive_predicates(visited)
+        }
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_prime_formulas()
+    fn get_prime_formulas(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_prime_formulas(visited)
+        }
     }
     
-    fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_goals()
+    fn get_goals(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_goals(visited)
+        }
     }
     
-    fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_assumptions()
+    fn get_assumptions(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_assumptions(visited)
+        }
     }
     
-    fn get_axioms(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_axioms()
+    fn get_axioms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_axioms(visited)
+        }
     }
     
-    fn get_theorems(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_theorems()
+    fn get_theorems(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::UniversalElim(self.clone()));
+            
+            self.proof.get_theorems(visited)
+        }
     }
     
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {

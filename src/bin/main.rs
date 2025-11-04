@@ -1,6 +1,6 @@
 
 use std::collections::HashMap;
-use lib::builtin::{totality::extract_totality, elimination::{extract_elimination_proof, extract_elimination_axiom}};
+use lib::{builtin::{elimination::{extract_elimination_axiom, extract_elimination_proof}, totality::extract_totality}};
 use lib::core::predicates::all_quantifier::AllQuantifier;
 use lib::core::predicates::implication::Implication;
 use lib::core::predicates::minlog_predicate::PredicateDegree;
@@ -54,16 +54,18 @@ fn main() {
     println!("{}", nat_total_elim_proof.debug_string());
     println!("{}", nat_total_elim_proof.render_proof_tree());
     
-    let tvar = TypeVariable::create("T".to_string());
-    let tmvar = TermVariable::create("x".to_string(), tvar.clone(), Totality::Total);
-    let pred_var_1 = PredicateVariable::create("P".to_string(), tvar.clone(), PredicateDegree {
+    let tvar1 = TypeVariable::create("T".to_string());
+    
+    let tmvar1 = TermVariable::create("x".to_string(), tvar1.clone(), Totality::Total);
+    
+    let pred_var_1 = PredicateVariable::create("P".to_string(), tvar1.clone(), PredicateDegree {
         positive_content: false, negative_content: false
     });
-    let pred_var_2 = PredicateVariable::create("Q".to_string(), tvar.clone(), PredicateDegree {
+    let pred_var_2 = PredicateVariable::create("Q".to_string(), tvar1.clone(), PredicateDegree {
         positive_content: false, negative_content: false
     });
     
-    let and_def = InductiveConstant::create("and".to_string(), tvar.clone());
+    let and_def = InductiveConstant::create("and".to_string(), tvar1.clone());
     let and_pred = InductivePredicate::create(and_def.clone(), PredicateSubstitution::make_empty());
     
     println!("And Predicate:");
@@ -97,12 +99,12 @@ fn main() {
     println!("{}", ex_pred.debug_string());
     
     let ex_clause = AllQuantifier::create(
-        vec![tmvar.clone()],
+        vec![tmvar1.clone()],
         Implication::create(
             vec![
                 PrimeFormula::create(
                     pred_var_1.clone(),
-                    vec![tmvar.clone()]
+                    vec![tmvar1.clone()]
                 )
             ],
             ex_pred.clone()

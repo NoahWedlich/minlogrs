@@ -60,15 +60,15 @@ impl TermBody for Constructor {
         self.minlog_type.is_algebra()
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
+    fn get_constructors(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
         HashSet::from([Rc::new(MinlogTerm::Constructor(self.clone()))])
     }
     

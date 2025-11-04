@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
+use std::{rc::Rc, collections::HashSet};
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -13,20 +13,15 @@ use crate::core::types::type_substitution::TypeSubstitution;
 
 use crate::core::structures::algebra::Algebra;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AlgebraType {
     algebra: Rc<Algebra>,
     parameters: TypeSubstitution,
-    blocked_collection: RefCell<bool>,
 }
 
 impl AlgebraType {
-    pub fn create(algebra: Rc<Algebra>, mut parameters: TypeSubstitution) -> Rc<MinlogType> {
-        let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown)
-            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
-        parameters.restrict(|from| alg_tvars.contains(from));
-        
-        Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters, blocked_collection: RefCell::new(false) }))
+    pub fn create(algebra: Rc<Algebra>, parameters: TypeSubstitution) -> Rc<MinlogType> {
+        Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters }))
     }
     
     pub fn algebra(&self) -> &Rc<Algebra> {
@@ -81,7 +76,7 @@ impl AlgebraType {
             
             if let Some(arrow_type) = constructor_type.to_arrow() {
                 for arg_type in arrow_type.arguments().iter() {
-                    let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive);
+                    let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive, &mut HashSet::new());
                     for polarized_alg in polarized_algs.iter() {
                         if !polarized_alg.polarity.is_strictly_positive() &&
                             polarized_alg.value.to_algebra().unwrap().references_algebra(&self_alg_type) {
@@ -109,37 +104,28 @@ impl TypeBody for AlgebraType {
             .max().unwrap_or(0)
     }
     
-    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        // TODO: Get rid of this hacky fix to avoid infinite recursion
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Algebra(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Algebra(self.clone()));
+            
+            self.constructors().iter()
+                .flat_map(|c| c.minlog_type().get_polarized_tvars(current, visited))
+                .collect::<HashSet<_>>()
         }
-        
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.constructors().iter()
-            .flat_map(|c| c.minlog_type().get_polarized_tvars(current))
-            .collect::<HashSet<_>>();
-        
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
     }
 
-    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Algebra(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Algebra(self.clone()));
+
+            self.constructors().iter()
+                .flat_map(|c| c.minlog_type().get_polarized_algebras(current, visited))
+                .collect::<HashSet<_>>()
         }
-        
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.constructors().iter()
-            .flat_map(|c| c.minlog_type().get_polarized_algebras(current))
-            .collect::<HashSet<_>>();
-        
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
     }
     
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
@@ -208,7 +194,7 @@ impl TypeBody for AlgebraType {
 
 impl PrettyPrintable for AlgebraType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tparams = self.algebra.get_polarized_tvars(Polarity::Unknown)
+        let tparams = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
             .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
         
         if tparams.is_empty() {
@@ -248,12 +234,5 @@ impl PrettyPrintable for AlgebraType {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
-    }
-}
-
-impl Hash for AlgebraType {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.algebra.hash(state);
-        self.parameters.hash(state);
     }
 }

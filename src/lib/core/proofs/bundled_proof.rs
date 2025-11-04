@@ -47,52 +47,124 @@ impl ProofBody for BundledProof {
         BundledProof::create(self.proof.normalize(eta, pi), self.name.clone())
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.proof.get_type_variables()
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_type_variables(visited)
+        }
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.proof.get_algebra_types()
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_algebra_types(visited)
+        }
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.proof.get_free_variables()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_free_variables(visited)
+        }
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.proof.get_bound_variables()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_bound_variables(visited)
+        }
     }
     
-    fn get_predicate_variables(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_predicate_variables()
+    fn get_predicate_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_predicate_variables(visited)
+        }
     }
     
-    fn get_comprehension_terms(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_comprehension_terms()
+    fn get_comprehension_terms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_comprehension_terms(visited)
+        }
     }
     
-    fn get_inductive_predicates(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_inductive_predicates()
+    fn get_inductive_predicates(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_inductive_predicates(visited)
+        }
     }
     
-    fn get_prime_formulas(&self) -> HashSet<Rc<MinlogPredicate>> {
-        self.proof.get_prime_formulas()
+    fn get_prime_formulas(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_prime_formulas(visited)
+        }
     }
     
-    fn get_goals(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_goals()
+    fn get_goals(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_goals(visited)
+        }
     }
     
-    fn get_assumptions(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_assumptions()
+    fn get_assumptions(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_assumptions(visited)
+        }
     }
     
-    fn get_axioms(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_axioms()
+    fn get_axioms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_axioms(visited)
+        }
     }
     
-    fn get_theorems(&self) -> HashSet<Rc<MinlogProof>> {
-        self.proof.get_theorems()
+    fn get_theorems(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+        if visited.contains(&MinlogProof::BundledProof(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogProof::BundledProof(self.clone()));
+            
+            self.proof.get_theorems(visited)
+        }
     }
     
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
@@ -153,7 +225,7 @@ impl PrettyPrintable for BundledProof {
             PPElement::text(format!("{} (", self.name)),
             PPElement::break_elem(1, 4, false),
             PPElement::list(
-                self.proof.get_goals().iter().map(|g| g.to_pp_element(detail)).collect(),
+                self.proof.get_goals(&mut HashSet::new()).iter().map(|g| g.to_pp_element(detail)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
                 PPElement::break_elem(1, 0, false),
@@ -172,7 +244,7 @@ impl PrettyPrintable for BundledProof {
 impl ProofTreeDisplayable for BundledProof {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
         ProofTreeNode::new_node(
-            self.proof.get_goals().iter().map(|g| g.to_proof_tree_node()).collect(),
+            self.proof.get_goals(&mut HashSet::new()).iter().map(|g| g.to_proof_tree_node()).collect(),
             self.proved_formula().display_string(),
             Some(self.name.clone()),
         )

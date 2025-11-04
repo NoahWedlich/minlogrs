@@ -64,7 +64,8 @@ impl Abstraction {
     
     pub fn closure(minlog_term: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
         let mut vars = vec![];
-        for var in MinlogTerm::get_free_variables(minlog_term) {
+        
+        for var in minlog_term.get_free_variables(&mut HashSet::new()) {
             if var.is_variable() && !vars.contains(&var) {
                 vars.push(var);
             }
@@ -101,7 +102,7 @@ impl TermBody for Abstraction {
         let mut vars = vec![];
         
         if eta {
-            let free_vars = MinlogTerm::get_free_variables(&kernel);
+            let free_vars = kernel.get_free_variables(&mut HashSet::new());
             for var in &self.vars {
                 if free_vars.contains(var) {
                     vars.push(var.clone());
@@ -126,34 +127,64 @@ impl TermBody for Abstraction {
         1 + self.kernel.depth()
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.kernel.get_free_variables().into_iter()
-            .filter(|v| !self.vars.contains(v))
-            .collect()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Abstraction(self.clone()));
+            
+            self.kernel.get_free_variables(visited).into_iter()
+                .filter(|v| !self.vars.contains(v))
+                .collect()
+        }
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.kernel.get_bound_variables().union(&self.vars.iter().cloned().collect()).cloned().collect()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Abstraction(self.clone()));
+            
+            self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect()).cloned().collect()
+        }
     }
     
-    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.kernel.get_constructors()
+    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Abstraction(self.clone()));
+            
+            self.kernel.get_constructors(visited)
+        }
     }
     
-    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.kernel.get_program_terms()
+    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Abstraction(self.clone()));
+            
+            self.kernel.get_program_terms(visited)
+        }
     }
     
-    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.kernel.get_internal_constants()
+    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Abstraction(self.clone()));
+            
+            self.kernel.get_internal_constants(visited)
+        }
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

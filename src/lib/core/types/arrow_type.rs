@@ -62,24 +62,36 @@ impl TypeBody for ArrowType {
         max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
     }
     
-    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        let mut result = self.arguments.iter()
-            .flat_map(|arg| arg.get_polarized_tvars(current.invert()))
-            .collect::<HashSet<_>>();
-        
-        result.extend(self.value.get_polarized_tvars(current));
-        
-        result
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Arrow(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Arrow(self.clone()));
+            
+            let mut result = self.arguments.iter()
+                .flat_map(|arg| arg.get_polarized_tvars(current.invert(), visited))
+                .collect::<HashSet<_>>();
+            
+            result.extend(self.value.get_polarized_tvars(current, visited));
+            
+            result
+        }
     }
-    
-    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        let mut result = self.arguments.iter()
-            .flat_map(|arg| arg.get_polarized_algebras(current.invert()))
-            .collect::<HashSet<_>>();
-        
-        result.extend(self.value.get_polarized_algebras(current));
-        
-        result
+
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Arrow(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Arrow(self.clone()));
+
+            let mut result = self.arguments.iter()
+                .flat_map(|arg| arg.get_polarized_algebras(current.invert(), visited))
+                .collect::<HashSet<_>>();
+
+            result.extend(self.value.get_polarized_algebras(current, visited));
+
+            result
+        }
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

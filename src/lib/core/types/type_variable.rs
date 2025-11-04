@@ -31,7 +31,7 @@ impl TypeBody for TypeVariable {
         Some(TypeVariable::create(self.name.clone()))
     }
 
-    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
         HashSet::from([Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))])
     }
 

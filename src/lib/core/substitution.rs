@@ -94,14 +94,14 @@ impl<T: Substitutable> Substitution<T> {
             }
             
             for (_, v) in self.map.iter_mut() {
-                if v.clone().eq(&pair.0) {
-                    *v = pair.1.clone();
-                }
+                *v = v.substitute(&pair.0, &pair.1);
             }
             
             if !self.map.iter().any(|(k, _)| k == &pair.0) {
                 self.map.insert(pair.0, pair.1);
             }
+            
+            self.collapse();
         }
     }
 

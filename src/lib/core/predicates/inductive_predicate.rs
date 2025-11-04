@@ -1,6 +1,6 @@
 
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
-use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
+use crate::{utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
@@ -26,14 +26,7 @@ pub struct InductivePredicate {
 }
 
 impl InductivePredicate {
-    pub fn create(definition: Rc<InductiveConstant>, mut params: PredicateSubstitution) -> Rc<MinlogPredicate> {
-        let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables().into_iter().map(|tv| tv.into())
-            .chain(definition.get_free_variables().into_iter().map(|tv| tv.into()))
-            .chain(definition.get_polarized_pred_vars(Polarity::Unknown).into_iter().map(|pol| pol.value.into()))
-            .collect();
-        
-        params.restrict(|from| idp_vars.contains(from));
-        
+    pub fn create(definition: Rc<InductiveConstant>, params: PredicateSubstitution) -> Rc<MinlogPredicate> {
         Rc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
             definition,
             params,
@@ -101,7 +94,7 @@ impl InductivePredicate {
         for (_, body) in self.clauses().iter() {
             if let Some(implication) = body.to_implication() {
                 for premise in implication.premises().iter() {
-                    let polarized_args = premise.get_polarized_inductive_preds(Polarity::StrictlyPositive);
+                    let polarized_args = premise.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut HashSet::new());
                     for polarized_arg in polarized_args.iter() {
                         if !polarized_arg.polarity.is_strictly_positive() &&
                             polarized_arg.value.to_inductive_predicate().unwrap().references_idp(&self_idp_pred) {
@@ -156,172 +149,155 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        // TODO: Get rid of these hacks to prevent infinite recursion
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.definition.get_type_variables().iter()
-            .flat_map(|tv| {
-                self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables()
-            }).collect();
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
+            self.definition.get_type_variables(visited).iter()
+                .flat_map(|tv| {
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables(&mut HashSet::new())
+                }).chain(
+                    self.clauses().iter().flat_map(|(_, body)| body.get_type_variables(visited))
+                ).collect()
+        }
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.definition.get_type_variables().iter()
-            .flat_map(|tv| {
-                self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types()
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_algebra_types())
-            ).collect();
-
-        *self.blocked_collection.borrow_mut() = false;
-
-        result
-    }
-    
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.definition.get_free_variables().iter()
-            .flat_map(|tv| {
-                self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_free_variables()
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_free_variables())
-            ).collect();
-
-        *self.blocked_collection.borrow_mut() = false;
-
-        result
-    }
-    
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.definition.get_bound_variables().iter()
-            .flat_map(|tv| {
-                self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables()
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_bound_variables())
-            ).collect();
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
+            self.definition.get_type_variables(visited).iter()
+                .flat_map(|tv| {
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types(&mut HashSet::new())
+                }).chain(
+                    self.clauses().iter().flat_map(|(_, body)| body.get_algebra_types(visited))
+                ).collect()
+        }
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
+
+            self.definition.get_free_variables(visited).iter()
+                .flat_map(|tv| {
+                    self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap().get_free_variables(&mut HashSet::new())
+                }).chain(
+                    self.clauses().iter().flat_map(|(_, body)| body.get_free_variables(visited))
+                ).collect()
         }
-
-        *self.blocked_collection.borrow_mut() = true;
-
-        let result = self.definition.get_polarized_pred_vars(current).iter()
-            .flat_map(|pol| {
-                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
-                    .get_polarized_pred_vars(current)
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current))
-            ).collect();
+    }
+    
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
+            self.definition.get_bound_variables(visited).iter()
+                .flat_map(|tv| {
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables(&mut HashSet::new())
+                }).chain(
+                    self.clauses().iter().flat_map(|(_, body)| body.get_bound_variables(visited))
+                ).collect()
+        }
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-        
-        *self.blocked_collection.borrow_mut() = true;
-
-        let result = self.definition.get_polarized_comp_terms(current).iter()
-            .flat_map(|pol| {
-                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
-                    .get_polarized_comp_terms(current)
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current))
-            ).collect();
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
-    }
-    
-    fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-
-        *self.blocked_collection.borrow_mut() = true;
-
-        let mut results = self.definition.get_polarized_inductive_preds(current).iter()
-            .flat_map(|pol| {
-                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
-                    .get_polarized_inductive_preds(current)
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current))
-            ).collect::<HashSet<_>>();
-
-        results.insert(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
-
-        *self.blocked_collection.borrow_mut() = false;
-
-        results
-    }
-    
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
-        }
-        
-        *self.blocked_collection.borrow_mut() = true;
-
-        let result = self.definition.get_polarized_prime_formulas(current).iter()
-            .flat_map(|pol| {
-                self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
-                    .get_polarized_prime_formulas(current)
-            }).chain(
-                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current))
-            ).collect();
+            let mut results = self.definition.get_polarized_pred_vars(current, visited).iter()
+                .flat_map(|pol| {
+                    self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
+                        .get_polarized_pred_vars(current, visited)
+                }).collect::<HashSet<_>>();
+                
+            results.extend(
+                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current, visited))
+            );
             
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
+            results
+        }
+    }
+    
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
+            
+            let mut results = self.definition.get_polarized_comp_terms(current, visited).iter()
+                .flat_map(|pol| {
+                    self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
+                        .get_polarized_comp_terms(current, visited)
+                }).collect::<HashSet<_>>();
+                
+            results.extend(
+                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current, visited))
+            );
+            
+            results
+        }
+    }
+
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
+            
+            let mut results = self.definition.get_polarized_inductive_preds(current, visited).iter()
+                .flat_map(|pol| {
+                    self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
+                        .get_polarized_inductive_preds(current, visited)
+                }).collect::<HashSet<_>>();
+                
+            results.extend(
+                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited))
+            );
+    
+            results.insert(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
+    
+            results
+        }
+    }
+    
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
+            
+            let mut results = self.definition.get_polarized_prime_formulas(current, visited).iter()
+                .flat_map(|pol| {
+                    self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
+                        .get_polarized_prime_formulas(current, visited)
+                }).collect::<HashSet<_>>();
+                
+            results.extend(
+                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current, visited))
+            );
+            
+            results
+        }
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         if let Some(pred) = from.to_predicate() && pred.is_inductive_predicate() && self == pred.to_inductive_predicate().unwrap() {
             to.to_predicate().unwrap()
         } else {
-            let new_params = PredicateSubstitution::from_pairs(
-                self.params.pairs().iter()
-                    .map(|(f, t)| (f.substitute(from, to), t.substitute(from, to)))
-                    .collect()
-            );
+            let mut new_params = self.params.clone();
+            new_params.extend((from.clone(), to.clone()));
+            
             InductivePredicate::create(self.definition.clone(), new_params)
         }
     }
@@ -380,9 +356,9 @@ impl PredicateBody for InductivePredicate {
 
 impl PrettyPrintable for InductivePredicate {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tparams = self.definition.get_type_variables();
-        let tmparams = self.definition.get_free_variables();
-        let pparams = self.definition.get_polarized_pred_vars(Polarity::Unknown)
+        let tparams = self.definition.get_type_variables(&mut HashSet::new());
+        let tmparams = self.definition.get_free_variables(&mut HashSet::new());
+        let pparams = self.definition.get_polarized_pred_vars(Polarity::Unknown, &mut HashSet::new())
             .into_iter().map(|p| p.value).collect::<HashSet<_>>();
         
         let has_tparams = !tparams.is_empty();

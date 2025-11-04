@@ -60,7 +60,7 @@ impl AllQuantifier {
     }
     
     pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables().into_iter().collect();
+        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables(&mut HashSet::new()).into_iter().collect();
         if free_vars.is_empty() {
             minlog_formula.clone()
         } else {
@@ -117,46 +117,94 @@ impl PredicateBody for AllQuantifier {
             .remove_nulls().unwrap_or(TypeConstant::create_null())
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.vars.iter()
-            .flat_map(|v| v.get_type_variables())
-            .chain(self.body.get_type_variables())
-            .collect()
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.vars.iter()
+                .flat_map(|v| v.get_type_variables(&mut HashSet::new()))
+                .chain(self.body.get_type_variables(visited))
+                .collect()
+        }
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.vars.iter()
-            .flat_map(|v| v.get_algebra_types())
-            .chain(self.body.get_algebra_types())
-            .collect()
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.vars.iter()
+                .flat_map(|v| v.get_algebra_types(&mut HashSet::new()))
+                .chain(self.body.get_algebra_types(visited))
+                .collect()
+        }
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.body.get_free_variables().into_iter()
-            .filter(|v| !self.vars.contains(v))
-            .collect()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.body.get_free_variables(visited).into_iter()
+                .filter(|v| !self.vars.contains(v))
+                .collect()
+        }
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.vars.iter().cloned()
-            .chain(self.body.get_bound_variables())
-            .collect()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.vars.iter().cloned()
+                .chain(self.body.get_bound_variables(visited))
+                .collect()
+        }
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_pred_vars(current)
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.body.get_polarized_pred_vars(current, visited)
+        }
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_comp_terms(current)
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.body.get_polarized_comp_terms(current, visited)
+        }
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_inductive_preds(current)
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.body.get_polarized_inductive_preds(current, visited)
+        }
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_prime_formulas(current)
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
+            
+            self.body.get_polarized_prime_formulas(current, visited)
+        }
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

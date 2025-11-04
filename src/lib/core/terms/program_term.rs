@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
+use std::{rc::Rc, collections::HashSet};
 use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -13,21 +13,15 @@ use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
 
 use crate::core::structures::program_constant::{ProgramConstant, RewriteRule};
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProgramTerm {
     pconst: Rc<ProgramConstant>,
     parameters: TermSubstitution,
-    blocked_collection: RefCell<bool>,
 }
 
 impl ProgramTerm {
-    pub fn create(pconst: Rc<ProgramConstant>, mut parameters: TermSubstitution) -> Rc<MinlogTerm> {
-        let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables().into_iter().map(|tv| tv.into())
-            .chain(pconst.get_free_variables().into_iter().map(|fv| fv.into()))
-            .collect::<Vec<_>>();
-        parameters.restrict(|from| pconst_vars.contains(from));
-        
-        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters, blocked_collection: RefCell::new(false) }))
+    pub fn create(pconst: Rc<ProgramConstant>, parameters: TermSubstitution) -> Rc<MinlogTerm> {
+        Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters }))
     }
     
     pub fn pconst(&self) -> &Rc<ProgramConstant> {
@@ -73,52 +67,55 @@ impl TermBody for ProgramTerm {
         0
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.computation_rules().iter().chain(self.rewrite_rules().iter())
-            .flat_map(|r| r.get_type_variables())
-            .collect()
-    }
-    
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.computation_rules().iter().chain(self.rewrite_rules().iter())
-            .flat_map(|r| r.get_algebra_types())
-            .collect()
-    }
-    
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        // Get rid of these hacks to prevent infinite recursion
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::ProgramTerm(self.clone()));
+            
+            self.computation_rules().iter().chain(self.rewrite_rules().iter())
+                .flat_map(|r| r.get_type_variables(visited))
+                .collect()
         }
-        
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.computation_rules().iter().chain(self.rewrite_rules().iter())
-            .flat_map(|r| r.get_free_variables())
-            .collect();
-        
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        if *self.blocked_collection.borrow() {
-            return HashSet::new();
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::ProgramTerm(self.clone()));
+            
+            self.computation_rules().iter().chain(self.rewrite_rules().iter())
+                .flat_map(|r| r.get_algebra_types(visited))
+                .collect()
         }
-        
-        *self.blocked_collection.borrow_mut() = true;
-        
-        let result = self.computation_rules().iter().chain(self.rewrite_rules().iter())
-            .flat_map(|r| r.get_bound_variables())
-            .collect();
-        
-        *self.blocked_collection.borrow_mut() = false;
-        
-        result
     }
     
-    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::ProgramTerm(self.clone()));
+            
+            self.computation_rules().iter().chain(self.rewrite_rules().iter())
+                .flat_map(|r| r.get_free_variables(visited))
+                .collect()
+        }
+    }
+    
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::ProgramTerm(self.clone()));
+            
+            self.computation_rules().iter().chain(self.rewrite_rules().iter())
+                .flat_map(|r| r.get_bound_variables(visited))
+                .collect()
+        }
+    }
+    
+    fn get_program_terms(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
         HashSet::from([Rc::new(MinlogTerm::ProgramTerm(self.clone()))])
     }
     
@@ -211,8 +208,8 @@ impl TermBody for ProgramTerm {
 
 impl PrettyPrintable for ProgramTerm {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.pconst.get_type_variables();
-        let tmvars = self.pconst.get_free_variables();
+        let tvars = self.pconst.get_type_variables(&mut HashSet::new());
+        let tmvars = self.pconst.get_free_variables(&mut HashSet::new());
         
         let has_tvars = !tvars.is_empty();
         let has_tmvars = !tmvars.is_empty();
@@ -287,12 +284,5 @@ impl PrettyPrintable for ProgramTerm {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
-    }
-}
-
-impl Hash for ProgramTerm {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.pconst.hash(state);
-        self.parameters.hash(state);
     }
 }

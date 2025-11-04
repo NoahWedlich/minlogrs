@@ -1,5 +1,5 @@
 
-use std::rc::Rc;
+use std::{rc::Rc, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
@@ -298,7 +298,7 @@ pub type ProofMatchContext = MatchContextImpl<ProofSubstEntry>;
 
 impl ProofSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
-        for free_var in term.get_free_variables() {
+        for free_var in term.get_free_variables(&mut HashSet::new()) {
             let substituted = self.apply(&ProofSubstEntry::Term(free_var.clone()));
             if let ProofSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
@@ -313,7 +313,7 @@ impl ProofSubstitution {
     }
     
     pub fn admissible_predicate(&self, predicate: &Rc<MinlogPredicate>) -> bool {
-        for pred_var in predicate.get_predicate_variables() {
+        for pred_var in predicate.get_predicate_variables(&mut HashSet::new()) {
             let substituted = self.apply(&ProofSubstEntry::Predicate(pred_var.clone()));
             if let ProofSubstEntry::Predicate(p) = substituted {
                 if self.substitute(&pred_var.arity()) != p.arity() {

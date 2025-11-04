@@ -59,22 +59,22 @@ impl Algebra {
         self.constructors.borrow_mut().push(constructor);
     }
     
-    pub fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+    pub fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
         self.constructors.borrow().iter().flat_map(|constructor| {
-            constructor.minlog_type().get_polarized_tvars(current)
+            constructor.minlog_type().get_polarized_tvars(current, visited)
         }).collect()
     }
     
-    pub fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+    pub fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
         self.constructors.borrow().iter().flat_map(|constructor| {
-            constructor.minlog_type().get_polarized_algebras(current)
+            constructor.minlog_type().get_polarized_algebras(current, visited)
         }).collect()
     }
 }
 
 impl PrettyPrintable for Algebra {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.get_polarized_tvars(Polarity::Unknown)
+        let tvars = self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
             .into_iter().map(|p| p.value).collect::<HashSet<_>>();
         
         let has_tvars = !tvars.is_empty();
@@ -83,7 +83,8 @@ impl PrettyPrintable for Algebra {
             PPElement::text(self.name.clone())
         } else {
             let tvars = PPElement::list(
-                self.get_polarized_tvars(Polarity::Unknown).iter().map(|pol| pol.value.to_pp_element(detail)).collect(),
+                self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                    .iter().map(|pol| pol.value.to_pp_element(detail)).collect(),
                 PPElement::break_elem(0, 4, false),
                 PPElement::text(",".to_string()),
                 PPElement::break_elem(1, 4, false),

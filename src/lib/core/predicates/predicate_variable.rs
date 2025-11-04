@@ -75,15 +75,15 @@ impl PredicateBody for PredicateVariable {
         TypeVariable::create(name)
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.arity().get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        self.arity().get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.arity.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        self.arity.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
         HashSet::from([Polarized {
             polarity: current,
             value: Rc::new(MinlogPredicate::Variable(self.clone())),

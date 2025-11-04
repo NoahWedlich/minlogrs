@@ -30,11 +30,11 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn get_polarized_tvars(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+        pub fn get_polarized_tvars(&Self, _current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
             HashSet::new()
         }
 
-        pub fn get_polarized_algebras(&Self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
+        pub fn get_polarized_algebras(&Self, _current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
             HashSet::new()
         }
         
@@ -89,21 +89,21 @@ impl MinlogType {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }
     
-    pub fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.get_polarized_tvars(Polarity::Unknown)
+    pub fn get_type_variables(&self, visited: &mut HashSet<MinlogType>) -> HashSet<Rc<MinlogType>> {
+        self.get_polarized_tvars(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.get_polarized_algebras(Polarity::Unknown)
+    pub fn get_algebra_types(&self, visited: &mut HashSet<MinlogType>) -> HashSet<Rc<MinlogType>> {
+        self.get_polarized_algebras(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && self.get_type_variables().contains(var)
+        var.is_variable() && self.get_type_variables(&mut HashSet::new()).contains(var)
     }
     
     pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && self.get_algebra_types().contains(alg)
+        alg.is_algebra() && self.get_algebra_types(&mut HashSet::new()).contains(alg)
     }
 }

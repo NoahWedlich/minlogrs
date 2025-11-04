@@ -39,16 +39,26 @@ impl TypeBody for TupleType {
         self.types.iter().map(|t| t.level()).max().unwrap_or(0)
     }
 
-    fn get_polarized_tvars(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        self.types.iter()
-            .flat_map(|t| t.get_polarized_tvars(current))
-            .collect()
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Tuple(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Tuple(self.clone()));
+            self.types.iter()
+                .flat_map(|t| t.get_polarized_tvars(current, visited))
+                .collect()
+        }
     }
 
-    fn get_polarized_algebras(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogType>>> {
-        self.types.iter()
-            .flat_map(|t| t.get_polarized_algebras(current))
-            .collect()
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+        if visited.contains(&MinlogType::Tuple(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogType::Tuple(self.clone()));
+            self.types.iter()
+                .flat_map(|t| t.get_polarized_algebras(current, visited))
+                .collect()
+        }
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

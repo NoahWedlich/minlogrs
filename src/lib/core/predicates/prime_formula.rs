@@ -79,50 +79,98 @@ impl PredicateBody for PrimeFormula {
         self.body.extracted_type()
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.arguments.iter()
-            .flat_map(|arg| arg.get_type_variables())
-            .chain(self.body.get_type_variables())
-            .collect()
+    fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.arguments.iter()
+                .flat_map(|arg| arg.get_type_variables(&mut HashSet::new()))
+                .chain(self.body.get_type_variables(visited))
+                .collect()
+        }
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.arguments.iter()
-            .flat_map(|arg| arg.get_algebra_types())
-            .chain(self.body.get_algebra_types())
-            .collect()
+    fn get_algebra_types(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.arguments.iter()
+                .flat_map(|arg| arg.get_algebra_types(&mut HashSet::new()))
+                .chain(self.body.get_algebra_types(visited))
+                .collect()
+        }
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.arguments.iter()
-            .flat_map(|arg| arg.get_free_variables())
-            .chain(self.body.get_free_variables())
-            .collect()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.arguments.iter()
+                .flat_map(|arg| arg.get_free_variables(&mut HashSet::new()))
+                .chain(self.body.get_free_variables(visited))
+                .collect()
+        }
     }
     
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.arguments.iter()
-            .flat_map(|arg| arg.get_bound_variables())
-            .chain(self.body.get_bound_variables())
-            .collect()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.arguments.iter()
+                .flat_map(|arg| arg.get_bound_variables(&mut HashSet::new()))
+                .chain(self.body.get_bound_variables(visited))
+                .collect()
+        }
     }
     
-    fn get_polarized_pred_vars(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_pred_vars(_current)
+    fn get_polarized_pred_vars(&self, _current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.body.get_polarized_pred_vars(_current, visited)
+        }
     }
     
-    fn get_polarized_comp_terms(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_comp_terms(_current)
+    fn get_polarized_comp_terms(&self, _current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.body.get_polarized_comp_terms(_current, visited)
+        }
     }
     
-    fn get_polarized_inductive_preds(&self, _current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        self.body.get_polarized_inductive_preds(_current)
+    fn get_polarized_inductive_preds(&self, _current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            self.body.get_polarized_inductive_preds(_current, visited)
+        }
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        let mut primes = self.body.get_polarized_prime_formulas(current);
-        primes.insert(Polarized::new(current, Rc::new(MinlogPredicate::Prime(self.clone()))));
-        primes
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+        if visited.contains(&MinlogPredicate::Prime(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogPredicate::Prime(self.clone()));
+            
+            let mut primes = self.body.get_polarized_prime_formulas(current, visited);
+            primes.insert(Polarized::new(current, Rc::new(MinlogPredicate::Prime(self.clone()))));
+            primes
+        }
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

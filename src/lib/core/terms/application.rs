@@ -183,42 +183,72 @@ impl TermBody for Application {
         self.operator.is_constructor() && self.operands.iter().all(|op| op.constructor_pattern())
     }
     
-    fn get_type_variables(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables()
+    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut HashSet::new())
     }
     
-    fn get_algebra_types(&self) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types()
+    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut HashSet::new())
     }
     
-    fn get_free_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.operands.iter().flat_map(|op| op.get_free_variables())
-            .chain(self.operator.get_free_variables())
-            .collect()
+    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Application(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Application(self.clone()));
+            
+            self.operator.get_free_variables(visited)
+                .union(&self.operands.iter().flat_map(|op| op.get_free_variables(visited)).collect())
+                .cloned().collect()
+        }
     }
 
-    fn get_bound_variables(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.operands.iter().flat_map(|op| op.get_bound_variables())
-            .chain(self.operator.get_bound_variables())
-            .collect()
+    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Application(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Application(self.clone()));
+            
+            self.operator.get_bound_variables(visited)
+                .union(&self.operands.iter().flat_map(|op| op.get_bound_variables(visited)).collect())
+                .cloned().collect()
+        }
     }
 
-    fn get_constructors(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.operands.iter().flat_map(|op| op.get_constructors())
-            .chain(self.operator.get_constructors())
-            .collect()
+    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Application(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Application(self.clone()));
+            
+            self.operator.get_constructors(visited)
+                .union(&self.operands.iter().flat_map(|op| op.get_constructors(visited)).collect())
+                .cloned().collect()
+        }
     }
 
-    fn get_program_terms(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.operands.iter().flat_map(|op| op.get_program_terms())
-            .chain(self.operator.get_program_terms())
-            .collect()
+    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Application(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Application(self.clone()));
+            
+            self.operator.get_program_terms(visited)
+                .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect())
+                .cloned().collect()
+        }
     }
 
-    fn get_internal_constants(&self) -> HashSet<Rc<MinlogTerm>> {
-        self.operands.iter().flat_map(|op| op.get_internal_constants())
-            .chain(self.operator.get_internal_constants())
-            .collect()
+    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        if visited.contains(&MinlogTerm::Application(self.clone())) {
+            HashSet::new()
+        } else {
+            visited.insert(MinlogTerm::Application(self.clone()));
+            
+            self.operator.get_internal_constants(visited)
+                .union(&self.operands.iter().flat_map(|op| op.get_internal_constants(visited)).collect())
+                .cloned().collect()
+        }
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
