@@ -31,6 +31,21 @@ pub fn extract_elimination_proof(inductive_predicate: &Rc<MinlogPredicate>) -> R
         proof = UniversalElim::create(proof, var);
     }
     
+    let mut idp_premises = vec![];
+    while let Some(imp_inner) = proof.proved_formula().to_implication()
+        && let Some(first_prime) = imp_inner.premises().first().unwrap().to_prime()
+        && let Some(idp) = first_prime.body().to_inductive_predicate()
+        && idp.references_idp(inductive_predicate)
+    {
+        let assumption = Assumption::create(
+            format!("idp_premise_{}", idp_premises.len()),
+            imp_inner.premises()[0].clone()
+        );
+        
+        idp_premises.push(assumption.clone());
+        proof = ImplicationElim::create(proof, assumption);
+    }
+    
     let mut goal_index = 0;
     
     while let Some(imp) = proof.proved_formula().to_implication() {
@@ -79,6 +94,10 @@ pub fn extract_elimination_proof(inductive_predicate: &Rc<MinlogPredicate>) -> R
             sub_proof
         );
         goal_index += 1;
+    }
+    
+    for assumption in idp_premises.iter().rev() {
+        proof = ImplicationIntro::create(proof, assumption.clone());
     }
     
     for arg in arguments.iter() {

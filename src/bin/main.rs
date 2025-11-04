@@ -137,4 +137,38 @@ fn main() {
     println!("{}", ex_elim_proof.debug_string());
     println!("Proof Tree:");
     println!("{}", ex_elim_proof.render_proof_tree());
+    
+    let ord_alg = Algebra::create("Ord".to_string());
+    let ord_type = AlgebraType::create(ord_alg.clone(), TypeSubstitution::make_empty());
+    
+    println!("Algebra Type:");
+    println!("{}", ord_type.debug_string());
+    
+    let zero = Constructor::create("Zero".to_string(), ord_type.clone());
+    ord_alg.add_constructor(zero);
+    
+    let succ_type = ArrowType::create(vec![ord_type.clone()], ord_type.clone());
+    let succ = Constructor::create("Succ".to_string(), succ_type.clone());
+    ord_alg.add_constructor(succ);
+    
+    let lim_type = ArrowType::create(vec![ArrowType::create(vec![nat_type.clone()], ord_type.clone())], ord_type.clone());
+    let lim = Constructor::create("Lim".to_string(), lim_type.clone());
+    ord_alg.add_constructor(lim);
+    
+    ord_type.to_algebra().unwrap().ensure_well_founded();
+    
+    println!("Algebra:");
+    println!("{}", ord_alg.debug_string());
+    
+    let ord_total = extract_totality(&ord_alg, &mut HashMap::new());
+    println!("Totality Predicate:");
+    println!("{}", ord_total.to_inductive_predicate().unwrap().definition().debug_string());
+    
+    let ord_total_elim = extract_elimination_axiom(&ord_total);
+    println!("Totality Elimination Axiom:");
+    println!("{}", ord_total_elim.debug_string());
+    
+    let ord_total_elim_proof = extract_elimination_proof(&ord_total);
+    println!("Totality Elimination Proof:");
+    println!("{}", ord_total_elim_proof.render_proof_tree());
 }
