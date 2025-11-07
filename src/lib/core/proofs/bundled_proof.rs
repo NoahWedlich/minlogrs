@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, collections::HashSet};
+use std::{rc::Rc, hash::{Hash, Hasher}, collections::HashSet};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
@@ -14,15 +14,17 @@ use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
 
 use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct BundledProof {
     proof: Rc<MinlogProof>,
+    dependencies: HashSet<Rc<MinlogProof>>,
     name: String,
 }
 
 impl BundledProof {
-    pub fn create(proof: Rc<MinlogProof>, name: String) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::BundledProof(BundledProof { proof, name }))
+    pub fn create(proof: Rc<MinlogProof>, name: String, mut extra_dependencies: HashSet<Rc<MinlogProof>>) -> Rc<MinlogProof> {
+        extra_dependencies.extend(proof.get_goals(&mut HashSet::new()));
+        Rc::new(MinlogProof::BundledProof(BundledProof { proof, name, dependencies: extra_dependencies }))
     }
     
     pub fn proof(&self) -> &Rc<MinlogProof> {
@@ -31,6 +33,10 @@ impl BundledProof {
     
     pub fn name(&self) -> &str {
         &self.name
+    }
+    
+    pub fn dependencies(&self) -> &HashSet<Rc<MinlogProof>> {
+        &self.dependencies
     }
 }
 
@@ -44,7 +50,11 @@ impl ProofBody for BundledProof {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        BundledProof::create(self.proof.normalize(eta, pi), self.name.clone())
+        BundledProof::create(
+            self.proof.normalize(eta, pi),
+            self.name.clone(),
+            self.dependencies.iter().map(|d| d.normalize(eta, pi)).collect(),
+        )
     }
     
     fn unfold(&self) -> Rc<MinlogProof> {
@@ -175,7 +185,11 @@ impl ProofBody for BundledProof {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_bundled_proof() && self == from_proof.to_bundled_proof().unwrap() {
             to.to_proof().unwrap()
         } else {
-            BundledProof::create(self.proof.substitute(from, to), self.name.clone())
+            BundledProof::create(
+                self.proof.substitute(from, to),
+                self.name.clone(),
+                self.dependencies.iter().map(|d| d.substitute(from, to)).collect(),
+            )
         }
     }
 
@@ -229,7 +243,7 @@ impl PrettyPrintable for BundledProof {
             PPElement::text(format!("{} (", self.name)),
             PPElement::break_elem(1, 4, false),
             PPElement::list(
-                self.proof.get_goals(&mut HashSet::new()).iter().map(|g| g.to_pp_element(detail)).collect(),
+                self.dependencies.iter().map(|d| d.to_pp_element(detail)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(",".to_string()),
                 PPElement::break_elem(1, 0, false),
@@ -247,10 +261,20 @@ impl PrettyPrintable for BundledProof {
 
 impl ProofTreeDisplayable for BundledProof {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
+        let mut goals = self.proof.get_goals(&mut HashSet::new()).iter().cloned().collect::<Vec<_>>();
+        goals.sort_by_key(|a| a.to_goal().map_or("".to_string(), |g| g.name().to_string()));
+        
         ProofTreeNode::new_node(
-            self.proof.get_goals(&mut HashSet::new()).iter().map(|g| g.to_proof_tree_node()).collect(),
+            self.dependencies.iter().map(|d| d.to_proof_tree_node()).collect(),
             self.proved_formula().display_string(),
             Some(self.name.clone()),
         )
+    }
+}
+
+impl Hash for BundledProof {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.proof.hash(state);
+        self.name.hash(state);
     }
 }
