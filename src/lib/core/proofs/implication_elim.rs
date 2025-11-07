@@ -77,6 +77,14 @@ impl ProofBody for ImplicationElim {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::ImplicationElim(ImplicationElim {
+            premise: self.premise.unfold(),
+            implication: self.implication.unfold(),
+            formula: self.formula.clone(),
+        }))
+    }
+    
     fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
             HashSet::new()

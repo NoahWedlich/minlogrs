@@ -73,6 +73,10 @@ impl ProofBody for Goal {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::Goal(self.clone()))
+    }
+    
     fn get_type_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         self.formula.get_type_variables(&mut HashSet::new())
     }

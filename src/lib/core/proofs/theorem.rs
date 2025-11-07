@@ -53,6 +53,14 @@ impl ProofBody for Theorem {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::Theorem(Theorem {
+            name: self.name.clone(),
+            formula: self.formula.clone(),
+            proof: self.proof.unfold(),
+        }))
+    }
+    
     fn get_type_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         self.formula.get_type_variables(&mut HashSet::new())
     }

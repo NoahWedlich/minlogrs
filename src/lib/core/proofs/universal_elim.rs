@@ -80,6 +80,15 @@ impl ProofBody for UniversalElim {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::UniversalElim(UniversalElim {
+            proof: self.proof.unfold(),
+            term: self.term.clone(),
+            replaced_variable: self.replaced_variable.clone(),
+            formula: self.formula.clone(),
+        }))
+    }
+    
     fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
             HashSet::new()
@@ -213,6 +222,11 @@ impl ProofBody for UniversalElim {
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_universal_elim() && self == from_proof.to_universal_elim().unwrap() {
             to.to_proof().unwrap()
+        } else if let Some(term) = from.to_term() && (self.replaced_variable == term || self.term == term) {
+            UniversalElim::create(
+                self.proof.clone(),
+                self.term.substitute_with(from, to),
+            )
         } else {
             UniversalElim::create(
                 self.proof.substitute(from, to),

@@ -109,7 +109,7 @@ impl Substitutable for ProofSubstEntry {
                 ProofSubstEntry::Proof(pr.substitute(from, to))
             },
             _ => {
-                panic!("Tried to substitute between incompatible ProofSubstEntry types");
+                self.clone()
             }
         }
     }
@@ -138,6 +138,8 @@ impl Substitutable for ProofSubstEntry {
         match (self, to) {
             (ProofSubstEntry::Proof(p1), ProofSubstEntry::Proof(p2)) => {
                 p1.is_goal() && !p2.contains_goal(p1)
+                && p2.get_assumptions(&mut HashSet::new()).is_subset(&p1.get_assumptions(&mut HashSet::new()))
+                && p2.get_free_variables(&mut HashSet::new()).is_subset(&p1.get_free_variables(&mut HashSet::new()))
             },
             (_, _) if self.is_pred_subst_entry() && to.is_pred_subst_entry() => {
                 let from_pse = self.to_pred_subst_entry().unwrap();
@@ -299,7 +301,7 @@ pub type ProofMatchContext = MatchContextImpl<ProofSubstEntry>;
 impl ProofSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
         for free_var in term.get_free_variables(&mut HashSet::new()) {
-            let substituted = self.apply(&ProofSubstEntry::Term(free_var.clone()));
+            let substituted = self.substitute(&ProofSubstEntry::Term(free_var.clone()));
             if let ProofSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
                     return false;
@@ -314,7 +316,7 @@ impl ProofSubstitution {
     
     pub fn admissible_predicate(&self, predicate: &Rc<MinlogPredicate>) -> bool {
         for pred_var in predicate.get_predicate_variables(&mut HashSet::new()) {
-            let substituted = self.apply(&ProofSubstEntry::Predicate(pred_var.clone()));
+            let substituted = self.substitute(&ProofSubstEntry::Predicate(pred_var.clone()));
             if let ProofSubstEntry::Predicate(p) = substituted {
                 if self.substitute(&pred_var.arity()) != p.arity() {
                     return false;

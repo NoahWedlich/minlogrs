@@ -64,6 +64,10 @@ impl ProofBody for Assumption {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::Assumption(self.clone()))
+    }
+    
     fn get_type_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         self.formula.get_type_variables(&mut HashSet::new())
     }

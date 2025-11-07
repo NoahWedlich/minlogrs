@@ -61,6 +61,14 @@ impl ProofBody for UniversalIntro {
         }))
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::UniversalIntro(UniversalIntro {
+            proof: self.proof.unfold(),
+            variable: self.variable.clone(),
+            formula: self.formula.clone(),
+        }))
+    }
+    
     fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
             HashSet::new()

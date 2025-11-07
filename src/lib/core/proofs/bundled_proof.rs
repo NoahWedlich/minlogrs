@@ -47,6 +47,10 @@ impl ProofBody for BundledProof {
         BundledProof::create(self.proof.normalize(eta, pi), self.name.clone())
     }
     
+    fn unfold(&self) -> Rc<MinlogProof> {
+        self.proof.unfold()
+    }
+    
     fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
             HashSet::new()

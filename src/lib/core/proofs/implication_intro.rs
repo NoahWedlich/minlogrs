@@ -29,10 +29,6 @@ impl ImplicationIntro {
             panic!("ImplicationIntro::create called with a non-assumption proof as assumption");
         }
         
-        if !proof.contains_assumption(&assumption) {
-            panic!("ImplicationIntro::create called with a proof that does not have the given assumption free");
-        }
-        
         let premise_formula = assumption.proved_formula();
         let conclusion_formula = proof.proved_formula();
         let implication_formula = Implication::create(vec![premise_formula], conclusion_formula);
@@ -63,6 +59,14 @@ impl ProofBody for ImplicationIntro {
             assumption: self.assumption.normalize(eta, pi),
             conclusion: self.conclusion.normalize(eta, pi),
             formula: self.formula.normalize(eta, pi),
+        }))
+    }
+    
+    fn unfold(&self) -> Rc<MinlogProof> {
+        Rc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
+            assumption: self.assumption.unfold(),
+            conclusion: self.conclusion.unfold(),
+            formula: self.formula.clone(),
         }))
     }
     

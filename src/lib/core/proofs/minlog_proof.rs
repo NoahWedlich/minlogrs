@@ -32,6 +32,8 @@ crate::wrapper_enum! {
         
         pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogProof>
         
+        pub fn unfold(&Self) -> Rc<MinlogProof>
+        
         pub fn get_type_variables(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
             HashSet::new()
         }
@@ -119,7 +121,7 @@ impl MinlogProof {
     pub fn is_closed(&self) -> bool {
         self.get_assumptions(&mut HashSet::new()).is_empty()
     }
-    
+
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
         var.is_variable() && self.get_type_variables(&mut HashSet::new()).contains(var)
     }
