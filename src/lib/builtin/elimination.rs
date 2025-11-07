@@ -1,10 +1,7 @@
 
-use std::{rc::Rc, collections::{HashMap, HashSet}};
-use crate::core::proofs::{assumption::Assumption, axiom::Axiom, bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro};
-use crate::core::proofs::goal::Goal;
-use crate::core::proofs::implication_elim::ImplicationElim;
+use std::{rc::Rc, collections::{HashMap}};
+use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::proofs::universal_elim::UniversalElim;
 use crate::utils::pretty_printer::*;
 
 use crate::core::{
@@ -18,94 +15,6 @@ use crate::core::{
         minlog_term::Totality, term_variable::TermVariable
     }
 };
-
-pub fn extract_elimination_proof(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogProof> {
-    let elim_axiom = extract_elimination_axiom(inductive_predicate);
-    let mut proof = elim_axiom;
-    
-    let mut arguments = HashSet::new();
-    
-    while let Some(all) = proof.proved_formula().to_all_quantifier() {
-        let var = all.vars()[0].clone();
-        arguments.insert(var.clone());
-        proof = UniversalElim::create(proof, var);
-    }
-    
-    let mut idp_premises = vec![];
-    while let Some(imp_inner) = proof.proved_formula().to_implication()
-        && let Some(first_prime) = imp_inner.premises().first().unwrap().to_prime()
-        && let Some(idp) = first_prime.body().to_inductive_predicate()
-        && idp.references_idp(inductive_predicate)
-    {
-        let assumption = Assumption::create(
-            format!("idp_premise_{}", idp_premises.len()),
-            imp_inner.premises()[0].clone()
-        );
-        
-        idp_premises.push(assumption.clone());
-        proof = ImplicationElim::create(proof, assumption);
-    }
-    
-    let mut goal_index = 0;
-    
-    while let Some(imp) = proof.proved_formula().to_implication() {
-        let premise = imp.premises()[0].clone();
-        let provided_vars = arguments.intersection(&premise.get_free_variables(&mut HashSet::new())).cloned().collect::<HashSet<_>>();
-        
-        let mut reduced_premise = premise.clone();
-        
-        let mut sub_vars = vec![];
-        if let Some(all) = reduced_premise.to_all_quantifier() {
-            sub_vars.extend(all.vars().iter().cloned());
-            reduced_premise = all.body().clone();
-        }
-        
-        let mut assumptions = vec![];
-        if let Some(imp_inner) = reduced_premise.to_implication() {
-            for assumption in imp_inner.premises().iter() {
-                assumptions.push(Assumption::create(
-                    format!("a{}", assumptions.len()),
-                    assumption.clone()
-                ));
-            }
-            reduced_premise = imp_inner.conclusion().clone();
-        }
-        
-        let sub_vars_set = sub_vars.iter().cloned().collect::<HashSet<_>>();
-        let assumptions_set = assumptions.iter().cloned().collect::<HashSet<_>>();
-        
-        let mut sub_proof = Goal::create(
-            format!("g{}", goal_index),
-            reduced_premise,
-            provided_vars.union(&sub_vars_set).cloned().collect(),
-            assumptions_set
-        );
-        
-        for assumption in assumptions.iter().rev() {
-            sub_proof = ImplicationIntro::create(sub_proof, assumption.clone());
-        }
-        
-        for var in sub_vars.iter().rev() {
-            sub_proof = UniversalIntro::create(sub_proof, var.clone());
-        }
-        
-        proof = ImplicationElim::create(
-            proof,
-            sub_proof
-        );
-        goal_index += 1;
-    }
-    
-    for assumption in idp_premises.iter().rev() {
-        proof = ImplicationIntro::create(proof, assumption.clone());
-    }
-    
-    for arg in arguments.iter() {
-        proof = UniversalIntro::create(proof, arg.clone());
-    }
-    
-    BundledProof::create(proof, "elim".to_string())
-}
 
 pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogProof> {
     let pvar = PredicateVariable::create(
@@ -133,7 +42,7 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
     let conclusion = PrimeFormula::create(pvar, arguments.clone());
     
     Axiom::create(
-        "Elim".to_string(),
+        format!("{}Elim", inductive_predicate.to_inductive_predicate().unwrap().name()),
         AllQuantifier::create(
             arguments,
             Implication::create(elimination_clauses, conclusion)
