@@ -12,3 +12,4 @@ pub mod universal_intro;
 pub mod universal_elim;
 
 pub mod proof_substitution;
+pub mod proof_context;
