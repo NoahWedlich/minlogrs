@@ -26,7 +26,14 @@ pub struct InductivePredicate {
 }
 
 impl InductivePredicate {
-    pub fn create(definition: Rc<InductiveConstant>, params: PredicateSubstitution) -> Rc<MinlogPredicate> {
+    pub fn create(definition: Rc<InductiveConstant>, mut params: PredicateSubstitution) -> Rc<MinlogPredicate> {
+        let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into())
+            .chain(definition.get_free_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into()))
+            .chain(definition.get_polarized_pred_vars(Polarity::Unknown, &mut HashSet::new()).into_iter().map(|pol| pol.value.into()))
+            .collect();
+        
+        params.restrict(|from| idp_vars.contains(from));
+        
         Rc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
             definition,
             params,

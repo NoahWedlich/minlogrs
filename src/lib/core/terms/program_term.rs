@@ -20,7 +20,13 @@ pub struct ProgramTerm {
 }
 
 impl ProgramTerm {
-    pub fn create(pconst: Rc<ProgramConstant>, parameters: TermSubstitution) -> Rc<MinlogTerm> {
+    pub fn create(pconst: Rc<ProgramConstant>, mut parameters: TermSubstitution) -> Rc<MinlogTerm> {
+        let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into())
+            .chain(pconst.get_free_variables(&mut HashSet::new()).into_iter().map(|fv| fv.into()))
+            .collect::<Vec<_>>();
+        
+        parameters.restrict(|from| pconst_vars.contains(from));
+        
         Rc::new(MinlogTerm::ProgramTerm(ProgramTerm { pconst, parameters }))
     }
     

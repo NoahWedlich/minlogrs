@@ -23,6 +23,10 @@ pub struct Implication {
 
 impl Implication {
     pub fn create(premises: Vec<Rc<MinlogPredicate>>, conclusion: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        if premises.is_empty() {
+            return conclusion;
+        }
+        
         for premise in &premises {
             if premise.arity() != conclusion.arity() {
                 panic!("All premises and conclusion of an Implication must have the same arity");

@@ -1,5 +1,6 @@
 
-use std::{hash::{Hash, Hasher}, collections::HashMap};
+use indexmap::IndexMap;
+use std::{hash::{Hash, Hasher}};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
@@ -24,13 +25,13 @@ pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Substitution<T: Substitutable> {
-    map: HashMap<T, T>,
+    map: IndexMap<T, T>,
 }
 
 impl<T: Substitutable> Substitution<T> {
     pub fn make_empty() -> Self {
         Self {
-            map: HashMap::new(),
+            map: IndexMap::new(),
         }
     }
 
@@ -180,8 +181,8 @@ impl<T: Substitutable> Substitution<T> {
         Some(result)
     }
     
-    pub fn match_with(first: &T, second: &T) -> Option<Self> {
-        Self::match_all(&mut [first.clone()], &mut [second.clone()])
+    pub fn match_with(pattern: &T, instance: &T) -> Option<Self> {
+        Self::match_all(&mut [pattern.clone()], &mut [instance.clone()])
     }
     
     pub fn match_all(patterns: &mut [T], instances: &mut [T]) -> Option<Self> {
@@ -281,15 +282,15 @@ impl<T: Substitutable> PrettyPrintable for Substitution<T> {
             self.map.iter().map(|(k, v)| {
                 PPElement::group(vec![
                     k.to_enclosed_pp_element(detail),
-                    PPElement::break_elem(1, 4, false),
+                    PPElement::break_elem(1, 0, false),
                     PPElement::text("->".to_string()),
-                    PPElement::break_elem(1, 4, false),
+                    PPElement::break_elem(1, 0, false),
                     v.to_enclosed_pp_element(detail),
                 ], BreakType::Flexible, 0)
             }).collect(),
-            PPElement::break_elem(0, 4, false),
+            PPElement::break_elem(0, 0, false),
             PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 4, false),
+            PPElement::break_elem(1, 0, false),
             BreakType::Flexible,
         ));
         

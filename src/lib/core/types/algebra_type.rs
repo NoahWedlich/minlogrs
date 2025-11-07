@@ -20,7 +20,11 @@ pub struct AlgebraType {
 }
 
 impl AlgebraType {
-    pub fn create(algebra: Rc<Algebra>, parameters: TypeSubstitution) -> Rc<MinlogType> {
+    pub fn create(algebra: Rc<Algebra>, mut parameters: TypeSubstitution) -> Rc<MinlogType> {
+        let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+            .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
+        parameters.restrict(|from| alg_tvars.contains(from));
+        
         Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters }))
     }
     

@@ -14,6 +14,10 @@ pub struct TupleType {
 
 impl TupleType {
     pub fn create(types: Vec<Rc<MinlogType>>) -> Rc<MinlogType> {
+        if types.len() == 1 {
+            return types[0].clone();
+        }
+        
         Rc::new(MinlogType::Tuple(TupleType { types }))
     }
     

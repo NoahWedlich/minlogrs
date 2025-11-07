@@ -136,7 +136,7 @@ impl TermBody for Application {
                 subst.extend((TermSubstEntry::Term(var.clone()), TermSubstEntry::Term(op.normalize(eta, pi))));
             }
             
-            let kernel = subst.apply(&TermSubstEntry::Term(abs.kernel().clone())).to_term().unwrap().clone();
+            let kernel = subst.substitute(&TermSubstEntry::Term(abs.kernel().clone())).to_term().unwrap().clone();
             
             let remaining_vars = abs.vars()[applicable..].to_vec();
             let inner_term = if remaining_vars.is_empty() {

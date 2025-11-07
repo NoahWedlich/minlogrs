@@ -232,7 +232,7 @@ pub type PredicateMatchContext = MatchContextImpl<PredSubstEntry>;
 impl PredicateSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
         for free_var in term.get_free_variables(&mut HashSet::new()) {
-            let substituted = self.apply(&PredSubstEntry::Term(free_var.clone()));
+            let substituted = self.substitute(&PredSubstEntry::Term(free_var.clone()));
             if let PredSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
                     return false;
@@ -246,7 +246,7 @@ impl PredicateSubstitution {
     
     pub fn admissible(&self, predicate: &Rc<MinlogPredicate>) -> bool {
         for pred_var in predicate.get_predicate_variables(&mut HashSet::new()) {
-            let substituted = self.apply(&PredSubstEntry::Predicate(pred_var.clone()));
+            let substituted = self.substitute(&PredSubstEntry::Predicate(pred_var.clone()));
             if let PredSubstEntry::Predicate(p) = substituted {
                 if self.substitute(&pred_var.arity()) != p.arity() {
                     return false;

@@ -256,6 +256,8 @@ impl ProofTreeNode {
                     Some(TextSpan::span_multiple(
                         text.iter().map(|line| line.range.clone()).collect::<Vec<TextSpan>>().as_slice()
                     ))
+                } else if layer == 0 && text.is_empty() {
+                    Some(TextSpan{ left: 0, right: 1 })
                 } else {
                     None
                 }

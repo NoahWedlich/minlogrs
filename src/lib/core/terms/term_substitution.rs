@@ -48,7 +48,7 @@ impl Substitutable for TermSubstEntry {
                 TermSubstEntry::Term(tm.substitute(from, to))
             },
             _ => {
-                panic!("Tried to substitute between incompatible TermSubstEntry types");
+                self.clone()
             }
         }
     }
@@ -158,7 +158,7 @@ pub type TermMatchContext = MatchContextImpl<TermSubstEntry>;
 impl TermSubstitution {
     pub fn admissible(&self, term: &Rc<MinlogTerm>) -> bool {
         for free_var in term.get_free_variables(&mut HashSet::new()) {
-            let substituted = self.apply(&TermSubstEntry::Term(free_var.clone()));
+            let substituted = self.substitute(&TermSubstEntry::Term(free_var.clone()));
             if let TermSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
                     return false;

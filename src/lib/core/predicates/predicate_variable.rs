@@ -134,6 +134,8 @@ impl PredicateBody for PredicateVariable {
             (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
                 if p.arity() != i.arity() {
                     ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
+                    ctx.extend(&p.clone().into(), &i.clone().into());
+                    return MatchOutput::Matched;
                 }
                 
                 match (p.degree(), i.degree()) {
