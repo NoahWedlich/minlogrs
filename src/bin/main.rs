@@ -1,11 +1,18 @@
 
-use std::collections::HashMap;
-use lib::{builtin::{elimination::{extract_elimination_axiom, extract_elimination_proof}, totality::extract_totality}};
+use std::{rc::Rc, collections::{HashMap, HashSet}};
+use lib::{builtin::{elimination::extract_elimination_axiom, totality::extract_totality},
+core::{predicates::comprehension_term::ComprehensionTerm,
+    proofs::{minlog_proof::{MinlogProof, ProofBody},
+    proof_context::ProofContext},
+    structures::program_constant::{ProgramConstant, RewriteRule},
+    terms::{application::Application, program_term::ProgramTerm, term_substitution::TermSubstitution}}};
+use lib::proof_generation::by_use::generate_proof_by_use;
+use lib::proof_generation::by_assume::{generate_proof_by_assume, generate_proof_by_assume_with_name};
+use lib::proof_generation::by_intro::generate_proof_by_intro;
+use lib::proof_generation::by_elim::generate_proof_by_elim;
 use lib::core::predicates::all_quantifier::AllQuantifier;
 use lib::core::predicates::implication::Implication;
-use lib::core::predicates::minlog_predicate::PredicateDegree;
 use lib::core::predicates::predicate_substitution::PredicateSubstitution;
-use lib::core::predicates::predicate_variable::PredicateVariable;
 use lib::core::predicates::inductive_predicate::InductivePredicate;
 use lib::core::predicates::prime_formula::PrimeFormula;
 use lib::core::structures::inductive_constant::InductiveConstant;
@@ -22,6 +29,89 @@ use lib::core::terms::constructor::*;
 use lib::core::structures::{algebra::*};
 
 fn main() {
+    let tvar = TypeVariable::create("T".to_string());
+    let tmvar = TermVariable::create("x".to_string(), tvar.clone(), Totality::Partial);
+    
+    let eq_def = InductiveConstant::create("Eq".to_string(), TupleType::create(vec![tvar.clone(), tvar.clone()]));
+    let eq_pred = InductivePredicate::create(eq_def.clone(), PredicateSubstitution::make_empty());
+    
+    println!("Equality Predicate:");
+    println!("{}", eq_pred.debug_string());
+    
+    let eq_intro = AllQuantifier::create(
+        vec![tmvar.clone()],
+        PrimeFormula::create(
+            eq_pred.clone(),
+            vec![tmvar.clone(), tmvar.clone()]
+        )
+    );
+    eq_def.add_clause("EqIntro".to_string(), eq_intro);
+    
+    eq_pred.to_inductive_predicate().unwrap().ensure_well_founded();
+    
+    println!("Equality Constant:");
+    println!("{}", eq_def.debug_string());
+    
+    let eq_elim = extract_elimination_axiom(&eq_pred);
+    println!("Equality Elimination Axiom:");
+    println!("{}", eq_elim.render_proof_tree());
+    
+    let eq_elim_proof = generate_proof_by_elim(&eq_pred);
+    println!("Equality Elimination Proof:");
+    println!("{}", eq_elim_proof.render_proof_tree());
+    
+    let bool = Algebra::create("Bool".to_string());
+    let bool_type = AlgebraType::create(bool.clone(), TypeSubstitution::make_empty());
+    println!("Algebra Type:");
+    println!("{}", bool_type.debug_string());
+    
+    let true_const = Constructor::create("True".to_string(), bool_type.clone());
+    bool.add_constructor(true_const.clone());
+    
+    let false_const = Constructor::create("False".to_string(), bool_type.clone());
+    bool.add_constructor(false_const.clone());
+    
+    bool_type.to_algebra().unwrap().ensure_well_founded();
+    
+    println!("Algebra:");
+    println!("{}", bool.debug_string());
+    
+    let atom_def = InductiveConstant::create("Atom".to_string(), TupleType::create(vec![bool_type.clone()]));
+    let atom_pred = InductivePredicate::create(atom_def.clone(), PredicateSubstitution::make_empty());
+    
+    println!("Atom Predicate:");
+    println!("{}", atom_pred.debug_string());
+    
+    let bool_var = TermVariable::create("b".to_string(), bool_type.clone(), Totality::Partial);
+    let atom_intro = AllQuantifier::create(
+        vec![bool_var.clone()],
+        Implication::create(
+            vec![
+                PrimeFormula::create(
+                    eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
+                    vec![bool_var.clone(), true_const.clone()]
+                )
+            ],
+            PrimeFormula::create(
+                atom_pred.clone(),
+                vec![bool_var.clone()]
+            )
+        )
+    );
+    atom_def.add_clause("AtomIntro".to_string(), atom_intro);
+    
+    atom_pred.to_inductive_predicate().unwrap().ensure_well_founded();
+    
+    println!("Atom Constant:");
+    println!("{}", atom_def.debug_string());
+    
+    let atom_elim = extract_elimination_axiom(&atom_pred);
+    println!("Atom Elimination Axiom:");
+    println!("{}", atom_elim.render_proof_tree());
+    
+    let atom_elim_proof = generate_proof_by_elim(&atom_pred);
+    println!("Atom Elimination Proof:");
+    println!("{}", atom_elim_proof.render_proof_tree());
     
     let nat = Algebra::create("Nat".to_string());
     let nat_type = AlgebraType::create(nat.clone(), TypeSubstitution::make_empty());
@@ -29,11 +119,11 @@ fn main() {
     println!("{}", nat_type.debug_string());
     
     let zero = Constructor::create("Zero".to_string(), nat_type.clone());
-    nat.add_constructor(zero);
+    nat.add_constructor(zero.clone());
     
     let succ_type = ArrowType::create(vec![nat_type.clone()], nat_type.clone());
     let succ = Constructor::create("Succ".to_string(), succ_type.clone());
-    nat.add_constructor(succ);
+    nat.add_constructor(succ.clone());
     
     nat_type.to_algebra().unwrap().ensure_well_founded();
 
@@ -46,129 +136,281 @@ fn main() {
     
     let nat_total_elim = extract_elimination_axiom(&nat_total);
     println!("Totality Elimination Axiom:");
-    println!("{}", nat_total_elim.debug_string());
     println!("{}", nat_total_elim.render_proof_tree());
     
-    let nat_total_elim_proof = extract_elimination_proof(&nat_total);
+    let nat_total_elim_proof = generate_proof_by_elim(&nat_total);
     println!("Totality Elimination Proof:");
-    println!("{}", nat_total_elim_proof.debug_string());
     println!("{}", nat_total_elim_proof.render_proof_tree());
     
-    let tvar1 = TypeVariable::create("T".to_string());
+    let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone(), Totality::Partial);
+    let nat_var_2 = TermVariable::create("m".to_string(), nat_type.clone(), Totality::Partial);
+    let nat_var_3 = TermVariable::create("n0".to_string(), nat_type.clone(), Totality::Partial);
+    let nat_var_4 = TermVariable::create("m0".to_string(), nat_type.clone(), Totality::Partial);
     
-    let tmvar1 = TermVariable::create("x".to_string(), tvar1.clone(), Totality::Total);
-    
-    let pred_var_1 = PredicateVariable::create("P".to_string(), tvar1.clone(), PredicateDegree {
-        positive_content: false, negative_content: false
-    });
-    let pred_var_2 = PredicateVariable::create("Q".to_string(), tvar1.clone(), PredicateDegree {
-        positive_content: false, negative_content: false
-    });
-    
-    let and_def = InductiveConstant::create("and".to_string(), tvar1.clone());
-    let and_pred = InductivePredicate::create(and_def.clone(), PredicateSubstitution::make_empty());
-    
-    println!("And Predicate:");
-    println!("{}", and_pred.debug_string());
-    
-    let and_clause = Implication::create(
-        vec![pred_var_1.clone(), pred_var_2.clone()],
-        and_pred.clone()
+    let nat_eq = ProgramConstant::create(
+        "NatEq".to_string(),
+        ArrowType::create(
+            vec![nat_type.clone(), nat_type.clone()],
+            bool_type.clone()
+        ),
+        Totality::Partial
     );
-    and_def.add_clause("AndInit".to_string(), and_clause);
+    let nat_eq_term = ProgramTerm::create(nat_eq.clone(), TermSubstitution::make_empty());
     
-    and_pred.to_inductive_predicate().unwrap().ensure_well_founded();
+    println!("Program Term:");
+    println!("{}", nat_eq_term.debug_string());
     
-    println!("And Constant:");
-    println!("{}", and_def.debug_string());
+    let zero_eq_zero = RewriteRule::create(
+        Application::create(
+            nat_eq_term.clone(),
+            vec![zero.clone(), zero.clone()]
+        ),
+        true_const.clone()
+    );
+    nat_eq.add_computation_rule(zero_eq_zero);
     
-    let and_alg = Algebra::create("AndAlg".to_string());
-    and_def.make_computational(and_alg, false);
+    let zero_neq_succ = RewriteRule::create(
+        Application::create(
+            nat_eq_term.clone(),
+            vec![zero.clone(), Application::create(succ.clone(), vec![nat_var_1.clone()])]
+        ),
+        false_const.clone()
+    );
+    nat_eq.add_computation_rule(zero_neq_succ);
     
-    println!("And Algebra:");
-    println!("{}", and_pred.to_inductive_predicate().unwrap().get_algebra().unwrap()
-        .to_algebra().unwrap().algebra().debug_string());
+    let succ_eq_succ = RewriteRule::create(
+        Application::create(
+            nat_eq_term.clone(),
+            vec![
+                Application::create(succ.clone(), vec![nat_var_1.clone()]),
+                Application::create(succ.clone(), vec![nat_var_2.clone()])
+            ]
+        ),
+        Application::create(
+            nat_eq_term.clone(),
+            vec![nat_var_1.clone(), nat_var_2.clone()]
+        )
+    );
+    nat_eq.add_computation_rule(succ_eq_succ);
     
-    println!("And ET-Type:");
-    println!("{}", and_pred.extracted_type().debug_string());
+    println!("Program Constant:");
+    println!("{}", nat_eq.debug_string());
     
-    let ex_def = InductiveConstant::create("Ex".to_string(), TupleType::create_unit());
-    let ex_pred = InductivePredicate::create(ex_def.clone(), PredicateSubstitution::make_empty());
-    
-    println!("Ex Predicate:");
-    println!("{}", ex_pred.debug_string());
-    
-    let ex_clause = AllQuantifier::create(
-        vec![tmvar1.clone()],
+    let target = AllQuantifier::create(
+        vec![nat_var_1.clone(), nat_var_2.clone()],
         Implication::create(
             vec![
                 PrimeFormula::create(
-                    pred_var_1.clone(),
-                    vec![tmvar1.clone()]
-                )
+                    nat_total.clone(),
+                    vec![nat_var_1.clone()]
+                ),
+                PrimeFormula::create(
+                    nat_total.clone(),
+                    vec![nat_var_2.clone()]
+                ),
+                PrimeFormula::create(
+                eq_pred.substitute(&tvar.clone().into(), &nat_type.clone().into()),
+                vec![nat_var_1.clone(), nat_var_2.clone()]
+            )
             ],
-            ex_pred.clone()
+            PrimeFormula::create(
+                atom_pred.clone(),
+                vec![Application::create(
+                    nat_eq_term.clone(),
+                    vec![nat_var_1.clone(), nat_var_2.clone()]
+                )]
+            )
         )
     );
-    ex_def.add_clause("ExInit".to_string(), ex_clause);
+    println!("Target Formula:");
+    println!("{}", target.debug_string());
     
-    ex_pred.to_inductive_predicate().unwrap().ensure_well_founded();
+    let assume_proof = generate_proof_by_assume(
+        &target,
+        &vec!["n".to_string(), "m".to_string(), "Tn".to_string(), "Tm".to_string(), "eq_nm".to_string()],
+        &ProofContext::new()
+    );
+    println!("Assume Proof:");
+    println!("{}", assume_proof.render_proof_tree());
     
-    println!("Ex Constant:");
-    println!("{}", ex_def.debug_string());
+    let goal0 = assume_proof.get_goals(&mut HashSet::new()).iter().next().unwrap()
+        .to_goal().unwrap().clone();
+    let context0 = goal0.get_context().clone();
+
+    println!("Goal to Prove:");
+    println!("{}", goal0.render_proof_tree());
     
-    let ex_alg = Algebra::create("ExAlg".to_string());
-    ex_def.make_computational(ex_alg, false);
+    let subproof0 = generate_proof_by_intro(
+        &goal0.proved_formula(),
+        &"AtomIntro".to_string(),
+        &context0
+    );
+    println!("Subproof by Introduction:");
+    println!("{}", subproof0.render_proof_tree());
     
-    println!("Ex Algebra:");
-    println!("{}", ex_pred.to_inductive_predicate().unwrap().get_algebra().unwrap()
-        .to_algebra().unwrap().algebra().debug_string());
+    let goal1 = subproof0.get_goals(&mut HashSet::new()).iter().next().unwrap()
+        .to_goal().unwrap().clone();
+    let context1 = goal1.get_context().clone();
     
-    println!("Ex ET-Type:");
-    println!("{}", ex_pred.extracted_type().debug_string());
+    println!("Next Goal to Prove:");
+    println!("{}", goal1.render_proof_tree());
     
-    let ex_elim = extract_elimination_axiom(&ex_pred);
-    println!("Ex Elimination Axiom:");
-    println!("{}", ex_elim.debug_string());
-    println!("{}", ex_elim.render_proof_tree());
+    let formula_to_prove0 = PrimeFormula::create(
+        ComprehensionTerm::create(
+            vec![nat_var_3.clone(), nat_var_4.clone()],
+            Implication::create(
+                vec![
+                    PrimeFormula::create(
+                        nat_total.clone(),
+                        vec![nat_var_3.clone()]
+                    ),
+                    PrimeFormula::create(
+                        nat_total.clone(),
+                        vec![nat_var_4.clone()]
+                    ),
+                ],
+                PrimeFormula::create(
+                    eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
+                    vec![
+                        Application::create(nat_eq_term.clone(), vec![nat_var_3.clone(), nat_var_4.clone()]),
+                        true_const.clone()
+                    ]
+                )
+            )
+        ),
+        vec![nat_var_1.clone(), nat_var_2.clone()]
+    );
     
-    let ex_elim_proof = extract_elimination_proof(&ex_pred);
-    println!("Ex Elimination Proof:");
-    println!("{}", ex_elim_proof.debug_string());
-    println!("Proof Tree:");
-    println!("{}", ex_elim_proof.render_proof_tree());
+    println!("Next Goal Formula:");
+    println!("{}", formula_to_prove0.debug_string());
     
-    let ord_alg = Algebra::create("Ord".to_string());
-    let ord_type = AlgebraType::create(ord_alg.clone(), TypeSubstitution::make_empty());
+    let subproof1 = generate_proof_by_use(
+        &formula_to_prove0,
+        &eq_elim,
+        &context1
+    );
+    println!("Subproof by Use:");
+    println!("{}", subproof1.render_proof_tree());
     
-    println!("Algebra Type:");
-    println!("{}", ord_type.debug_string());
+    let normalized_proof = subproof1.normalize(false, false);
+    println!("Normalized Proof:");
+    println!("{}", normalized_proof.render_proof_tree());
     
-    let zero = Constructor::create("Zero".to_string(), ord_type.clone());
-    ord_alg.add_constructor(zero);
+    let goal2 = normalized_proof.get_goals(&mut HashSet::new()).iter().next().unwrap()
+        .to_goal().unwrap().clone();
+    let context2 = goal2.get_context().clone();
     
-    let succ_type = ArrowType::create(vec![ord_type.clone()], ord_type.clone());
-    let succ = Constructor::create("Succ".to_string(), succ_type.clone());
-    ord_alg.add_constructor(succ);
+    println!("Next Goal to Prove:");
+    println!("{}", goal2.render_proof_tree());
     
-    let lim_type = ArrowType::create(vec![ArrowType::create(vec![nat_type.clone()], ord_type.clone())], ord_type.clone());
-    let lim = Constructor::create("Lim".to_string(), lim_type.clone());
-    ord_alg.add_constructor(lim);
+    let subproof2 = generate_proof_by_assume_with_name(
+        &goal2.proved_formula(),
+        &vec!["x".to_string(), "Tx".to_string()],
+        &context2,
+        "g2".to_string()
+    );
+    println!("Subproof by Assume:");
+    println!("{}", subproof2.render_proof_tree());
     
-    ord_type.to_algebra().unwrap().ensure_well_founded();
+    let goal3 = subproof2.get_goals(&mut HashSet::new()).iter().next().unwrap()
+        .to_goal().unwrap().clone();
+    let context3 = goal3.get_context().clone();
     
-    println!("Algebra:");
-    println!("{}", ord_alg.debug_string());
+    println!("Next Goal to Prove:");
+    println!("{}", goal3.render_proof_tree());
     
-    let ord_total = extract_totality(&ord_alg, &mut HashMap::new());
-    println!("Totality Predicate:");
-    println!("{}", ord_total.to_inductive_predicate().unwrap().definition().debug_string());
+    let formula_to_prove1 = Implication::create(
+        vec![
+            PrimeFormula::create(
+                nat_total.clone(),
+                vec![nat_var_1.clone()]
+            ),
+        ],
+        PrimeFormula::create(
+            ComprehensionTerm::create(
+                vec![nat_var_3.clone()],
+                PrimeFormula::create(
+                    eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
+                    vec![
+                        Application::create(
+                            nat_eq_term.clone(),
+                            vec![nat_var_3.clone(), nat_var_3.clone()]
+                        ),
+                        true_const.clone()
+                    ]
+                )
+            ),
+            vec![nat_var_1.clone()]
+        )
+    );
+    println!("Next Goal Formula:");
+    println!("{}", formula_to_prove1.debug_string());
     
-    let ord_total_elim = extract_elimination_axiom(&ord_total);
-    println!("Totality Elimination Axiom:");
-    println!("{}", ord_total_elim.debug_string());
+    let subproof3 = generate_proof_by_use(
+        &formula_to_prove1,
+        &nat_total_elim_proof,
+        &context3
+    );
+    println!("Subproof by Use:");
+    println!("{}", subproof3.render_proof_tree());
     
-    let ord_total_elim_proof = extract_elimination_proof(&ord_total);
-    println!("Totality Elimination Proof:");
-    println!("{}", ord_total_elim_proof.render_proof_tree());
+    let normalized_proof2 = subproof3.normalize(false, false);
+    println!("Normalized Proof:");
+    println!("{}", normalized_proof2.render_proof_tree());
+    
+    let goal4 = normalized_proof2.get_goals(&mut HashSet::new()).iter().next().unwrap()
+        .to_goal().unwrap().clone();
+    let context4 = goal4.get_context().clone();
+    
+    println!("Final Goal to Prove:");
+    println!("{}", goal4.render_proof_tree());
+    
+    let subproof_final = generate_proof_by_intro(
+        &goal4.proved_formula(),
+        &"EqIntro".to_string(),
+        &context4
+    );
+    println!("Final Subproof by Introduction:");
+    println!("{}", subproof_final.render_proof_tree());
+
+    let complete_subproof_0 = normalized_proof2.substitute(&Rc::new(MinlogProof::Goal(goal4.clone())).into(), &subproof_final.into());
+    println!("Complete Subproof 0:");
+    println!("{}", complete_subproof_0.render_proof_tree());
+    
+    let complete_subproof_1 = generate_proof_by_use(
+        &goal3.proved_formula(),
+        &complete_subproof_0,
+        &context3
+    );
+    println!("Complete Subproof 1:");
+    println!("{}", complete_subproof_1.render_proof_tree());
+    
+    let complete_subproof_2 = subproof2.substitute(&Rc::new(MinlogProof::Goal(goal3.clone())).into(), &complete_subproof_1.into());
+    println!("Complete Subproof 2:");
+    println!("{}", complete_subproof_2.render_proof_tree());
+    
+    let complete_subproof_3 = normalized_proof.substitute(&Rc::new(MinlogProof::Goal(goal2.clone())).into(), &complete_subproof_2.into());
+    println!("Complete Subproof 3:");
+    println!("{}", complete_subproof_3.render_proof_tree());
+    
+    let complete_subproof_4 = generate_proof_by_use(
+        &goal1.proved_formula(),
+        &complete_subproof_3,
+        &context1
+    );
+    println!("Complete Subproof 4:");
+    println!("{}", complete_subproof_4.render_proof_tree());
+    
+    let complete_proof_5 = subproof0.substitute(&Rc::new(MinlogProof::Goal(goal1.clone())).into(), &complete_subproof_4.into());
+    println!("Complete Subproof 5:");
+    println!("{}", complete_proof_5.render_proof_tree());
+    
+    let complete_proof = assume_proof.substitute(&Rc::new(MinlogProof::Goal(goal0.clone())).into(), &complete_proof_5.into());
+    println!("Complete Proof:");
+    println!("{}", complete_proof.render_proof_tree());
+    
+    println!("Complete Proof is valid: {}", complete_proof.is_closed());
+    
+    println!("Complete Proof (Unfolded):");
+    println!("{}", complete_proof.unfold().render_proof_tree());
 }
