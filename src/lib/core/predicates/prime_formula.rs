@@ -1,5 +1,6 @@
-use std::{rc::Rc, collections::HashSet};
+use std::{rc::Rc, cmp::min, collections::HashSet};
 
+use crate::core::predicates::comprehension_term::ComprehensionTerm;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -12,27 +13,57 @@ use crate::core::terms::minlog_term::MinlogTerm;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
 
-use crate::core::predicates::predicate_substitution::PredSubstEntry;
+use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
-    pub body: Rc<MinlogPredicate>,
-    pub arguments: Vec<Rc<MinlogTerm>>,
+    body: Rc<MinlogPredicate>,
+    arguments: Vec<Rc<MinlogTerm>>,
+    arity: Rc<MinlogType>,
 }
 
 impl PrimeFormula {
     pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogPredicate> {
-        if body.unpacked_arity().len() != arguments.len() {
-            panic!("Number of arguments does not match predicate arity");
+        if arguments.is_empty() {
+            return body;
         }
+        
+        let unpacked_arity = body.unpacked_arity();
 
-        for (arg, expected_type) in arguments.iter().zip(body.unpacked_arity().iter()) {
-            if arg.minlog_type() != *expected_type {
+        if unpacked_arity.len() < arguments.len() {
+            panic!("Tried to create PrimeFormula with too many arguments");
+        }
+        
+        for (i, arg) in arguments.iter().enumerate() {
+            if arg.minlog_type() != unpacked_arity[i] {
                 panic!("Argument type does not match predicate arity type");
             }
         }
         
-        Rc::new(MinlogPredicate::Prime(PrimeFormula { body, arguments }))
+        let arity = if unpacked_arity.len() == arguments.len() {
+            TupleType::create_unit()
+        } else {
+            TupleType::create(unpacked_arity[arguments.len()..].to_vec())
+        };
+
+        PrimeFormula::collapse(&Rc::new(MinlogPredicate::Prime(PrimeFormula { body, arguments, arity })))
+    }
+    
+    pub fn collapse(prime: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        if !prime.is_prime() || !prime.to_prime().unwrap().body.is_prime() {
+            prime.clone()
+        } else {
+            let mut prime = prime.to_prime().unwrap().clone();
+            let mut args = prime.arguments.clone();
+            
+            while prime.body.is_prime() {
+                let inner_prime = prime.body.to_prime().unwrap();
+                args.extend(inner_prime.arguments.iter().cloned());
+                prime.body = inner_prime.body.clone();
+            }
+            
+            PrimeFormula::create(prime.body.clone(), args)
+        }
     }
     
     pub fn body(&self) -> &Rc<MinlogPredicate> {
@@ -54,7 +85,7 @@ impl PrimeFormula {
 
 impl PredicateBody for PrimeFormula {
     fn arity(&self) -> Rc<MinlogType> {
-        TupleType::create_unit()
+        self.arity.clone()
     }
     
     fn degree(&self) -> PredicateDegree {
@@ -62,11 +93,68 @@ impl PredicateBody for PrimeFormula {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
-        let norm_args: Vec<Rc<MinlogTerm>> = self.arguments.iter()
-            .map(|arg| arg.normalize(eta, pi))
-            .collect();
+        if self.arguments.is_empty() {
+            return self.body.normalize(eta, pi);
+        }
         
-        PrimeFormula::create(self.body.normalize(eta, pi), norm_args)
+        if pi {
+            for arg in &self.arguments {
+                if arg.is_tuple() || arg.is_conditional() {
+                    println!("Warning: Pi-normalization of Prime Formulas is not implemented yet.");
+                    break;
+                }
+            }
+        }
+        
+        if self.body.is_comprehension_term() {
+            let cterm = self.body.to_comprehension_term().unwrap();
+            
+            let applicable_arguments = min(self.arguments.len(), cterm.vars().len());
+            let mut subst = PredicateSubstitution::make_empty();
+            
+            for i in 0..applicable_arguments {
+                let var = &cterm.vars()[i];
+                let arg = &self.arguments[i];
+                
+                if var.minlog_type() != arg.minlog_type() {
+                    panic!("Type mismatch during beta-normalization of Prime Formula.");
+                }
+                
+                if var.totality(&mut HashSet::new()).is_total() && arg.totality(&mut HashSet::new()).is_partial() {
+                    panic!("Cannot substitute partial term for total variable during beta-normalization of Prime Formula.");
+                }
+                
+                if arg.contains_free_variable(var) {
+                    panic!("Tried to apply term that contains the bound variable during beta-normalization of Prime Formula.");
+                }
+                
+                subst.extend((var.clone().into(), arg.clone().into()));
+            }
+            
+            let new_body = subst.substitute::<PredSubstEntry>(&cterm.body().into()).to_predicate().unwrap();
+            
+            let remaining_vars = cterm.vars()[applicable_arguments..].to_vec();
+            let inner_pred = if remaining_vars.is_empty() {
+                new_body.normalize(eta, pi)
+            } else {
+                ComprehensionTerm::create(remaining_vars, new_body).normalize(eta, pi)
+            };
+            
+            let remaining_args = self.arguments[applicable_arguments..].to_vec();
+            
+            if remaining_args.is_empty() {
+                inner_pred
+            } else {
+                PrimeFormula::create(inner_pred, remaining_args).normalize(eta, pi)
+            }
+        } else {
+            let new_body = self.body.normalize(eta, pi);
+            let new_arguments = self.arguments.iter()
+                .map(|arg| arg.normalize(eta, pi))
+                .collect();
+            
+            PrimeFormula::create(new_body, new_arguments)
+        }
     }
     
     fn depth(&self) -> usize {

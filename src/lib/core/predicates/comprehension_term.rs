@@ -24,6 +24,10 @@ pub struct ComprehensionTerm {
 
 impl ComprehensionTerm {
     pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        if vars.is_empty() {
+            return body;
+        }
+        
         if vars.iter().any(|v| !v.is_variable()) {
             panic!("Tried to create comprehension term with non-variable bound terms");
         }
@@ -91,11 +95,21 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm {
-            vars: self.vars.clone(),
-            body: self.body.normalize(eta, pi),
-            arity: self.arity.clone(),
-        }))
+        let new_body = self.body.normalize(eta, pi);
+        
+        let vars = if eta {
+            self.vars.iter()
+                .filter(|v| new_body.contains_free_variable(v))
+                .cloned().collect()
+        } else {
+            self.vars.clone()
+        };
+        
+        if vars.is_empty() {
+            new_body
+        } else {
+            ComprehensionTerm::create(vars, new_body)
+        }
     }
     
     fn depth(&self) -> usize {
