@@ -135,6 +135,18 @@ impl RewriteRule {
             .union(&self.result.get_bound_variables(visited)).cloned().collect::<HashSet<_>>()
             .union(&self.pattern.get_free_variables(visited)).cloned().collect()
     }
+    
+    pub fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        self.pattern.get_constructors(visited).union(&self.result.get_constructors(visited)).cloned().collect()
+    }
+    
+    pub fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        self.pattern.get_program_terms(visited).union(&self.result.get_program_terms(visited)).cloned().collect()
+    }
+    
+    pub fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+        self.pattern.get_internal_constants(visited).union(&self.result.get_internal_constants(visited)).cloned().collect()
+    }
 }
 
 impl SubstitutableWith<TermSubstEntry> for Rc<RewriteRule> {

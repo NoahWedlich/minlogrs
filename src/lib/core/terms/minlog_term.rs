@@ -14,6 +14,7 @@ use crate::core::terms::abstraction::Abstraction;
 use crate::core::terms::application::Application;
 use crate::core::terms::tuple::Tuple;
 use crate::core::terms::projection::Projection;
+use crate::core::terms::match_term::MatchTerm;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -87,7 +88,7 @@ crate::wrapper_enum! {
         Application(||application|| Application),
         Tuple(||tuple|| Tuple),
         Projection(||projection|| Projection),
-        Conditional(||conditional||),
+        MatchTerm(||match_term|| MatchTerm),
     }
     
     impl PrettyPrintable {

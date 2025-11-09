@@ -9,5 +9,6 @@ pub mod abstraction;
 pub mod application;
 pub mod tuple;
 pub mod projection;
+pub mod match_term;
 
 pub mod term_substitution;

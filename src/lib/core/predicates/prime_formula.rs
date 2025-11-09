@@ -95,7 +95,7 @@ impl PredicateBody for PrimeFormula {
         
         if pi {
             for arg in &self.arguments {
-                if arg.is_tuple() || arg.is_conditional() {
+                if arg.is_tuple() || arg.is_match_term() {
                     println!("Warning: Pi-normalization of Prime Formulas is not implemented yet.");
                     break;
                 }

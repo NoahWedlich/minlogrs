@@ -103,7 +103,7 @@ impl TermBody for Application {
         
         if pi {
             for op in &self.operands {
-                if op.is_tuple() || op.is_conditional() {
+                if op.is_tuple() || op.is_match_term() {
                     println!("Warning: Pi-normalization for Applications is not implemented yet.");
                     break;
                 }
@@ -153,6 +153,12 @@ impl TermBody for Application {
             let (computed, success) = self.operator.to_program_term().unwrap().pconst().compute(
                 &Application::create(self.operator.clone(), self.operands.clone())
             );
+            
+            if success {
+                return computed.normalize(eta, pi);
+            }
+        } else if self.operator.is_match_term() {
+            let (computed, success) = self.operator.to_match_term().unwrap().compute(&self.operands()[0]);
             
             if success {
                 return computed.normalize(eta, pi);

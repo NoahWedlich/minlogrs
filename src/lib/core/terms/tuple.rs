@@ -46,8 +46,8 @@ impl TermBody for Tuple {
                 println!("Warning: Eta-reduction for tuples of projections not implemented yet.");
             }
             
-            if self.elements.iter().all(|e| e.is_conditional()) {
-                println!("Warning: Eta-reduction for tuples of conditionals not implemented yet.");
+            if self.elements.iter().all(|e| e.is_match_term()) {
+                println!("Warning: Eta-reduction for tuples of match terms not implemented yet.");
             }
         }
         
