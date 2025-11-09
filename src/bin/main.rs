@@ -5,7 +5,7 @@ core::{predicates::comprehension_term::ComprehensionTerm,
     proofs::{minlog_proof::{MinlogProof, ProofBody},
     proof_context::ProofContext},
     structures::program_constant::{ProgramConstant, RewriteRule},
-    terms::{application::Application, program_term::ProgramTerm, term_substitution::TermSubstitution}}};
+    terms::{application::Application, program_term::ProgramTerm, term_substitution::TermSubstitution}, types::type_constant::TypeConstant}};
 use lib::proof_generation::by_use::generate_proof_by_use;
 use lib::proof_generation::by_assume::{generate_proof_by_assume, generate_proof_by_assume_with_name};
 use lib::proof_generation::by_intro::generate_proof_by_intro;
@@ -193,6 +193,38 @@ fn main() {
     
     println!("Program Constant:");
     println!("{}", nat_eq.debug_string());
+    
+    let algebra = Algebra::create("TestAlgebra".to_string());
+    let algebra_type = AlgebraType::create(algebra.clone(), TypeSubstitution::make_empty());
+    
+    let test_const_type_0 = ArrowType::create(
+        vec![tvar.clone()],
+        algebra_type.clone()
+    );
+    let test_const_type_1 = ArrowType::create(
+        vec![tvar.clone(), algebra_type.clone()],
+        algebra_type.clone()
+    );
+    
+    let test_const_0 = Constructor::create("TestConst0".to_string(), test_const_type_0.clone());
+    algebra.add_constructor(test_const_0.clone());
+    
+    let test_const_1 = Constructor::create("TestConst1".to_string(), test_const_type_1.clone());
+    algebra.add_constructor(test_const_1.clone());
+    
+    algebra_type.to_algebra().unwrap().ensure_well_founded();
+    
+    println!("Algebra:");
+    println!("{}", algebra.debug_string());
+    
+    algebra.add_reduction(HashSet::from([tvar.clone()]), nat.clone());
+    
+    let test_subst = TypeSubstitution::from_pairs(
+        vec![(tvar.clone(), TypeConstant::create_null())]
+    );
+    let reduced_algebra_type = test_subst.substitute(&algebra_type).remove_nulls().unwrap();
+    println!("Reduced Algebra Type:");
+    println!("{}", reduced_algebra_type.debug_string());
     
     let target = AllQuantifier::create(
         vec![nat_var_1.clone(), nat_var_2.clone()],

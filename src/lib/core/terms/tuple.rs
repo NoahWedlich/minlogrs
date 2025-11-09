@@ -55,6 +55,18 @@ impl TermBody for Tuple {
         Tuple::create(new_elements)
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let new_elements = self.elements.iter()
+            .filter_map(|e| e.remove_nulls())
+            .collect::<Vec<_>>();
+        
+        if new_elements.is_empty() {
+            None
+        } else {
+            Some(Tuple::create(new_elements))
+        }
+    }
+    
     fn length(&self) -> usize {
         1 + self.elements.iter().map(|e| e.length()).sum::<usize>()
     }

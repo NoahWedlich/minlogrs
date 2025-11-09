@@ -60,6 +60,26 @@ impl TermBody for Projection {
         Projection::create(new_term, self.index)
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        if let Some(tuple) = self.term.to_tuple() {
+            let mut new_index = self.index;
+            
+            for i in 0..self.index {
+                if tuple.element(i).unwrap().remove_nulls().is_none() {
+                    new_index -= 1;
+                }
+            }
+            
+            self.term.remove_nulls().map(|new_term| {
+                Projection::create(new_term, new_index)
+            })
+        } else {
+            self.term.remove_nulls().map(|new_term| {
+                Projection::create(new_term, self.index)
+            })
+        }
+    }
+    
     fn length(&self) -> usize {
         1 + self.term.length()
     }

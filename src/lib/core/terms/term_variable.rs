@@ -53,6 +53,16 @@ impl TermBody for TermVariable {
         Rc::new(MinlogTerm::Variable(self.clone()))
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        self.minlog_type.remove_nulls().map(|new_type| {
+            Rc::new(MinlogTerm::Variable(TermVariable {
+                name: self.name.clone(),
+                minlog_type: new_type,
+                index: self.index,
+            }))
+        })
+    }
+    
     fn length(&self) -> usize {
         1
     }

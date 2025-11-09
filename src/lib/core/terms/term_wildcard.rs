@@ -32,6 +32,12 @@ impl TermBody for TermWildcard {
         Rc::new(MinlogTerm::Wildcard(self.clone()))
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        self.minlog_type.remove_nulls().map(|new_type| {
+            TermWildcard::create(new_type)
+        })
+    }
+    
     fn length(&self) -> usize {
         1
     }

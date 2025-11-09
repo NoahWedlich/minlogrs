@@ -48,6 +48,24 @@ impl TermBody for Constructor {
         Constructor::create(self.name.clone(), self.minlog_type.clone())
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let algebra_type = if let Some(algebra) = self.minlog_type.to_algebra() {
+            algebra
+        } else if let Some(arrow) = self.minlog_type.to_arrow() {
+            arrow.value().to_algebra()?
+        } else {
+            return None;
+        };
+        
+        if let Some(reduction) = algebra_type.get_reduction() {
+            let new_name = reduction.constructor_mapping.get(&self.name).unwrap().clone();
+            let new_type = self.minlog_type.remove_nulls().unwrap();
+            Some(Constructor::create(new_name, new_type))
+        } else {
+            Some(Constructor::create(self.name.clone(), self.minlog_type.clone()))
+        }
+    }
+    
     fn length(&self) -> usize {
         1
     }

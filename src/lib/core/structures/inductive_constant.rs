@@ -82,8 +82,6 @@ impl InductiveConstant {
                 algebra.add_constructor(Constructor::create(name, et_type));
             }
         }
-        
-        *self.algebra.borrow_mut() = Some(algebra);
     }
     
     pub fn is_computational(&self) -> bool {

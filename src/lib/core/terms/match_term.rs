@@ -77,6 +77,25 @@ impl TermBody for MatchTerm {
         MatchTerm::create(self.minlog_type.clone(), normalized_branches)
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let new_branches = self.branches.iter().filter_map(|(pattern, result)| {
+            let new_pattern = pattern.remove_nulls();
+            let new_result = result.remove_nulls();
+            
+            if new_pattern.is_none() || new_result.is_none() {
+                return None;
+            }
+            
+            Some((new_pattern.unwrap(), new_result.unwrap()))
+        }).collect::<Vec<_>>();
+        
+        if new_branches.is_empty() {
+            None
+        } else {
+            Some(MatchTerm::create(self.minlog_type.clone(), new_branches))
+        }
+    }
+    
     fn length(&self) -> usize {
         1
     }

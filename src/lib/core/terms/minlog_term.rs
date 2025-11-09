@@ -26,6 +26,8 @@ crate::wrapper_enum! {
         
         pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogTerm>
         
+        pub fn remove_nulls(&Self) -> Option<Rc<MinlogTerm>>
+        
         pub fn length(&Self) -> usize {
             0
         }
@@ -148,6 +150,10 @@ impl TermBody for EmptyTermBody {
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
         unimplemented!()
+    }
+    
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        None
     }
     
     fn alpha_equivalent(&self, _other: &Rc<MinlogTerm>,

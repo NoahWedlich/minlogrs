@@ -11,7 +11,7 @@ use crate::core::terms::minlog_term::MinlogTerm;
 
 use crate::core::types::type_substitution::TypeSubstitution;
 
-use crate::core::structures::algebra::Algebra;
+use crate::core::structures::algebra::{Algebra, AlgebraReduction};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AlgebraType {
@@ -91,6 +91,21 @@ impl AlgebraType {
             }
         }
     }
+    
+    pub fn get_reduction(&self) -> Option<AlgebraReduction> {
+        let null_types = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+            .into_iter().filter_map(|ptv| {
+                let original_type = ptv.value;
+                let substituted_type = self.parameters.substitute(&original_type).remove_nulls();
+                if substituted_type.is_none() {
+                    None
+                } else {
+                    Some(original_type)
+                }
+            }).collect::<HashSet<_>>();
+            
+        self.algebra.reduce(&null_types)
+    }
 }
 
 impl TypeBody for AlgebraType {
@@ -99,7 +114,23 @@ impl TypeBody for AlgebraType {
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
-        Some(AlgebraType::create(self.algebra.clone(), self.parameters.clone()))
+        if let Some(reduction) = self.get_reduction() {
+            let new_parameters = TypeSubstitution::from_pairs(
+                self.parameters.pairs().into_iter().filter_map(|(from, to)| {
+                    let substituted_from = self.parameters.substitute(&from);
+                    let substituted_to = self.parameters.substitute(&to);
+                    if substituted_from.is_null() || substituted_to.is_null() {
+                        None
+                    } else {
+                        Some((from, to))
+                    }
+                }
+            ).collect());
+            
+            Some(AlgebraType::create(reduction.reduced_algebra, new_parameters))
+        } else {
+            Some(Rc::new(MinlogType::Algebra(self.clone())))
+        }
     }
     
     fn level(&self) -> usize {

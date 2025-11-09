@@ -1,6 +1,6 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
-use crate::utils::pretty_printer::*;
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::{HashMap, HashSet}};
+use crate::{core::{terms::constructor::Constructor, types::{algebra_type::AlgebraType, type_constant::TypeConstant, type_substitution::TypeSubstitution}}, utils::pretty_printer::*};
 
 use crate::core::polarity::{Polarity, Polarized};
 
@@ -9,14 +9,21 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
 #[derive(Clone, PartialEq, Eq)]
+pub struct AlgebraReduction {
+    pub reduced_algebra: Rc<Algebra>,
+    pub constructor_mapping: HashMap<String, String>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct Algebra {
     name: String,
     constructors: RefCell<Vec<Rc<MinlogTerm>>>,
+    reductions: RefCell<HashMap<Vec<Rc<MinlogType>>, AlgebraReduction>>
 }
 
 impl Algebra {
     pub fn create(name: String) -> Rc<Algebra> {
-        Rc::new(Algebra { name, constructors: RefCell::new(vec![]) })
+        Rc::new(Algebra { name, constructors: RefCell::new(vec![]), reductions: RefCell::new(HashMap::new()) })
     }
     
     pub fn name(&self) -> &String {
@@ -57,6 +64,175 @@ impl Algebra {
         }
         
         self.constructors.borrow_mut().push(constructor);
+    }
+    
+    pub fn reductions(&self) -> HashMap<Vec<Rc<MinlogType>>, AlgebraReduction> {
+        self.reductions.borrow().clone()
+    }
+    
+    pub fn add_reduction(&self, null_types: HashSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>) {
+        let relevant_null_types = null_types
+            .intersection(
+                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect()
+            ).cloned().collect::<Vec<_>>();
+        
+        if self.reductions.borrow().contains_key(&relevant_null_types) {
+            panic!("Reduction for algebra '{}' with null types {:?} already exists", self.name, relevant_null_types.iter().map(|t| t.debug_string()).collect::<Vec<_>>());
+        }
+        
+        let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
+        let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
+        
+        let mut constructor_mapping = HashMap::new();
+        let mut remaining_constructors = reduced_algebra.constructors.borrow().clone();
+        
+        for constructor in self.constructors.borrow().iter() {
+            let subst = TypeSubstitution::from_pairs(
+                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+            );
+            
+            let mut reduced_type = subst.substitute(&constructor.minlog_type());
+            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.remove_nulls().unwrap();
+            
+            let possible_constructors = remaining_constructors.iter().filter_map(|c| {
+                if c.minlog_type() == reduced_type {
+                    Some(c.to_constructor().unwrap().name().clone())
+                } else {
+                    None
+                }
+            }).collect::<Vec<_>>();
+            
+            if possible_constructors.is_empty() {
+                panic!("No matching constructor found in reduced algebra '{}' for constructor '{}' of algebra '{}' with reduced type '{}'",
+                    reduced_algebra.name, constructor.debug_string(), self.name, reduced_type.debug_string());
+            } else if possible_constructors.len() > 1 {
+                panic!("Multiple matching constructors found in reduced algebra '{}' for constructor '{}' of algebra '{}' with reduced type '{}': [{}]",
+                    reduced_algebra.name, constructor.debug_string(), self.name, reduced_type.debug_string(), possible_constructors.join(", "));
+            } else {
+                constructor_mapping.insert(constructor.to_constructor().unwrap().name().clone(), possible_constructors[0].clone());
+                remaining_constructors.retain(|c| c.to_constructor().unwrap().name() != &possible_constructors[0]);
+            }
+        }
+        
+        self.reductions.borrow_mut().insert(relevant_null_types, AlgebraReduction {
+            reduced_algebra,
+            constructor_mapping,
+        });
+    }
+    
+    pub fn add_reduction_with_mapping(&self, null_types: HashSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>, constructor_mapping: HashMap<String, String>) {
+        let relevant_null_types = null_types
+            .intersection(
+                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect()
+            ).cloned().collect::<Vec<_>>();
+        
+        if self.reductions.borrow().contains_key(&relevant_null_types) {
+            panic!("Reduction for algebra '{}' with null types {:?} already exists", self.name, relevant_null_types.iter().map(|t| t.debug_string()).collect::<Vec<_>>());
+        }
+        
+        let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
+        let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
+        
+        for constructor in self.constructors.borrow().iter() {
+            let subst = TypeSubstitution::from_pairs(
+                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+            );
+            
+            let mut reduced_type = subst.substitute(&constructor.minlog_type());
+            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.remove_nulls().unwrap();
+            
+            if let Some(reduced_constructor_name) = constructor_mapping.get(constructor.to_constructor().unwrap().name()) {
+                if let Some(reduced_constructor) = reduced_algebra.constructor(reduced_constructor_name) {
+                    if reduced_constructor.minlog_type() != reduced_type {
+                        panic!("Mapped constructor '{}' in reduced algebra '{}' does not match reduced type '{}' for constructor '{}' of algebra '{}'",
+                            reduced_constructor_name, reduced_algebra.name, reduced_type.debug_string(), constructor.debug_string(), self.name);
+                    }
+                } else {
+                    panic!("Mapped constructor '{}' not found in reduced algebra '{}'", reduced_constructor_name, reduced_algebra.name);
+                }
+            } else {
+                panic!("No mapping provided for constructor '{}' of algebra '{}'", constructor.debug_string(), self.name);
+            }
+        }
+        
+        self.reductions.borrow_mut().insert(relevant_null_types, AlgebraReduction {
+            reduced_algebra,
+            constructor_mapping,
+        });
+    }
+    
+    pub fn generate_reduction(&self, null_types: HashSet<Rc<MinlogType>>, name: String) {
+        let relevant_null_types = null_types
+            .intersection(
+                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect()
+            ).cloned().collect::<Vec<_>>();
+        
+        if self.reductions.borrow().contains_key(&relevant_null_types) {
+            panic!("Reduction for algebra '{}' with null types {:?} already exists",
+                self.name, relevant_null_types.iter().map(|t| t.debug_string()).collect::<Vec<_>>()
+            );
+        }
+        
+        let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
+        
+        let reduced_algebra = Algebra::create(name);
+        let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
+        
+        for constructor in self.constructors.borrow().iter() {
+            let subst = TypeSubstitution::from_pairs(
+                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+            );
+            
+            let mut reduced_type = subst.substitute(&constructor.minlog_type());
+            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.remove_nulls().unwrap();
+            
+            let reduced_constructor = Constructor::create(
+                constructor.to_constructor().unwrap().name().clone(),
+                reduced_type
+            );
+            
+            reduced_algebra.add_constructor(reduced_constructor);
+        }
+        
+        reduced_algebra_type.to_algebra().unwrap().ensure_well_founded();
+        
+        let constructor_mapping = self.constructors.borrow().iter().map(|c| {
+            (c.to_constructor().unwrap().name().clone(), c.to_constructor().unwrap().name().clone())
+        }).collect::<HashMap<_, _>>();
+        
+        self.reductions.borrow_mut().insert(relevant_null_types, AlgebraReduction {
+            reduced_algebra,
+            constructor_mapping,
+        });
+    }
+    
+    pub fn reduce(&self, null_types: &HashSet<Rc<MinlogType>>) -> Option<AlgebraReduction> {
+        let relevant_null_types = null_types
+            .intersection(
+                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect()
+            ).cloned().collect::<Vec<_>>();
+            
+        if relevant_null_types.is_empty() {
+            return None;
+        }
+        
+        if self.reductions.borrow().contains_key(&relevant_null_types) {
+            Some(self.reductions.borrow().get(&relevant_null_types).unwrap().clone())
+        } else {
+            self.generate_reduction(
+                relevant_null_types.iter().cloned().collect(),
+                format!("{}Red{}", self.name, self.reductions.borrow().len())
+            );
+            
+            Some(self.reductions.borrow().get(&relevant_null_types).unwrap().clone())
+        }
     }
     
     pub fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
@@ -106,7 +282,7 @@ impl PrettyPrintable for Algebra {
                 self.constructors.borrow().iter().map(|c| c.to_pp_element(true)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(";".to_string()),
-                PPElement::break_elem(1, 4, true),
+                PPElement::break_elem(1, 0, true),
                 BreakType::Flexible,
             );
             

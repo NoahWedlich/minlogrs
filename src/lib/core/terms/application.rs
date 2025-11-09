@@ -170,6 +170,16 @@ impl TermBody for Application {
         Application::create(operator, operands)
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let new_operands = self.operands.iter()
+            .filter_map(|op| op.remove_nulls())
+            .collect::<Vec<_>>();
+        
+        self.operator.remove_nulls().map(|new_operator| {
+            Application::create(new_operator, new_operands)
+        })
+    }
+    
     fn length(&self) -> usize {
         1 + self.operands.iter().map(|op| op.length()).sum::<usize>() + self.operator.length()
     }

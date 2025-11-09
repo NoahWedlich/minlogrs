@@ -119,6 +119,16 @@ impl TermBody for Abstraction {
         }
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let new_vars = self.vars.iter()
+            .filter_map(|v| v.remove_nulls())
+            .collect::<Vec<_>>();
+        
+        self.kernel.remove_nulls().map(|k|
+            Abstraction::create(new_vars, k)
+        )
+    }
+    
     fn length(&self) -> usize {
         1 + self.kernel.length()
     }

@@ -65,6 +65,27 @@ impl TermBody for ProgramTerm {
         ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
     }
     
+    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
+        let new_parameters = TermSubstitution::from_pairs(
+            self.parameters.pairs().iter().filter_map(|(from, to)| {
+                match to {
+                    TermSubstEntry::Type(to_t) => {
+                        to_t.remove_nulls().map(|new_type|
+                            (from.clone(), TermSubstEntry::Type(new_type))
+                        )
+                    },
+                    TermSubstEntry::Term(to_tm) => {
+                        to_tm.remove_nulls().map(|new_term|
+                            (from.clone(), TermSubstEntry::Term(new_term))
+                        )
+                    }
+                }
+            }
+        ).collect());
+        
+        Some(ProgramTerm::create(self.pconst.clone(), new_parameters))
+    }
+    
     fn length(&self) -> usize {
         1
     }
