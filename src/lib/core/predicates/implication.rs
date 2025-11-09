@@ -11,7 +11,7 @@ use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -69,14 +69,6 @@ impl Implication {
 impl PredicateBody for Implication {
     fn arity(&self) -> Rc<MinlogType> {
         self.conclusion.arity()
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        PredicateDegree {
-            positive_content: self.conclusion.degree().positive_content,
-            negative_content: self.premises.iter().any(|p| p.degree().positive_content)
-                || self.conclusion.degree().negative_content,
-        }
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {

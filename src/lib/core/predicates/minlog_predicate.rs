@@ -20,19 +20,9 @@ use crate::core::predicates::all_quantifier::AllQuantifier;
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub struct PredicateDegree {
-    pub positive_content: bool,
-    pub negative_content: bool,
-}
-
 crate::wrapper_enum! {
     pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn arity(&Self) -> Rc<MinlogType>
-        
-        pub fn degree(&Self) -> PredicateDegree {
-            PredicateDegree { positive_content: false, negative_content: false }
-        }
         
         pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogPredicate>
         

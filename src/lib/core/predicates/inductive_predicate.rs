@@ -10,7 +10,7 @@ use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::algebra_type::AlgebraType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate};
 
 use crate::core::types::type_substitution::TypeSubstitution;
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -118,20 +118,6 @@ impl InductivePredicate {
 impl PredicateBody for InductivePredicate {
     fn arity(&self) -> Rc<MinlogType> {
         self.params.substitute::<PredSubstEntry>(&self.definition.arity().into()).to_type().unwrap()
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        if !self.definition.is_computational() && !self.definition.clauses().len() <= 1 {
-            PredicateDegree{
-                positive_content: false,
-                negative_content: true
-            }
-        } else {
-            PredicateDegree{
-                positive_content: true,
-                negative_content: true
-            }
-        }
     }
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {

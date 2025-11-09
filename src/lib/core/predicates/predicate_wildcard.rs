@@ -8,7 +8,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_constant::TypeConstant;
 
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -30,10 +30,6 @@ impl PredicateBody for PredicateWildcard {
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
         Rc::new(MinlogPredicate::Wildcard(self.clone()))
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        PredicateDegree { positive_content: false, negative_content: false }
     }
     
     fn extracted_type(&self) -> Rc<MinlogType> {

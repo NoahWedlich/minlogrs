@@ -9,7 +9,7 @@ use crate::core::polarity::{Polarity, Polarized};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_variable::TypeVariable;
 
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
 
@@ -17,13 +17,12 @@ use crate::core::predicates::predicate_substitution::PredSubstEntry;
 pub struct PredicateVariable {
     name: String,
     arity: Rc<MinlogType>,
-    degree: PredicateDegree,
     index: usize,
 }
 
 impl PredicateVariable {
-    pub fn create(name: String, arity: Rc<MinlogType>, degree: PredicateDegree) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Variable(PredicateVariable { name, arity, degree, index: 0 }))
+    pub fn create(name: String, arity: Rc<MinlogType>) -> Rc<MinlogPredicate> {
+        Rc::new(MinlogPredicate::Variable(PredicateVariable { name, arity, index: 0 }))
     }
     
     pub fn unshadow(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
@@ -31,7 +30,6 @@ impl PredicateVariable {
             Rc::new(MinlogPredicate::Variable(PredicateVariable {
                 name: pv.name.clone(),
                 arity: pv.arity.clone(),
-                degree: pv.degree.clone(),
                 index: pv.index + 1,
             }))
         } else {
@@ -46,10 +44,6 @@ impl PredicateVariable {
     pub fn index(&self) -> usize {
         self.index
     }
-    
-    pub fn set_degree(&mut self, degree: PredicateDegree) {
-        self.degree = degree;
-    }
 }
 
 impl PredicateBody for PredicateVariable {
@@ -59,10 +53,6 @@ impl PredicateBody for PredicateVariable {
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
         Rc::new(MinlogPredicate::Variable(self.clone()))
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        self.degree.clone()
     }
     
     fn extracted_type(&self) -> Rc<MinlogType> {
@@ -97,7 +87,6 @@ impl PredicateBody for PredicateVariable {
                 Rc::new(MinlogPredicate::Variable(PredicateVariable {
                     name: self.name.clone(),
                     arity: new_arity,
-                    degree: self.degree.clone(),
                     index: self.index,
                 }))
             },
@@ -136,14 +125,6 @@ impl PredicateBody for PredicateVariable {
                     ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
                     ctx.extend(&p.clone().into(), &i.clone().into());
                     return MatchOutput::Matched;
-                }
-                
-                match (p.degree(), i.degree()) {
-                    (PredicateDegree{ positive_content: false, .. }, PredicateDegree{ positive_content: true, .. }) |
-                    (PredicateDegree{ negative_content: false, .. }, PredicateDegree{ negative_content: true, .. }) => {
-                        return MatchOutput::FailedMatch;
-                    },
-                    _ => {}
                 }
                 
                 MatchOutput::Substitution(p.into(), i.into())

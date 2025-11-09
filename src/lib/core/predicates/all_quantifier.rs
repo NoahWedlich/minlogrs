@@ -9,7 +9,7 @@ use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::{PredicateSubstitution, PredSubstEntry};
 
@@ -82,13 +82,6 @@ impl AllQuantifier {
 impl PredicateBody for AllQuantifier {
     fn arity(&self) -> Rc<MinlogType> {
         self.body.arity()
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        PredicateDegree {
-            positive_content: self.body.degree().positive_content,
-            negative_content: false // TODO: This should be deprecated
-        }
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {

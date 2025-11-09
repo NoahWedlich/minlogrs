@@ -20,7 +20,6 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
     let pvar = PredicateVariable::create(
         "P0".to_string(),
         inductive_predicate.arity().clone(),
-        inductive_predicate.degree()
     );
     
     let arguments = (0..inductive_predicate.unpacked_arity().len()).map(|i| {
@@ -64,7 +63,6 @@ fn clause_to_elimination_clauses(
                     let new_pvar = PredicateVariable::create(
                         format!("P{}", index),
                         prime.body().arity().clone(),
-                        prime.body().degree()
                     );
                     pvars.insert(prime.body().clone(), new_pvar.clone());
                     new_pvar
@@ -113,7 +111,6 @@ fn inner_clause_to_elimination_clauses(
                     let new_pvar = PredicateVariable::create(
                         format!("P{}", index),
                         prime.body().arity().clone(),
-                        prime.body().degree()
                     );
                     pvars.insert(prime.body().clone(), new_pvar.clone());
                     new_pvar

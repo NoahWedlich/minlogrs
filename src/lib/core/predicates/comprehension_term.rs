@@ -11,7 +11,7 @@ use crate::core::types::tuple_type::TupleType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody, PredicateDegree};
+use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::{PredicateSubstitution, PredSubstEntry};
 
@@ -88,10 +88,6 @@ impl ComprehensionTerm {
 impl PredicateBody for ComprehensionTerm {
     fn arity(&self) -> Rc<MinlogType> {
         self.arity.clone()
-    }
-    
-    fn degree(&self) -> PredicateDegree {
-        self.body.degree()
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
