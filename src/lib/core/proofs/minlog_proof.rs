@@ -11,6 +11,7 @@ use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
+use crate::core::proofs::proof_wildcard::ProofWildcard;
 use crate::core::proofs::goal::Goal;
 use crate::core::proofs::assumption::Assumption;
 use crate::core::proofs::axiom::Axiom;
@@ -91,6 +92,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogProof {
+        Wildcard(|wildcard| ProofWildcard),
         Goal(||goal|| Goal),
         Assumption(||assumption|| Assumption),
         Axiom(||axiom|| Axiom),

@@ -1,6 +1,7 @@
 
 pub mod minlog_term;
 
+pub mod term_wildcard;
 pub mod term_variable;
 pub mod constructor;
 pub mod program_term;

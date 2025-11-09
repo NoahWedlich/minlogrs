@@ -6,6 +6,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
+use crate::core::terms::term_wildcard::TermWildcard;
 use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::constructor::Constructor;
 use crate::core::terms::program_term::ProgramTerm;
@@ -97,6 +98,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogTerm {
+        Wildcard(|wildcard| TermWildcard),
         Variable(||variable|| TermVariable),
         Constructor(||constructor|| Constructor),
         ProgramTerm(||program_term|| ProgramTerm),

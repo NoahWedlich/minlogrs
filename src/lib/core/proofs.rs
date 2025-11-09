@@ -1,6 +1,7 @@
 
 pub mod minlog_proof;
 
+pub mod proof_wildcard;
 pub mod goal;
 pub mod assumption;
 pub mod axiom;

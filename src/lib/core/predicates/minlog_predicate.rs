@@ -10,6 +10,7 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::{MinlogTerm, Totality};
 use crate::core::terms::term_variable::TermVariable;
 
+use crate::core::predicates::predicate_wildcard::PredicateWildcard;
 use crate::core::predicates::predicate_variable::PredicateVariable;
 use crate::core::predicates::comprehension_term::ComprehensionTerm;
 use crate::core::predicates::inductive_predicate::InductivePredicate;
@@ -82,6 +83,7 @@ crate::wrapper_enum! {
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogPredicate {
+        Wildcard(|wildcard| PredicateWildcard),
         Variable(||variable|| PredicateVariable),
         Comprehension(||comprehension_term|| ComprehensionTerm),
         InductivePredicate(||inductive_predicate|| InductivePredicate),

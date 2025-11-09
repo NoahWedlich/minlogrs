@@ -51,6 +51,7 @@ crate::wrapper_enum! {
         Atomic(|atomic|),
         Existential(|existential|),
         Proposition(|proposition|),
+        Wildcard(|wildcard|),
         Variable(||variable|| TypeVariable),
         Algebra(||algebra|| AlgebraType),
         Arrow(||arrow|| ArrowType),

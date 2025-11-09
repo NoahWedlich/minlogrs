@@ -12,6 +12,7 @@ pub enum TypeConstant {
     Atomic,
     Existential,
     Proposition,
+    Wildcard,
 }
 
 impl TypeConstant {
@@ -30,6 +31,10 @@ impl TypeConstant {
     pub fn create_proposition() -> Rc<MinlogType> {
         Rc::new(MinlogType::Proposition(TypeConstant::Proposition))
     }
+    
+    pub fn create_wildcard() -> Rc<MinlogType> {
+        Rc::new(MinlogType::Wildcard(TypeConstant::Wildcard))
+    }
 }
 
 impl TypeBody for TypeConstant {
@@ -39,6 +44,7 @@ impl TypeBody for TypeConstant {
             TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
             TypeConstant::Existential => Some(TypeConstant::create_existential()),
             TypeConstant::Proposition => Some(TypeConstant::create_proposition()),
+            TypeConstant::Wildcard => Some(TypeConstant::create_wildcard()),
         }
     }
     
@@ -54,6 +60,7 @@ impl TypeBody for TypeConstant {
                 TypeConstant::Atomic => TypeConstant::create_atomic(),
                 TypeConstant::Existential => TypeConstant::create_existential(),
                 TypeConstant::Proposition => TypeConstant::create_proposition(),
+                TypeConstant::Wildcard => TypeConstant::create_wildcard(),
             }
         }
     }
@@ -80,6 +87,7 @@ impl TypeBody for TypeConstant {
             } else {
                 Some((TypeConstant::create_proposition(), other.clone()))
             },
+            TypeConstant::Wildcard => None,
         }
     }
     
@@ -87,10 +95,16 @@ impl TypeBody for TypeConstant {
         let pattern = ctx.next_pattern().unwrap();
         let instance = ctx.next_instance().unwrap();
         
-        if pattern == instance {
-            MatchOutput::Matched
-        } else {
-            MatchOutput::FailedMatch
+        match self {
+            TypeConstant::Wildcard => {
+                MatchOutput::Matched
+            },
+            _ if pattern == instance => {
+                MatchOutput::Matched
+            },
+            _ => {
+                MatchOutput::FailedMatch
+            }
         }
     }
 }
@@ -102,6 +116,7 @@ impl PrettyPrintable for TypeConstant {
             TypeConstant::Atomic => PPElement::text("atomic".to_string()),
             TypeConstant::Existential => PPElement::text("existential".to_string()),
             TypeConstant::Proposition => PPElement::text("proposition".to_string()),
+            TypeConstant::Wildcard => PPElement::text("_".to_string()),
         }
     }
     
