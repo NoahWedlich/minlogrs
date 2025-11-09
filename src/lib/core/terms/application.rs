@@ -7,7 +7,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 use crate::core::terms::abstraction::Abstraction;
 
@@ -123,10 +123,6 @@ impl TermBody for Application {
                 
                 if !var.minlog_type().eq(&op.minlog_type()) {
                     panic!("Tried to apply an abstraction to an operand of the wrong type");
-                }
-                
-                if var.totality(&mut HashSet::new()) == Totality::Total && op.totality(&mut HashSet::new()) == Totality::Partial {
-                    panic!("Tried to apply an abstraction with a total variable to a partial operand");
                 }
                 
                 if op.contains_free_variable(&var.clone()) {
@@ -268,14 +264,6 @@ impl TermBody for Application {
         self.operator.alpha_equivalent(other.operator(), forward, backward) &&
             self.operands.iter().zip(other.operands.iter())
             .all(|(a, b)| a.alpha_equivalent(b, forward, backward))
-    }
-    
-    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
-        if self.operands.iter().any(|op| op.totality(bound) == Totality::Partial) {
-            return Totality::Partial;
-        }
-        
-        self.operator.totality(bound)
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

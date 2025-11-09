@@ -12,7 +12,7 @@ use crate::core::{
         implication::Implication,
         all_quantifier::AllQuantifier
     }, terms::{
-        minlog_term::Totality, term_variable::TermVariable
+        term_variable::TermVariable
     }
 };
 
@@ -27,7 +27,6 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
         TermVariable::create(
             format!("x{}", i),
             inductive_predicate.unpacked_arity()[i].clone(),
-            Totality::Partial
         )
     }).collect::<Vec<_>>();
     

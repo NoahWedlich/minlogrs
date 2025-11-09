@@ -6,8 +6,6 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
-use crate::core::types::type_constant::TypeConstant;
-use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 
@@ -89,9 +87,7 @@ impl PredicateBody for AllQuantifier {
     fn degree(&self) -> PredicateDegree {
         PredicateDegree {
             positive_content: self.body.degree().positive_content,
-            negative_content: self.vars.iter().any(
-                |v| v.totality(&mut HashSet::new()).is_total()
-            )
+            negative_content: false // TODO: This should be deprecated
         }
     }
     
@@ -105,16 +101,7 @@ impl PredicateBody for AllQuantifier {
     }
     
     fn extracted_type(&self) -> Rc<MinlogType> {
-        let var_types = self.vars.iter().map(|v| {
-            if v.totality(&mut HashSet::new()).is_total() {
-                v.minlog_type()
-            } else {
-                TypeConstant::create_null()
-            }
-        }).collect::<Vec<_>>();
-        
-        ArrowType::create(var_types, self.body.extracted_type())
-            .remove_nulls().unwrap_or(TypeConstant::create_null())
+        self.body.extracted_type()
     }
     
     fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {

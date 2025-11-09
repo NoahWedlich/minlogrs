@@ -8,7 +8,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::tuple_type::TupleType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -137,14 +137,6 @@ impl TermBody for Tuple {
         }
         
         true
-    }
-    
-    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
-        if self.elements.iter().any(|e| e.totality(bound) == Totality::Partial) {
-            Totality::Partial
-        } else {
-            Totality::Total
-        }
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

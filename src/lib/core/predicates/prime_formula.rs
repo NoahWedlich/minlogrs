@@ -120,10 +120,6 @@ impl PredicateBody for PrimeFormula {
                     panic!("Type mismatch during beta-normalization of Prime Formula.");
                 }
                 
-                if var.totality(&mut HashSet::new()).is_total() && arg.totality(&mut HashSet::new()).is_partial() {
-                    panic!("Cannot substitute partial term for total variable during beta-normalization of Prime Formula.");
-                }
-                
                 if arg.contains_free_variable(var) {
                     panic!("Tried to apply term that contains the bound variable during beta-normalization of Prime Formula.");
                 }

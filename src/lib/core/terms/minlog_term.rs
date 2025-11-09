@@ -17,22 +17,6 @@ use crate::core::terms::projection::Projection;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub enum Totality {
-    Total,
-    Partial,
-}
-
-impl Totality {
-    pub fn is_total(&self) -> bool {
-        matches!(self, Totality::Total)
-    }
-    
-    pub fn is_partial(&self) -> bool {
-        matches!(self, Totality::Partial)
-    }
-}
-
 crate::wrapper_enum! {
     
     @default { EmptyTermBody }
@@ -84,10 +68,6 @@ crate::wrapper_enum! {
         pub fn alpha_equivalent(&Self, other: &Rc<MinlogTerm>,
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
-
-        pub fn totality(&Self, _bound: &mut HashSet<TermVariable>) -> Totality {
-            Totality::Partial
-        }
         
         pub fn substitute(&Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
         

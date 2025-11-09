@@ -7,7 +7,7 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{MinlogTerm, Totality};
+use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::predicates::predicate_wildcard::PredicateWildcard;
@@ -119,7 +119,7 @@ impl MinlogPredicate {
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let arity = pred.unpacked_arity();
         let vars = arity.iter().enumerate().map(|(i, t)| {
-            TermVariable::create(format!("T{}", i), t.clone(), Totality::Partial)
+            TermVariable::create(format!("T{}", i), t.clone())
         }).collect::<Vec<_>>();
         let prime_formula = PrimeFormula::create(pred.clone(), vars.clone());
         ComprehensionTerm::create(vars, prime_formula)

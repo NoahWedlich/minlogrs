@@ -16,7 +16,6 @@ use lib::core::predicates::predicate_substitution::PredicateSubstitution;
 use lib::core::predicates::inductive_predicate::InductivePredicate;
 use lib::core::predicates::prime_formula::PrimeFormula;
 use lib::core::structures::inductive_constant::InductiveConstant;
-use lib::core::terms::minlog_term::Totality;
 use lib::core::terms::term_variable::TermVariable;
 use lib::core::types::tuple_type::TupleType;
 use lib::core::types::type_substitution::TypeSubstitution;
@@ -30,7 +29,7 @@ use lib::core::structures::{algebra::*};
 
 fn main() {
     let tvar = TypeVariable::create("T".to_string());
-    let tmvar = TermVariable::create("x".to_string(), tvar.clone(), Totality::Partial);
+    let tmvar = TermVariable::create("x".to_string(), tvar.clone());
     
     let eq_def = InductiveConstant::create("Eq".to_string(), TupleType::create(vec![tvar.clone(), tvar.clone()]));
     let eq_pred = InductivePredicate::create(eq_def.clone(), PredicateSubstitution::make_empty());
@@ -82,7 +81,7 @@ fn main() {
     println!("Atom Predicate:");
     println!("{}", atom_pred.debug_string());
     
-    let bool_var = TermVariable::create("b".to_string(), bool_type.clone(), Totality::Partial);
+    let bool_var = TermVariable::create("b".to_string(), bool_type.clone());
     let atom_intro = AllQuantifier::create(
         vec![bool_var.clone()],
         Implication::create(
@@ -142,10 +141,10 @@ fn main() {
     println!("Totality Elimination Proof:");
     println!("{}", nat_total_elim_proof.render_proof_tree());
     
-    let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone(), Totality::Partial);
-    let nat_var_2 = TermVariable::create("m".to_string(), nat_type.clone(), Totality::Partial);
-    let nat_var_3 = TermVariable::create("n0".to_string(), nat_type.clone(), Totality::Partial);
-    let nat_var_4 = TermVariable::create("m0".to_string(), nat_type.clone(), Totality::Partial);
+    let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone());
+    let nat_var_2 = TermVariable::create("m".to_string(), nat_type.clone());
+    let nat_var_3 = TermVariable::create("n0".to_string(), nat_type.clone());
+    let nat_var_4 = TermVariable::create("m0".to_string(), nat_type.clone());
     
     let nat_eq = ProgramConstant::create(
         "NatEq".to_string(),
@@ -153,7 +152,6 @@ fn main() {
             vec![nat_type.clone(), nat_type.clone()],
             bool_type.clone()
         ),
-        Totality::Partial
     );
     let nat_eq_term = ProgramTerm::create(nat_eq.clone(), TermSubstitution::make_empty());
     

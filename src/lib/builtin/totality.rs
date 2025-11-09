@@ -13,7 +13,7 @@ use crate::core::{
         algebra::Algebra,
         inductive_constant::InductiveConstant
     }, terms::{
-        application::Application, minlog_term::{MinlogTerm, Totality}, projection::Projection, term_variable::TermVariable
+        application::Application, minlog_term::MinlogTerm, projection::Projection, term_variable::TermVariable
     }, types::{
         algebra_type::AlgebraType, minlog_type::MinlogType, type_substitution::TypeSubstitution
     }
@@ -62,7 +62,7 @@ fn constructor_to_totality_clause(
             let mut var_index = 0usize;
             
             let vars = arrow_type.arguments().iter().map(|arg_type| {
-                let var = TermVariable::create(format!("v{}", var_index), arg_type.clone(), Totality::Partial);
+                let var = TermVariable::create(format!("v{}", var_index), arg_type.clone());
                 var_index += 1;
                 var
             }).collect::<Vec<_>>();
@@ -115,7 +115,7 @@ fn term_to_totality_condition(
         },
         MinlogType::Arrow(arrow_type) => {
             let argument_vars = arrow_type.arguments().iter().map(|arg_type| {
-                let var = TermVariable::create(format!("v{}", var_index), arg_type.clone(), Totality::Partial);
+                let var = TermVariable::create(format!("v{}", var_index), arg_type.clone());
                 *var_index += 1;
                 var
             }).collect::<Vec<_>>();

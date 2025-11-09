@@ -6,7 +6,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -132,10 +132,6 @@ impl TermBody for Projection {
         let other = other.to_projection().unwrap();
         
         self.index == other.index && self.term.alpha_equivalent(&other.term, forward, backward)
-    }
-    
-    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
-        self.term.totality(bound)
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

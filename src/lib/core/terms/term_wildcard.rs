@@ -7,7 +7,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -53,10 +53,6 @@ impl TermBody for TermWildcard {
         _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
         
         other.is_wildcard() && self.minlog_type == other.minlog_type()
-    }
-    
-    fn totality(&self, _bound: &mut HashSet<TermVariable>) -> Totality {
-        Totality::Partial
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

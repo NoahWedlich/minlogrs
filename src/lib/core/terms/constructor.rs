@@ -6,7 +6,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::TermSubstEntry;
@@ -81,10 +81,6 @@ impl TermBody for Constructor {
         } else {
             false
         }
-    }
-    
-    fn totality(&self, _bound: &mut HashSet<TermVariable>) -> Totality {
-        Totality::Total
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

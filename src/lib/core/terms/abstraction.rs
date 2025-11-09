@@ -7,7 +7,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 use crate::core::terms::term_variable::TermVariable;
 
 use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
@@ -211,23 +211,6 @@ impl TermBody for Abstraction {
         }
         
         self.kernel.alpha_equivalent(&other.kernel, forward, backward)
-    }
-    
-    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
-        let mut new_bound = HashSet::new();
-        for var in &self.vars {
-            let var_body = var.to_variable().unwrap();
-            if !bound.contains(var_body) {
-                new_bound.insert(var_body.clone());
-                bound.insert(var_body.clone());
-            }
-        }
-        
-        let totality = self.kernel.totality(bound);
-        
-        bound.retain(|v| !new_bound.contains(v));
-        
-        totality
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {

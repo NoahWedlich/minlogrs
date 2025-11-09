@@ -6,7 +6,7 @@ use crate::core::substitution::SubstitutableWith;
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{MinlogTerm, TermBody, Totality};
+use crate::core::terms::minlog_term::{MinlogTerm, TermBody};
 
 use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
 
@@ -169,17 +169,15 @@ pub struct ProgramConstant {
     minlog_type: Rc<MinlogType>,
     computation_rules: RefCell<Vec<Rc<RewriteRule>>>,
     rewrite_rules: RefCell<Vec<Rc<RewriteRule>>>,
-    totality: RefCell<Totality>,
 }
 
 impl ProgramConstant {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>, totality: Totality) -> Rc<ProgramConstant> {
+    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> Rc<ProgramConstant> {
         Rc::new(ProgramConstant {
             name,
             minlog_type,
             computation_rules: RefCell::new(vec![]),
             rewrite_rules: RefCell::new(vec![]),
-            totality: RefCell::new(totality),
         })
     }
     
@@ -189,14 +187,6 @@ impl ProgramConstant {
     
     pub fn minlog_type(&self) -> Rc<MinlogType> {
         self.minlog_type.clone()
-    }
-    
-    pub fn totality(&self) -> Totality {
-        self.totality.borrow().clone()
-    }
-    
-    pub fn set_totality(&self, totality: Totality) {
-        *self.totality.borrow_mut() = totality;
     }
     
     pub fn computation_rules(&self) -> Vec<Rc<RewriteRule>> {

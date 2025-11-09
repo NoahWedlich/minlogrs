@@ -7,7 +7,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 
 use crate::core::types::minlog_type::MinlogType;
 
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm, Totality};
+use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
 
 use crate::core::terms::term_substitution::TermSubstEntry;
 
@@ -15,13 +15,12 @@ use crate::core::terms::term_substitution::TermSubstEntry;
 pub struct TermVariable {
     name: String,
     minlog_type: Rc<MinlogType>,
-    totality: Totality,
     index: usize,
 }
 
 impl TermVariable {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>, totality: Totality) -> Rc<MinlogTerm> {
-        Rc::new(MinlogTerm::Variable(TermVariable { name, minlog_type, totality, index: 0 }))
+    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> Rc<MinlogTerm> {
+        Rc::new(MinlogTerm::Variable(TermVariable { name, minlog_type, index: 0 }))
     }
     
     pub fn unshadow(var: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
@@ -29,7 +28,6 @@ impl TermVariable {
             Rc::new(MinlogTerm::Variable(TermVariable {
                 name: tv.name.clone(),
                 minlog_type: Rc::clone(&tv.minlog_type),
-                totality: tv.totality.clone(),
                 index: tv.index + 1,
             }))
         } else {
@@ -43,10 +41,6 @@ impl TermVariable {
     
     pub fn index(&self) -> usize {
         self.index
-    }
-    
-    pub fn set_totality(&mut self, totality: Totality) {
-        self.totality = totality;
     }
 }
 
@@ -98,14 +92,6 @@ impl TermBody for TermVariable {
             _ => false,
         }
     }
-    
-    fn totality(&self, bound: &mut HashSet<TermVariable>) -> Totality {
-        if bound.contains(self) {
-            Totality::Total
-        } else {
-            self.totality.clone()
-        }
-    }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm> {
         match from {
@@ -113,7 +99,6 @@ impl TermBody for TermVariable {
                 Rc::new(MinlogTerm::Variable(TermVariable {
                     name: self.name.clone(),
                     minlog_type: self.minlog_type.substitute(from_t, &to.to_type().unwrap()),
-                    totality: self.totality.clone(),
                     index: self.index,
                 }))
             },
@@ -149,10 +134,6 @@ impl TermBody for TermVariable {
                     ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
                     ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
                     return MatchOutput::Matched;
-                }
-
-                if p.totality(&mut HashSet::new()) == Totality::Total && i.totality(&mut HashSet::new()) == Totality::Partial {
-                    return MatchOutput::FailedMatch;
                 }
 
                 MatchOutput::Substitution(p.into(), i.into())
