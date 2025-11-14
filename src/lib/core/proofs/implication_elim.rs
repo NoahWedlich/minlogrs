@@ -87,6 +87,19 @@ impl ProofBody for ImplicationElim {
         }))
     }
     
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.implication.extracted_term().map(|imp_term| {
+            if let Some(prem_term) = self.premise.extracted_term() {
+                Application::create(
+                    imp_term,
+                    vec![prem_term],
+                )
+            } else {
+                imp_term
+            }
+        })
+    }
+    
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
             IndexSet::new()

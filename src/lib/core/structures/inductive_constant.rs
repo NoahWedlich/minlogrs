@@ -6,8 +6,6 @@ use crate::utils::pretty_printer::*;
 
 use crate::core::polarity::{Polarity, Polarized};
 
-use crate::core::structures::algebra::Algebra;
-
 use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -20,7 +18,7 @@ pub struct InductiveConstant {
     name: String,
     arity: Rc<MinlogType>,
     clauses: RefCell<Vec<(String, Rc<MinlogPredicate>)>>,
-    algebra: RefCell<Option<Rc<Algebra>>>,
+    computational_content: RefCell<Option<IDPComputationalContent>>,
 }
 
 impl InductiveConstant {
@@ -29,7 +27,7 @@ impl InductiveConstant {
             name,
             arity,
             clauses: RefCell::new(vec![]),
-            algebra: RefCell::new(None),
+            computational_content: RefCell::new(None),
         })
     }
     
@@ -59,10 +57,19 @@ impl InductiveConstant {
         self.clauses.borrow().clone()
     }
     
-    pub fn make_computational(&self, algebra: Rc<Algebra>, existing: bool) {
-        *self.algebra.borrow_mut() = Some(algebra.clone());
+    pub fn make_computational(&self, algebra_type: Rc<MinlogType>, existing: bool) {
+        if !algebra_type.is_algebra() {
+            panic!("make_computational called with a non-algebra type");
+        }
+        
+        let algebra = algebra_type.to_algebra().unwrap();
+        
+        *self.computational_content.borrow_mut() = Some(IDPComputationalContent { algebra: algebra_type.clone(), clause_mapping: IndexMap::new() });
+        
+        let mut clause_mapping = IndexMap::new();
+        
         for (name, body) in self.clauses.borrow().iter() {
-            let et_type = body.extracted_type();
+            let et_type = body.extracted_type_pattern();
             
             if existing {
                 if let Some(existing) = algebra.constructor(name) {
@@ -70,27 +77,37 @@ impl InductiveConstant {
                         panic!("Existing constructor '{}' has type '{}', but extracted type is '{}'",
                             name, existing.minlog_type().debug_string(), et_type.debug_string());
                     }
+                    clause_mapping.insert(name.clone(), name.clone());
                 } else if algebra.constructors().iter().filter(|c| c.minlog_type() == et_type).count() > 1 {
                     panic!("Multiple constructors with extracted type '{}' exist in the algebra, but none named '{}'",
                         et_type.debug_string(), name);
                 } else if algebra.constructors().iter().all(|c| c.minlog_type() != et_type) {
                     panic!("No constructor with extracted type '{}' exists in the algebra for clause '{}'",
                         et_type.debug_string(), name);
+                } else {
+                    let constructor = algebra.constructors().iter()
+                        .find(|c| c.minlog_type() == et_type).unwrap().clone();
+                    clause_mapping.insert(name.clone(), constructor.to_constructor().unwrap().name().clone());
                 }
 
             } else {
-                let name = format!("{}^et", name);
-                algebra.add_constructor(Constructor::create(name, et_type));
+                let constr_name = format!("{}^et", name.clone());
+                algebra.algebra().add_constructor(Constructor::create(constr_name.clone(), et_type));
+                clause_mapping.insert(name.clone(), constr_name);
             }
+        }
+        
+        if let Some(ref mut content) = *self.computational_content.borrow_mut() {
+            content.clause_mapping = clause_mapping;
         }
     }
     
     pub fn is_computational(&self) -> bool {
-        self.algebra.borrow().is_some()
+        self.computational_content.borrow().is_some()
     }
     
-    pub fn get_algebra(&self) -> Option<Rc<Algebra>> {
-        self.algebra.borrow().clone()
+    pub fn get_computational_content(&self) -> Option<IDPComputationalContent> {
+        self.computational_content.borrow().clone()
     }
     
     pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
@@ -212,5 +229,45 @@ impl Hash for InductiveConstant {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.arity.hash(state);
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct IDPComputationalContent {
+    pub algebra: Rc<MinlogType>,
+    pub clause_mapping: IndexMap<String, String>,
+}
+
+impl PrettyPrintable for IDPComputationalContent {
+    fn to_pp_element(&self, detail: bool) -> PPElement {
+        let header = PPElement::group(vec![
+            PPElement::text("↘︎".to_string()),
+            PPElement::break_elem(1, 4, false),
+            self.algebra.to_pp_element(detail)
+        ], BreakType::Consistent, 0);
+        
+        let mappings = PPElement::list(
+            self.clause_mapping.iter().map(|(from, to)| {
+                PPElement::group(vec![
+                    PPElement::text(from.clone()),
+                    PPElement::text(" -> ".to_string()),
+                    PPElement::text(to.clone())
+                ], BreakType::Consistent, 0)
+            }).collect(),
+            PPElement::break_elem(0, 0, false),
+            PPElement::text(";".to_string()),
+            PPElement::break_elem(1, 0, true),
+            BreakType::Flexible,
+        );
+        
+        PPElement::group(vec![
+            header,
+            PPElement::break_elem(1, 0, false),
+            PPElement::text("{".to_string()),
+            PPElement::break_elem(1, 4, true),
+            mappings,
+            PPElement::break_elem(1, 0, true),
+            PPElement::text("}".to_string())
+        ], BreakType::Consistent, 0)
     }
 }

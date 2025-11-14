@@ -62,6 +62,10 @@ impl ProofBody for Theorem {
         }))
     }
     
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.proof.extracted_term()
+    }
+    
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         self.formula.get_type_variables(&mut IndexSet::new())
     }

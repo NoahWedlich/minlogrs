@@ -72,6 +72,19 @@ impl ProofBody for ImplicationIntro {
         }))
     }
     
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.conclusion.extracted_term().map(|term| {
+            if let Some(assump_term) = self.assumption.extracted_term() {
+                Abstraction::create(
+                    vec![assump_term],
+                    term,
+                )
+            } else {
+                term
+            }
+        })
+    }
+    
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
             IndexSet::new()

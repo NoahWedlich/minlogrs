@@ -90,6 +90,10 @@ impl ProofBody for UniversalElim {
         }))
     }
     
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.proof.extracted_term()
+    }
+    
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::UniversalElim(self.clone())) {
             IndexSet::new()

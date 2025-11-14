@@ -2,6 +2,7 @@
 use indexmap::IndexSet;
 use std::rc::Rc;
 
+use crate::core::terms::term_variable::TermVariable;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
@@ -67,6 +68,19 @@ impl ProofBody for Assumption {
     
     fn unfold(&self) -> Rc<MinlogProof> {
         Rc::new(MinlogProof::Assumption(self.clone()))
+    }
+    
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.formula.extracted_type().remove_nulls().map(|t|
+            TermVariable::create(
+                if self.index > 0 {
+                    format!("{}_{}", self.name, self.index)
+                } else {
+                    self.name.clone()
+                },
+                t,
+            )
+        )
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {

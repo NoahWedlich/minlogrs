@@ -8,17 +8,24 @@ use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
+
 use crate::core::terms::minlog_term::MinlogTerm;
+use crate::core::terms::program_term::ProgramTerm;
+use crate::core::terms::term_substitution::TermSubstitution;
+
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 
 use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
 
 use crate::core::proofs::proof_substitution::ProofSubstEntry;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+use crate::core::structures::program_constant::ProgramConstant;
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct Axiom {
     name: String,
     formula: Rc<MinlogPredicate>,
+    content: RefCell<Option<Rc<MinlogTerm>>>,
 }
 
 impl Axiom {
@@ -27,11 +34,27 @@ impl Axiom {
             panic!("Can only create axioms of nullary predicates")
         }
         
-        Rc::new(MinlogProof::Axiom(Axiom { name, formula }))
+        Rc::new(MinlogProof::Axiom(Axiom { name, formula, content: RefCell::new(None) }))
     }
     
     pub fn name(&self) -> &str {
         &self.name
+    }
+    
+    pub fn has_content(&self) -> bool {
+        self.content.borrow().is_some()
+    }
+    
+    pub fn content(&self) -> Option<Rc<MinlogTerm>> {
+        self.content.borrow().clone()
+    }
+    
+    pub fn set_content(&self, content: Rc<MinlogTerm>) {
+        if content.minlog_type() != self.formula.extracted_type().remove_nulls().unwrap() {
+            panic!("Tried to set axiom content with mismatching type");
+        }
+        
+        *self.content.borrow_mut() = Some(content);
     }
 }
 
@@ -44,11 +67,23 @@ impl ProofBody for Axiom {
         Rc::new(MinlogProof::Axiom(Axiom {
             name: self.name.clone(),
             formula: self.formula.normalize(eta, pi),
+            content: RefCell::new(self.content.borrow().clone()),
         }))
     }
     
     fn unfold(&self) -> Rc<MinlogProof> {
         Rc::new(MinlogProof::Axiom(self.clone()))
+    }
+    
+    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+        self.formula.extracted_type().remove_nulls().map(|t| {
+            if let Some(content) = self.content.borrow().clone() {
+                content
+            } else {
+                let pconst = ProgramConstant::create(self.name.clone(), t);
+                ProgramTerm::create(pconst, TermSubstitution::make_empty())
+            }
+        })
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
@@ -165,5 +200,12 @@ impl ProofTreeDisplayable for Axiom {
         ProofTreeNode::new_node(vec![
             ProofTreeNode::new_leaf(self.name.clone())
         ], self.formula.display_string(), Some("Axiom".to_string()))
+    }
+}
+
+impl Hash for Axiom {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.formula.hash(state);
     }
 }

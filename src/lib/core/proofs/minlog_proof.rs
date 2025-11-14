@@ -36,6 +36,8 @@ crate::wrapper_enum! {
         
         pub fn unfold(&Self) -> Rc<MinlogProof>
         
+        pub fn extracted_term(&Self) -> Option<Rc<MinlogTerm>>
+        
         pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }

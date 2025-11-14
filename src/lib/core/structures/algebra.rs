@@ -10,12 +10,6 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct AlgebraReduction {
-    pub reduced_algebra: Rc<Algebra>,
-    pub constructor_mapping: IndexMap<String, String>,
-}
-
-#[derive(Clone, PartialEq, Eq)]
 pub struct Algebra {
     name: String,
     constructors: RefCell<Vec<Rc<MinlogTerm>>>,
@@ -88,9 +82,9 @@ impl Algebra {
         let mut constructor_mapping = IndexMap::new();
         let mut remaining_constructors = reduced_algebra.constructors.borrow().clone();
         
-            let subst = TypeSubstitution::from_pairs(
-                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
-            );
+        let subst = TypeSubstitution::from_pairs(
+            relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+        );
         
         let substituded_self = subst.substitute(&self_type);
         
@@ -140,9 +134,9 @@ impl Algebra {
         let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
         let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
         
-            let subst = TypeSubstitution::from_pairs(
-                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
-            );
+        let subst = TypeSubstitution::from_pairs(
+            relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+        );
         
         let substituded_self = subst.substitute(&self_type);
         
@@ -190,9 +184,9 @@ impl Algebra {
         let reduced_algebra = Algebra::create(name);
         let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
         
-            let subst = TypeSubstitution::from_pairs(
-                relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
-            );
+        let subst = TypeSubstitution::from_pairs(
+            relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
+        );
         
         let substituded_self = subst.substitute(&self_type);
         
@@ -314,5 +308,45 @@ impl PrettyPrintable for Algebra {
 impl Hash for Algebra {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct AlgebraReduction {
+    pub reduced_algebra: Rc<Algebra>,
+    pub constructor_mapping: IndexMap<String, String>,
+}
+
+impl PrettyPrintable for AlgebraReduction {
+    fn to_pp_element(&self, detail: bool) -> PPElement {
+        let header = PPElement::group(vec![
+            PPElement::text("↘︎".to_string()),
+            PPElement::break_elem(1, 4, false),
+            self.reduced_algebra.to_pp_element(detail)
+        ], BreakType::Consistent, 0);
+        
+        let mappings = PPElement::list(
+            self.constructor_mapping.iter().map(|(from, to)| {
+                PPElement::group(vec![
+                    PPElement::text(from.clone()),
+                    PPElement::text(" -> ".to_string()),
+                    PPElement::text(to.clone())
+                ], BreakType::Consistent, 0)
+            }).collect(),
+            PPElement::break_elem(0, 0, false),
+            PPElement::text(";".to_string()),
+            PPElement::break_elem(1, 4, true),
+            BreakType::Flexible,
+        );
+        
+        PPElement::group(vec![
+            header,
+            PPElement::break_elem(1, 0, false),
+            PPElement::text("{".to_string()),
+            PPElement::break_elem(1, 4, true),
+            mappings,
+            PPElement::break_elem(1, 0, true),
+            PPElement::text("}".to_string())
+        ], BreakType::Consistent, 0)
     }
 }
