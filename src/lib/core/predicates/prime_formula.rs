@@ -161,6 +161,10 @@ impl PredicateBody for PrimeFormula {
             .max().unwrap_or(0)
     }
     
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+        self.body.extracted_type_pattern()
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         self.body.extracted_type()
     }

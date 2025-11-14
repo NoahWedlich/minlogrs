@@ -87,6 +87,17 @@ impl PredicateBody for Implication {
             .map(|f| f.depth()).max().unwrap_or(0)
     }
     
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+        let premise_types: Vec<Rc<MinlogType>> = self.premises.iter()
+            .map(|p| p.extracted_type_pattern())
+            .collect();
+        
+        let conclusion_type = self.conclusion.extracted_type_pattern();
+        
+        ArrowType::create(premise_types, conclusion_type)
+            .remove_nulls().unwrap_or(TypeConstant::create_null())
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         let premise_types: Vec<Rc<MinlogType>> = self.premises.iter()
             .map(|p| p.extracted_type())

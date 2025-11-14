@@ -31,6 +31,7 @@ crate::wrapper_enum! {
             0
         }
         
+        pub fn extracted_type_pattern(&Self) -> Rc<MinlogType>
         pub fn extracted_type(&Self) -> Rc<MinlogType>
         
         pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

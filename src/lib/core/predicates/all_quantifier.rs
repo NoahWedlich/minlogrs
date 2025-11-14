@@ -98,6 +98,10 @@ impl PredicateBody for AllQuantifier {
         1 + self.body.depth()
     }
     
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+        self.body.extracted_type_pattern()
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         self.body.extracted_type()
     }

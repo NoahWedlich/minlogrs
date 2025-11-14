@@ -8,6 +8,7 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
+use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
@@ -56,7 +57,7 @@ impl PredicateBody for PredicateVariable {
         Rc::new(MinlogPredicate::Variable(self.clone()))
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
         let name = if self.index > 0 {
             format!("{}_{}^et", self.name, self.index)
         } else {
@@ -64,6 +65,10 @@ impl PredicateBody for PredicateVariable {
         };
         
         TypeVariable::create(name)
+    }
+    
+    fn extracted_type(&self) -> Rc<MinlogType> {
+        TypeConstant::create_null()
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

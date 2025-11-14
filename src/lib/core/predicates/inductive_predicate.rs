@@ -8,7 +8,6 @@ use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_constant::TypeConstant;
-use crate::core::types::algebra_type::AlgebraType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate};
@@ -73,8 +72,8 @@ impl InductivePredicate {
             }).collect()
         );
         
-        self.definition.get_algebra().map(|alg| {
-            AlgebraType::create(alg.clone(), type_subst)
+        self.definition.get_computational_content().map(|content| {
+            type_subst.substitute(&content.algebra.clone())
         })
     }
     
@@ -135,9 +134,37 @@ impl PredicateBody for InductivePredicate {
             .max().unwrap_or(0)
     }
     
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+        if let Some(alg) = self.get_algebra() {
+            let pred_vars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
+                .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
+            
+            let et_subst = TypeSubstitution::from_pairs(
+                pred_vars.into_iter().map(|pv| {
+                    let to = self.params.substitute::<PredSubstEntry>(&pv.clone().into()).to_predicate().unwrap();
+                    (pv.extracted_type_pattern(), to.extracted_type_pattern())
+                }).collect()
+            );
+            
+            et_subst.substitute(&alg)
+        } else {
+            TypeConstant::create_null()
+        }
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         if let Some(alg) = self.get_algebra() {
-            alg
+            let pred_vars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
+                .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
+            
+            let et_subst = TypeSubstitution::from_pairs(
+                pred_vars.into_iter().map(|pv| {
+                    let to = self.params.substitute::<PredSubstEntry>(&pv.clone().into()).to_predicate().unwrap();
+                    (pv.extracted_type_pattern(), to.extracted_type())
+                }).collect()
+            );
+            
+            et_subst.substitute(&alg).remove_nulls().unwrap_or(TypeConstant::create_null())
         } else {
             TypeConstant::create_null()
         }

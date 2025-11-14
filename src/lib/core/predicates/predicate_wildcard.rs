@@ -33,6 +33,10 @@ impl PredicateBody for PredicateWildcard {
         Rc::new(MinlogPredicate::Wildcard(self.clone()))
     }
     
+    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+        TypeConstant::create_null()
+    }
+    
     fn extracted_type(&self) -> Rc<MinlogType> {
         TypeConstant::create_null()
     }
