@@ -55,7 +55,7 @@ pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &
             } else if let Some(all) = remaining.to_all_quantifier() {
                 let var = all.vars()[0].clone();
                 assumptions_and_vars.push(AssumptionOrVariable::Variable(var.clone()));
-                remaining = all.body().clone();
+                remaining = AllQuantifier::create(all.vars()[1..].to_vec(), all.body().clone()).clone();
             } else {
                 break;
             }
