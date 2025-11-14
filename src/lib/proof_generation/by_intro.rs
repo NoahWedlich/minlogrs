@@ -29,14 +29,14 @@ pub fn generate_proof_by_intro(target: &Rc<MinlogPredicate>, clause: &String, co
     if let Some(inductive) = inductive_predicate.to_inductive_predicate() {
         let clauses = inductive.clauses();
         if let Some((name, clause_pred)) = clauses.iter().find(|(name, _)| name == clause) {
-            let into_axiom = Axiom::create(
+            let intro_axiom = Axiom::create(
                 name.clone(),
                 clause_pred.clone()
             );
             
             generate_proof_by_use(
                 target,
-                &into_axiom,
+                &intro_axiom,
                 context
             )
         } else {
