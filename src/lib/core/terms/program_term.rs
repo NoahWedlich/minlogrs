@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -21,8 +22,8 @@ pub struct ProgramTerm {
 
 impl ProgramTerm {
     pub fn create(pconst: Rc<ProgramConstant>, mut parameters: TermSubstitution) -> Rc<MinlogTerm> {
-        let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into())
-            .chain(pconst.get_free_variables(&mut HashSet::new()).into_iter().map(|fv| fv.into()))
+        let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into())
+            .chain(pconst.get_free_variables(&mut IndexSet::new()).into_iter().map(|fv| fv.into()))
             .collect::<Vec<_>>();
         
         parameters.restrict(|from| pconst_vars.contains(from));
@@ -94,9 +95,9 @@ impl TermBody for ProgramTerm {
         0
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::ProgramTerm(self.clone()));
             
@@ -106,9 +107,9 @@ impl TermBody for ProgramTerm {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::ProgramTerm(self.clone()));
             
@@ -118,9 +119,9 @@ impl TermBody for ProgramTerm {
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::ProgramTerm(self.clone()));
             
@@ -130,9 +131,9 @@ impl TermBody for ProgramTerm {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::ProgramTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::ProgramTerm(self.clone()));
             
@@ -142,8 +143,8 @@ impl TermBody for ProgramTerm {
         }
     }
     
-    fn get_program_terms(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-        HashSet::from([Rc::new(MinlogTerm::ProgramTerm(self.clone()))])
+    fn get_program_terms(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        IndexSet::from([Rc::new(MinlogTerm::ProgramTerm(self.clone()))])
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
@@ -231,8 +232,8 @@ impl TermBody for ProgramTerm {
 
 impl PrettyPrintable for ProgramTerm {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.pconst.get_type_variables(&mut HashSet::new());
-        let tmvars = self.pconst.get_free_variables(&mut HashSet::new());
+        let tvars = self.pconst.get_type_variables(&mut IndexSet::new());
+        let tmvars = self.pconst.get_free_variables(&mut IndexSet::new());
         
         let has_tvars = !tvars.is_empty();
         let has_tmvars = !tmvars.is_empty();

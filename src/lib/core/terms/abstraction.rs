@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -65,7 +66,7 @@ impl Abstraction {
     pub fn closure(minlog_term: &Rc<MinlogTerm>) -> Rc<MinlogTerm> {
         let mut vars = vec![];
         
-        for var in minlog_term.get_free_variables(&mut HashSet::new()) {
+        for var in minlog_term.get_free_variables(&mut IndexSet::new()) {
             if var.is_variable() && !vars.contains(&var) {
                 vars.push(var);
             }
@@ -102,7 +103,7 @@ impl TermBody for Abstraction {
         let mut vars = vec![];
         
         if eta {
-            let free_vars = kernel.get_free_variables(&mut HashSet::new());
+            let free_vars = kernel.get_free_variables(&mut IndexSet::new());
             for var in &self.vars {
                 if free_vars.contains(var) {
                     vars.push(var.clone());
@@ -137,17 +138,17 @@ impl TermBody for Abstraction {
         1 + self.kernel.depth()
     }
     
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Abstraction(self.clone()));
             
@@ -157,19 +158,19 @@ impl TermBody for Abstraction {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Abstraction(self.clone()));
             
-            self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect()).cloned().collect()
+            self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
         }
     }
     
-    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Abstraction(self.clone()));
             
@@ -177,9 +178,9 @@ impl TermBody for Abstraction {
         }
     }
     
-    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Abstraction(self.clone()));
             
@@ -187,9 +188,9 @@ impl TermBody for Abstraction {
         }
     }
     
-    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Abstraction(self.clone()));
             

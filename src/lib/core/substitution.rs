@@ -23,7 +23,7 @@ pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
     fn substitute_with(&self, from: &T, to: &T) -> Self;
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Substitution<T: Substitutable> {
     map: IndexMap<T, T>,
 }
@@ -325,6 +325,25 @@ impl<T: Substitutable> Hash for Substitution<T> {
         }
     }
 }
+
+impl<T: Substitutable> PartialEq for Substitution<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.size() != other.size() {
+            return false;
+        }
+        
+        for (k, v) in self.map.iter() {
+            match other.map.get(k) {
+                Some(v2) if v == v2 => {},
+                _ => return false,
+            }
+        }
+        
+        true
+    }
+}
+
+impl<T: Substitutable> Eq for Substitution<T> {}
 
 pub trait MatchContext<T: Substitutable> {
     fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self;

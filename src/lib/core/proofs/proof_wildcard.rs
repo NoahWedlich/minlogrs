@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{BreakType, PPElement, PrettyPrintable};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
@@ -64,40 +65,40 @@ impl ProofBody for ProofWildcard {
         Rc::new(MinlogProof::Wildcard(self.clone()))
     }
     
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
-        self.formula.get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+        self.formula.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
-        self.formula.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+        self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
-        self.formula.get_free_variables(&mut HashSet::new())
+    fn get_free_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+        self.formula.get_free_variables(&mut IndexSet::new())
             .union(&self.context.borrow().variables).cloned().collect()
     }
     
-    fn get_bound_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
-        self.formula.get_bound_variables(&mut HashSet::new())
+    fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+        self.formula.get_bound_variables(&mut IndexSet::new())
     }
     
-    fn get_predicate_variables(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_predicate_variables(&mut HashSet::new())
+    fn get_predicate_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+        self.formula.get_predicate_variables(&mut IndexSet::new())
     }
     
-    fn get_comprehension_terms(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_comprehension_terms(&mut HashSet::new())
+    fn get_comprehension_terms(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+        self.formula.get_comprehension_terms(&mut IndexSet::new())
     }
     
-    fn get_inductive_predicates(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_inductive_predicates(&mut HashSet::new())
+    fn get_inductive_predicates(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+        self.formula.get_inductive_predicates(&mut IndexSet::new())
     }
     
-    fn get_prime_formulas(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-        self.formula.get_prime_formulas(&mut HashSet::new())
+    fn get_prime_formulas(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+        self.formula.get_prime_formulas(&mut IndexSet::new())
     }
     
-    fn get_assumptions(&self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         self.context.borrow().assumptions.clone()
     }
     

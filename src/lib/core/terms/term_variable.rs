@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -71,16 +72,16 @@ impl TermBody for TermVariable {
         true
     }
 
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-        HashSet::from([Rc::new(MinlogTerm::Variable(self.clone()))])
+    fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        IndexSet::from([Rc::new(MinlogTerm::Variable(self.clone()))])
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

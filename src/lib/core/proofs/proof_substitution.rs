@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
@@ -138,8 +139,8 @@ impl Substitutable for ProofSubstEntry {
         match (self, to) {
             (ProofSubstEntry::Proof(p1), ProofSubstEntry::Proof(p2)) => {
                 p1.is_goal() && !p2.contains_goal(p1)
-                && p2.get_assumptions(&mut HashSet::new()).is_subset(&p1.get_assumptions(&mut HashSet::new()))
-                && p2.get_free_variables(&mut HashSet::new()).is_subset(&p1.get_free_variables(&mut HashSet::new()))
+                && p2.get_assumptions(&mut IndexSet::new()).is_subset(&p1.get_assumptions(&mut IndexSet::new()))
+                && p2.get_free_variables(&mut IndexSet::new()).is_subset(&p1.get_free_variables(&mut IndexSet::new()))
             },
             (_, _) if self.is_pred_subst_entry() && to.is_pred_subst_entry() => {
                 let from_pse = self.to_pred_subst_entry().unwrap();
@@ -300,7 +301,7 @@ pub type ProofMatchContext = MatchContextImpl<ProofSubstEntry>;
 
 impl ProofSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
-        for free_var in term.get_free_variables(&mut HashSet::new()) {
+        for free_var in term.get_free_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&ProofSubstEntry::Term(free_var.clone()));
             if let ProofSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
@@ -315,7 +316,7 @@ impl ProofSubstitution {
     }
     
     pub fn admissible_predicate(&self, predicate: &Rc<MinlogPredicate>) -> bool {
-        for pred_var in predicate.get_predicate_variables(&mut HashSet::new()) {
+        for pred_var in predicate.get_predicate_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&ProofSubstEntry::Predicate(pred_var.clone()));
             if let ProofSubstEntry::Predicate(p) = substituted {
                 if self.substitute(&pred_var.arity()) != p.arity() {

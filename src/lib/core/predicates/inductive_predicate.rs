@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 use crate::{utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -27,9 +28,9 @@ pub struct InductivePredicate {
 
 impl InductivePredicate {
     pub fn create(definition: Rc<InductiveConstant>, mut params: PredicateSubstitution) -> Rc<MinlogPredicate> {
-        let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into())
-            .chain(definition.get_free_variables(&mut HashSet::new()).into_iter().map(|tv| tv.into()))
-            .chain(definition.get_polarized_pred_vars(Polarity::Unknown, &mut HashSet::new()).into_iter().map(|pol| pol.value.into()))
+        let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into())
+            .chain(definition.get_free_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into()))
+            .chain(definition.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new()).into_iter().map(|pol| pol.value.into()))
             .collect();
         
         params.restrict(|from| idp_vars.contains(from));
@@ -101,7 +102,7 @@ impl InductivePredicate {
         for (_, body) in self.clauses().iter() {
             if let Some(implication) = body.to_implication() {
                 for premise in implication.premises().iter() {
-                    let polarized_args = premise.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut HashSet::new());
+                    let polarized_args = premise.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new());
                     for polarized_arg in polarized_args.iter() {
                         if !polarized_arg.polarity.is_strictly_positive() &&
                             polarized_arg.value.to_inductive_predicate().unwrap().references_idp(&self_idp_pred) {
@@ -142,69 +143,69 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
             self.definition.get_type_variables(visited).iter()
                 .flat_map(|tv| {
-                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables(&mut HashSet::new())
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables(&mut IndexSet::new())
                 }).chain(
                     self.clauses().iter().flat_map(|(_, body)| body.get_type_variables(visited))
                 ).collect()
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
             self.definition.get_type_variables(visited).iter()
                 .flat_map(|tv| {
-                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types(&mut HashSet::new())
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types(&mut IndexSet::new())
                 }).chain(
                     self.clauses().iter().flat_map(|(_, body)| body.get_algebra_types(visited))
                 ).collect()
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
 
             self.definition.get_free_variables(visited).iter()
                 .flat_map(|tv| {
-                    self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap().get_free_variables(&mut HashSet::new())
+                    self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap().get_free_variables(&mut IndexSet::new())
                 }).chain(
                     self.clauses().iter().flat_map(|(_, body)| body.get_free_variables(visited))
                 ).collect()
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
             self.definition.get_bound_variables(visited).iter()
                 .flat_map(|tv| {
-                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables(&mut HashSet::new())
+                    self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables(&mut IndexSet::new())
                 }).chain(
                     self.clauses().iter().flat_map(|(_, body)| body.get_bound_variables(visited))
                 ).collect()
         }
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
@@ -212,7 +213,7 @@ impl PredicateBody for InductivePredicate {
                 .flat_map(|pol| {
                     self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                         .get_polarized_pred_vars(current, visited)
-                }).collect::<HashSet<_>>();
+                }).collect::<IndexSet<_>>();
                 
             results.extend(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current, visited))
@@ -222,9 +223,9 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
@@ -232,7 +233,7 @@ impl PredicateBody for InductivePredicate {
                 .flat_map(|pol| {
                     self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                         .get_polarized_comp_terms(current, visited)
-                }).collect::<HashSet<_>>();
+                }).collect::<IndexSet<_>>();
                 
             results.extend(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current, visited))
@@ -242,9 +243,9 @@ impl PredicateBody for InductivePredicate {
         }
     }
 
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
@@ -252,7 +253,7 @@ impl PredicateBody for InductivePredicate {
                 .flat_map(|pol| {
                     self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                         .get_polarized_inductive_preds(current, visited)
-                }).collect::<HashSet<_>>();
+                }).collect::<IndexSet<_>>();
                 
             results.extend(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited))
@@ -264,9 +265,9 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
@@ -274,7 +275,7 @@ impl PredicateBody for InductivePredicate {
                 .flat_map(|pol| {
                     self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
                         .get_polarized_prime_formulas(current, visited)
-                }).collect::<HashSet<_>>();
+                }).collect::<IndexSet<_>>();
                 
             results.extend(
                 self.clauses().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current, visited))
@@ -349,10 +350,10 @@ impl PredicateBody for InductivePredicate {
 
 impl PrettyPrintable for InductivePredicate {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tparams = self.definition.get_type_variables(&mut HashSet::new());
-        let tmparams = self.definition.get_free_variables(&mut HashSet::new());
-        let pparams = self.definition.get_polarized_pred_vars(Polarity::Unknown, &mut HashSet::new())
-            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
+        let tparams = self.definition.get_type_variables(&mut IndexSet::new());
+        let tmparams = self.definition.get_free_variables(&mut IndexSet::new());
+        let pparams = self.definition.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
+            .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
         
         let has_tparams = !tparams.is_empty();
         let has_tmparams = !tmparams.is_empty();

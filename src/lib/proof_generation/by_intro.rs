@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::{HashSet}};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 use crate::core::polarity::Polarity;
 use crate::proof_generation::by_use::generate_proof_by_use;
@@ -9,14 +10,14 @@ use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::proof_context::ProofContext;
 
 pub fn generate_proof_by_intro(target: &Rc<MinlogPredicate>, clause: &String, context: &ProofContext) -> Rc<MinlogProof> {
-    let idps = target.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut HashSet::new())
+    let idps = target.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new())
         .into_iter().filter_map(|polarized| {
             if polarized.polarity == Polarity::StrictlyPositive {
                 Some(polarized.value)
             } else {
                 None
             }
-        }).collect::<HashSet<_>>();
+        }).collect::<IndexSet<_>>();
 
     let inductive_predicate = if idps.len() == 1 {
         idps.iter().next().unwrap().clone()

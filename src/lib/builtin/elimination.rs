@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::{HashMap}};
+use indexmap::{IndexMap, IndexSet};
+use std::rc::Rc;
 use crate::core::proofs::axiom::Axiom;
 use crate::core::proofs::minlog_proof::MinlogProof;
 use crate::utils::pretty_printer::*;
@@ -33,7 +34,7 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
 
     elimination_clauses.extend(
         inductive_predicate.to_inductive_predicate().unwrap().clauses().iter().map(|(_, clause)| {
-            clause_to_elimination_clauses(clause, inductive_predicate, &mut HashMap::new())
+            clause_to_elimination_clauses(clause, inductive_predicate, &mut IndexMap::new())
         })
     );
     
@@ -51,7 +52,7 @@ pub fn extract_elimination_axiom(inductive_predicate: &Rc<MinlogPredicate>) -> R
 fn clause_to_elimination_clauses(
     clause: &Rc<MinlogPredicate>,
     rel_idp: &Rc<MinlogPredicate>,
-    pvars: &mut HashMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
+    pvars: &mut IndexMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
 ) -> Rc<MinlogPredicate> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {
@@ -99,7 +100,7 @@ fn clause_to_elimination_clauses(
 fn inner_clause_to_elimination_clauses(
     clause: &Rc<MinlogPredicate>,
     rel_idp: &Rc<MinlogPredicate>,
-    pvars: &mut HashMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
+    pvars: &mut IndexMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
 ) -> Vec<Rc<MinlogPredicate>> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {

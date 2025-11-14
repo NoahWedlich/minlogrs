@@ -1,6 +1,7 @@
 
 use std::hash::Hash;
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -75,53 +76,53 @@ impl TermBody for Tuple {
         1 + self.elements.iter().map(|e| e.depth()).max().unwrap_or(0)
     }
     
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Tuple(self.clone()));
             self.elements.iter().flat_map(|e| e.get_free_variables(visited)).collect()
         }
     }
 
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Tuple(self.clone()));
             self.elements.iter().flat_map(|e| e.get_bound_variables(visited)).collect()
         }
     }
 
-    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Tuple(self.clone()));
             self.elements.iter().flat_map(|e| e.get_constructors(visited)).collect()
         }
     }
 
-    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Tuple(self.clone()));
             self.elements.iter().flat_map(|e| e.get_program_terms(visited)).collect()
         }
     }
 
-    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Tuple(self.clone()));
             self.elements.iter().flat_map(|e| e.get_internal_constants(visited)).collect()

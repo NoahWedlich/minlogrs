@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::{HashMap, HashSet}};
+use indexmap::{IndexMap, IndexSet};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 use crate::{core::{terms::constructor::Constructor, types::{algebra_type::AlgebraType, type_constant::TypeConstant, type_substitution::TypeSubstitution}}, utils::pretty_printer::*};
 
 use crate::core::polarity::{Polarity, Polarized};
@@ -11,19 +12,19 @@ use crate::core::terms::minlog_term::MinlogTerm;
 #[derive(Clone, PartialEq, Eq)]
 pub struct AlgebraReduction {
     pub reduced_algebra: Rc<Algebra>,
-    pub constructor_mapping: HashMap<String, String>,
+    pub constructor_mapping: IndexMap<String, String>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Algebra {
     name: String,
     constructors: RefCell<Vec<Rc<MinlogTerm>>>,
-    reductions: RefCell<HashMap<Vec<Rc<MinlogType>>, AlgebraReduction>>
+    reductions: RefCell<IndexMap<Vec<Rc<MinlogType>>, AlgebraReduction>>
 }
 
 impl Algebra {
     pub fn create(name: String) -> Rc<Algebra> {
-        Rc::new(Algebra { name, constructors: RefCell::new(vec![]), reductions: RefCell::new(HashMap::new()) })
+        Rc::new(Algebra { name, constructors: RefCell::new(vec![]), reductions: RefCell::new(IndexMap::new()) })
     }
     
     pub fn name(&self) -> &String {
@@ -66,15 +67,15 @@ impl Algebra {
         self.constructors.borrow_mut().push(constructor);
     }
     
-    pub fn reductions(&self) -> HashMap<Vec<Rc<MinlogType>>, AlgebraReduction> {
+    pub fn reductions(&self) -> IndexMap<Vec<Rc<MinlogType>>, AlgebraReduction> {
         self.reductions.borrow().clone()
     }
     
-    pub fn add_reduction(&self, null_types: HashSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>) {
+    pub fn add_reduction(&self, null_types: IndexSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>) {
         let relevant_null_types = null_types
             .intersection(
-                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
-                    .into_iter().map(|ptv| ptv.value).collect()
+                &self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect::<IndexSet<_>>()
             ).cloned().collect::<Vec<_>>();
         
         if self.reductions.borrow().contains_key(&relevant_null_types) {
@@ -84,7 +85,7 @@ impl Algebra {
         let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
         let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
         
-        let mut constructor_mapping = HashMap::new();
+        let mut constructor_mapping = IndexMap::new();
         let mut remaining_constructors = reduced_algebra.constructors.borrow().clone();
         
         for constructor in self.constructors.borrow().iter() {
@@ -122,11 +123,11 @@ impl Algebra {
         });
     }
     
-    pub fn add_reduction_with_mapping(&self, null_types: HashSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>, constructor_mapping: HashMap<String, String>) {
+    pub fn add_reduction_with_mapping(&self, null_types: IndexSet<Rc<MinlogType>>, reduced_algebra: Rc<Algebra>, constructor_mapping: IndexMap<String, String>) {
         let relevant_null_types = null_types
             .intersection(
-                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
-                    .into_iter().map(|ptv| ptv.value).collect()
+                &self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect::<IndexSet<_>>()
             ).cloned().collect::<Vec<_>>();
         
         if self.reductions.borrow().contains_key(&relevant_null_types) {
@@ -165,11 +166,11 @@ impl Algebra {
         });
     }
     
-    pub fn generate_reduction(&self, null_types: HashSet<Rc<MinlogType>>, name: String) {
+    pub fn generate_reduction(&self, null_types: IndexSet<Rc<MinlogType>>, name: String) {
         let relevant_null_types = null_types
             .intersection(
-                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
-                    .into_iter().map(|ptv| ptv.value).collect()
+                &self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect::<IndexSet<_>>()
             ).cloned().collect::<Vec<_>>();
         
         if self.reductions.borrow().contains_key(&relevant_null_types) {
@@ -204,7 +205,7 @@ impl Algebra {
         
         let constructor_mapping = self.constructors.borrow().iter().map(|c| {
             (c.to_constructor().unwrap().name().clone(), c.to_constructor().unwrap().name().clone())
-        }).collect::<HashMap<_, _>>();
+        }).collect::<IndexMap<_, _>>();
         
         self.reductions.borrow_mut().insert(relevant_null_types, AlgebraReduction {
             reduced_algebra,
@@ -212,11 +213,11 @@ impl Algebra {
         });
     }
     
-    pub fn reduce(&self, null_types: &HashSet<Rc<MinlogType>>) -> Option<AlgebraReduction> {
+    pub fn reduce(&self, null_types: &IndexSet<Rc<MinlogType>>) -> Option<AlgebraReduction> {
         let relevant_null_types = null_types
             .intersection(
-                &self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
-                    .into_iter().map(|ptv| ptv.value).collect()
+                &self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
+                    .into_iter().map(|ptv| ptv.value).collect::<IndexSet<_>>()
             ).cloned().collect::<Vec<_>>();
             
         if relevant_null_types.is_empty() {
@@ -235,13 +236,13 @@ impl Algebra {
         }
     }
     
-    pub fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    pub fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         self.constructors.borrow().iter().flat_map(|constructor| {
             constructor.minlog_type().get_polarized_tvars(current, visited)
         }).collect()
     }
     
-    pub fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    pub fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         self.constructors.borrow().iter().flat_map(|constructor| {
             constructor.minlog_type().get_polarized_algebras(current, visited)
         }).collect()
@@ -250,8 +251,8 @@ impl Algebra {
 
 impl PrettyPrintable for Algebra {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
-            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
+        let tvars = self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
+            .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
         
         let has_tvars = !tvars.is_empty();
         
@@ -259,7 +260,7 @@ impl PrettyPrintable for Algebra {
             PPElement::text(self.name.clone())
         } else {
             let tvars = PPElement::list(
-                self.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+                self.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
                     .iter().map(|pol| pol.value.to_pp_element(detail)).collect(),
                 PPElement::break_elem(0, 4, false),
                 PPElement::text(",".to_string()),

@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, hash::Hash, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
@@ -35,52 +36,52 @@ crate::wrapper_enum! {
         
         pub fn unfold(&Self) -> Rc<MinlogProof>
         
-        pub fn get_type_variables(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
         
-        pub fn get_algebra_types(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_algebra_types(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_free_variables(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_bound_variables(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_predicate_variables(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-            HashSet::new()
+        pub fn get_predicate_variables(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+            IndexSet::new()
         }
         
-        pub fn get_comprehension_terms(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-            HashSet::new()
+        pub fn get_comprehension_terms(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+            IndexSet::new()
         }
         
-        pub fn get_inductive_predicates(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-            HashSet::new()
+        pub fn get_inductive_predicates(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+            IndexSet::new()
         }
         
-        pub fn get_prime_formulas(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
-            HashSet::new()
+        pub fn get_prime_formulas(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+            IndexSet::new()
         }
         
-        pub fn get_goals(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
-            HashSet::new()
+        pub fn get_goals(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
+            IndexSet::new()
         }
         
-        pub fn get_assumptions(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
-            HashSet::new()
+        pub fn get_assumptions(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
+            IndexSet::new()
         }
         
-        pub fn get_axioms(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
-            HashSet::new()
+        pub fn get_axioms(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
+            IndexSet::new()
         }
         
-        pub fn get_theorems(&Self, _visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
-            HashSet::new()
+        pub fn get_theorems(&Self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
+            IndexSet::new()
         }
         
         pub fn substitute(&Self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof>
@@ -121,54 +122,54 @@ crate::wrapper_enum! {
 
 impl MinlogProof {
     pub fn is_closed(&self) -> bool {
-        self.get_assumptions(&mut HashSet::new()).is_empty()
+        self.get_assumptions(&mut IndexSet::new()).is_empty()
     }
 
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && self.get_type_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_type_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && self.get_algebra_types(&mut HashSet::new()).contains(alg)
+        alg.is_algebra() && self.get_algebra_types(&mut IndexSet::new()).contains(alg)
     }
     
     pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_free_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_free_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_bound_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_bound_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_predicate_variable(&self, pvar: &Rc<MinlogPredicate>) -> bool {
-        pvar.is_variable() && self.get_predicate_variables(&mut HashSet::new()).contains(pvar)
+        pvar.is_variable() && self.get_predicate_variables(&mut IndexSet::new()).contains(pvar)
     }
     
     pub fn contains_comprehension_term(&self, cterm: &Rc<MinlogPredicate>) -> bool {
-        cterm.is_comprehension_term() && self.get_comprehension_terms(&mut HashSet::new()).contains(cterm)
+        cterm.is_comprehension_term() && self.get_comprehension_terms(&mut IndexSet::new()).contains(cterm)
     }
     
     pub fn contains_inductive_predicate(&self, ipred: &Rc<MinlogPredicate>) -> bool {
-        ipred.is_inductive_predicate() && self.get_inductive_predicates(&mut HashSet::new()).contains(ipred)
+        ipred.is_inductive_predicate() && self.get_inductive_predicates(&mut IndexSet::new()).contains(ipred)
     }
     
     pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
-        pform.is_prime() && self.get_prime_formulas(&mut HashSet::new()).contains(pform)
+        pform.is_prime() && self.get_prime_formulas(&mut IndexSet::new()).contains(pform)
     }
     
     pub fn contains_goal(&self, goal: &Rc<MinlogProof>) -> bool {
-        goal.is_goal() && self.get_goals(&mut HashSet::new()).contains(goal)
+        goal.is_goal() && self.get_goals(&mut IndexSet::new()).contains(goal)
     }
     
     pub fn contains_assumption(&self, asm: &Rc<MinlogProof>) -> bool {
-        asm.is_assumption() && self.get_assumptions(&mut HashSet::new()).contains(asm)
+        asm.is_assumption() && self.get_assumptions(&mut IndexSet::new()).contains(asm)
     }
     
     pub fn contains_axiom(&self, axm: &Rc<MinlogProof>) -> bool {
-        axm.is_axiom() && self.get_axioms(&mut HashSet::new()).contains(axm)
+        axm.is_axiom() && self.get_axioms(&mut IndexSet::new()).contains(axm)
     }
     
     pub fn contains_theorem(&self, thm: &Rc<MinlogProof>) -> bool {
-        thm.is_theorem() && self.get_theorems(&mut HashSet::new()).contains(thm)
+        thm.is_theorem() && self.get_theorems(&mut IndexSet::new()).contains(thm)
     }
 }

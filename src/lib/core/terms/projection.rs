@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -88,53 +89,53 @@ impl TermBody for Projection {
         1 + self.term.depth()
     }
     
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-        self.minlog_type.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Projection(self.clone()));
             self.term.get_free_variables(visited)
         }
     }
 
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Projection(self.clone()));
             self.term.get_bound_variables(visited)
         }
     }
     
-    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Projection(self.clone()));
             self.term.get_constructors(visited)
         }
     }
 
-    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Projection(self.clone()));
             self.term.get_program_terms(visited)
         }
     }
     
-    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::Projection(self.clone()));
             self.term.get_internal_constants(visited)

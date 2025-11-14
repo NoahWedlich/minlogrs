@@ -1,4 +1,5 @@
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -58,7 +59,7 @@ impl AllQuantifier {
     }
     
     pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables(&mut HashSet::new()).into_iter().collect();
+        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables(&mut IndexSet::new()).into_iter().collect();
         if free_vars.is_empty() {
             minlog_formula.clone()
         } else {
@@ -97,35 +98,35 @@ impl PredicateBody for AllQuantifier {
         self.body.extracted_type()
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
             self.vars.iter()
-                .flat_map(|v| v.get_type_variables(&mut HashSet::new()))
+                .flat_map(|v| v.get_type_variables(&mut IndexSet::new()))
                 .chain(self.body.get_type_variables(visited))
                 .collect()
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
             self.vars.iter()
-                .flat_map(|v| v.get_algebra_types(&mut HashSet::new()))
+                .flat_map(|v| v.get_algebra_types(&mut IndexSet::new()))
                 .chain(self.body.get_algebra_types(visited))
                 .collect()
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
@@ -135,9 +136,9 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
@@ -147,9 +148,9 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
@@ -157,9 +158,9 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
@@ -167,9 +168,9 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             
@@ -177,9 +178,9 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::AllQuantifier(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogPredicate::AllQuantifier(self.clone()));
             

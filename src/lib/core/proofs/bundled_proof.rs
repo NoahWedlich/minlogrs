@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, hash::{Hash, Hasher}, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
@@ -17,13 +18,13 @@ use crate::core::proofs::proof_substitution::ProofSubstEntry;
 #[derive(Clone, PartialEq, Eq)]
 pub struct BundledProof {
     proof: Rc<MinlogProof>,
-    dependencies: HashSet<Rc<MinlogProof>>,
+    dependencies: IndexSet<Rc<MinlogProof>>,
     name: String,
 }
 
 impl BundledProof {
-    pub fn create(proof: Rc<MinlogProof>, name: String, mut extra_dependencies: HashSet<Rc<MinlogProof>>) -> Rc<MinlogProof> {
-        extra_dependencies.extend(proof.get_goals(&mut HashSet::new()));
+    pub fn create(proof: Rc<MinlogProof>, name: String, mut extra_dependencies: IndexSet<Rc<MinlogProof>>) -> Rc<MinlogProof> {
+        extra_dependencies.extend(proof.get_goals(&mut IndexSet::new()));
         Rc::new(MinlogProof::BundledProof(BundledProof { proof, name, dependencies: extra_dependencies }))
     }
     
@@ -35,7 +36,7 @@ impl BundledProof {
         &self.name
     }
     
-    pub fn dependencies(&self) -> &HashSet<Rc<MinlogProof>> {
+    pub fn dependencies(&self) -> &IndexSet<Rc<MinlogProof>> {
         &self.dependencies
     }
 }
@@ -61,9 +62,9 @@ impl ProofBody for BundledProof {
         self.proof.unfold()
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -71,9 +72,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -81,9 +82,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -91,9 +92,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -101,9 +102,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_predicate_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -111,9 +112,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_comprehension_terms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -121,9 +122,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_inductive_predicates(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -131,9 +132,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_prime_formulas(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -141,9 +142,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_goals(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_goals(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -151,9 +152,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_assumptions(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -161,9 +162,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_axioms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_axioms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -171,9 +172,9 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn get_theorems(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_theorems(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::BundledProof(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::BundledProof(self.clone()));
             
@@ -261,7 +262,7 @@ impl PrettyPrintable for BundledProof {
 
 impl ProofTreeDisplayable for BundledProof {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
-        let mut goals = self.proof.get_goals(&mut HashSet::new()).iter().cloned().collect::<Vec<_>>();
+        let mut goals = self.proof.get_goals(&mut IndexSet::new()).iter().cloned().collect::<Vec<_>>();
         goals.sort_by_key(|a| a.to_goal().map_or("".to_string(), |g| g.name().to_string()));
         
         ProofTreeNode::new_node(

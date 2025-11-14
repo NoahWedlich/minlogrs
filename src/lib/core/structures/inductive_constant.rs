@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}, collections::HashSet};
+use indexmap::{IndexMap, IndexSet};
+use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::*;
 
@@ -45,7 +46,7 @@ impl InductiveConstant {
             panic!("Clause with name '{}' already exists in inductive constant '{}'", clause_name, self.name);
         }
 
-        let ipreds = clause_body.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut HashSet::new());
+        let ipreds = clause_body.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new());
         if !ipreds.iter().any(|p| p.polarity.is_strictly_positive()
             && p.value.to_inductive_predicate().unwrap().definition().as_ref() == self) {
             panic!("Clause body does not contain strictly positive occurrence of inductive constant '{}'", self.name);
@@ -92,42 +93,42 @@ impl InductiveConstant {
         self.algebra.borrow().clone()
     }
     
-    pub fn get_type_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
+    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_type_variables(visited))
-            .chain(self.arity.get_type_variables(&mut HashSet::new())).collect()
+            .chain(self.arity.get_type_variables(&mut IndexSet::new())).collect()
     }
     
-    pub fn get_free_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_free_variables(visited)).collect()
     }
     
-    pub fn get_bound_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
+    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_bound_variables(visited)).collect()
     }
     
-    pub fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    pub fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current, visited)).collect()
     }
 
-    pub fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    pub fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current, visited)).collect()
     }
 
-    pub fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    pub fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited)).collect()
     }
     
-    pub fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
+    pub fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current, visited)).collect()
     }
 }
 
 impl PrettyPrintable for InductiveConstant {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tvars = self.get_type_variables(&mut HashSet::new());
-        let tmvars = self.get_free_variables(&mut HashSet::new());
-        let pvars = self.get_polarized_pred_vars(Polarity::Unknown, &mut HashSet::new())
-            .into_iter().map(|p| p.value).collect::<HashSet<_>>();
+        let tvars = self.get_type_variables(&mut IndexSet::new());
+        let tmvars = self.get_free_variables(&mut IndexSet::new());
+        let pvars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
+            .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
         
         let has_tvars = !tvars.is_empty();
         let has_tmvars = !tmvars.is_empty();

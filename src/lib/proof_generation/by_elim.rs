@@ -1,5 +1,6 @@
 
-use std::{collections::HashSet, rc::Rc};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::{builtin::elimination::extract_elimination_axiom, core::proofs::{assumption::Assumption,
     bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro},
     proof_generation::by_assume::generate_proof_by_assume_with_name};
@@ -14,7 +15,7 @@ pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<M
     
     let mut proof = elim_axiom;
     
-    let mut dependencies = HashSet::new();
+    let mut dependencies = IndexSet::new();
     
     let mut variables = vec![];
     while let Some(all) = proof.proved_formula().to_all_quantifier() {
@@ -41,11 +42,11 @@ pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<M
     let mut goal_index = 0;
     while let Some(imp) = proof.proved_formula().to_implication() {
         let premise = imp.premises()[0].clone();
-        let provided_vars = variables.iter().cloned().collect::<HashSet<_>>()
-            .intersection(&premise.get_free_variables(&mut HashSet::new())).cloned().collect::<HashSet<_>>();
+        let provided_vars = variables.iter().cloned().collect::<IndexSet<_>>()
+            .intersection(&premise.get_free_variables(&mut IndexSet::new())).cloned().collect::<IndexSet<_>>();
         
         let context = ProofContext {
-            assumptions: HashSet::new(),
+            assumptions: IndexSet::new(),
             variables: provided_vars,
         };
         
@@ -57,7 +58,7 @@ pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<M
         );
         
         dependencies.extend(
-            reduced_premise.to_bundled_proof().map_or(HashSet::new(), |bp| bp.dependencies().clone())
+            reduced_premise.to_bundled_proof().map_or(IndexSet::new(), |bp| bp.dependencies().clone())
         );
         
         goal_index += 1;

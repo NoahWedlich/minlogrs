@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput, Substitutable};
@@ -31,8 +32,8 @@ impl TypeBody for TypeVariable {
         Some(TypeVariable::create(self.name.clone()))
     }
 
-    fn get_polarized_tvars(&self, current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
-        HashSet::from([Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))])
+    fn get_polarized_tvars(&self, current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+        IndexSet::from([Polarized::new(current, Rc::new(MinlogType::Variable(self.clone())))])
     }
 
     fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {

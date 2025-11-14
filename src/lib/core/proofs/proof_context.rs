@@ -1,20 +1,21 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::proofs::minlog_proof::MinlogProof;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProofContext {
-    pub assumptions: HashSet<Rc<MinlogProof>>,
-    pub variables: HashSet<Rc<MinlogTerm>>,
+    pub assumptions: IndexSet<Rc<MinlogProof>>,
+    pub variables: IndexSet<Rc<MinlogTerm>>,
 }
 
 impl ProofContext {
     pub fn new() -> Self {
         ProofContext {
-            assumptions: HashSet::new(),
-            variables: HashSet::new(),
+            assumptions: IndexSet::new(),
+            variables: IndexSet::new(),
         }
     }
     
@@ -38,11 +39,11 @@ impl ProofContext {
         self.variables.insert(variable);
     }
     
-    pub fn get_assumptions(&self) -> &HashSet<Rc<MinlogProof>> {
+    pub fn get_assumptions(&self) -> &IndexSet<Rc<MinlogProof>> {
         &self.assumptions
     }
     
-    pub fn get_variables(&self) -> &HashSet<Rc<MinlogTerm>> {
+    pub fn get_variables(&self) -> &IndexSet<Rc<MinlogTerm>> {
         &self.variables
     }
     
@@ -55,11 +56,11 @@ impl ProofContext {
     }
     
     pub fn remove_assumption(&mut self, assumption: &Rc<MinlogProof>) {
-        self.assumptions.remove(assumption);
+        self.assumptions.shift_remove(assumption);
     }
     
     pub fn remove_variable(&mut self, variable: &Rc<MinlogTerm>) {
-        self.variables.remove(variable);
+        self.variables.shift_remove(variable);
     }
     
     pub fn clear(&mut self) {

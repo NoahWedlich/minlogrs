@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, hash::Hash, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -40,32 +41,32 @@ crate::wrapper_enum! {
             false
         }
         
-        pub fn get_type_variables(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
 
-        pub fn get_algebra_types(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_algebra_types(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_free_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_bound_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_constructors(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_constructors(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_program_terms(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_program_terms(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_internal_constants(&Self, _visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_internal_constants(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
         pub fn alpha_equivalent(&Self, other: &Rc<MinlogTerm>,
@@ -114,23 +115,23 @@ impl MinlogTerm {
     }
 
     pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_free_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_free_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_bound_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_bound_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_constructor(&self, con: &Rc<MinlogTerm>) -> bool {
-        con.is_constructor() && self.get_constructors(&mut HashSet::new()).contains(con)
+        con.is_constructor() && self.get_constructors(&mut IndexSet::new()).contains(con)
     }
     
     pub fn contains_program_term(&self, prog: &Rc<MinlogTerm>) -> bool {
-        prog.is_program_term() && self.get_program_terms(&mut HashSet::new()).contains(prog)
+        prog.is_program_term() && self.get_program_terms(&mut IndexSet::new()).contains(prog)
     }
     
     pub fn contains_internal_constant(&self, ic: &Rc<MinlogTerm>) -> bool {
-        ic.is_internal_constant() && self.get_internal_constants(&mut HashSet::new()).contains(ic)
+        ic.is_internal_constant() && self.get_internal_constants(&mut IndexSet::new()).contains(ic)
     }
 }
 

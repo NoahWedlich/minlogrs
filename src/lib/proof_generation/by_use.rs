@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::core::predicates::minlog_predicate::MinlogPredicate;
 use crate::core::proofs::goal::Goal;
 use crate::core::proofs::minlog_proof::MinlogProof;
@@ -10,7 +11,7 @@ use crate::core::proofs::proof_context::ProofContext;
 
 pub fn generate_proof_by_use(target: &Rc<MinlogPredicate>, to_use: &Rc<MinlogProof>, context: &ProofContext) -> Rc<MinlogProof> {
     let mut proof = to_use.clone();
-    let mut goal_index = proof.get_goals(&mut HashSet::new()).len();
+    let mut goal_index = proof.get_goals(&mut IndexSet::new()).len();
     
     loop {
         if let Some(subst) = ProofSubstitution::match_with(&proof.proved_formula().into(), &target.into()) {

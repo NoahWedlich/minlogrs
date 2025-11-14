@@ -1,6 +1,6 @@
 
-use std::hash::Hash;
-use std::{cmp::max, rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::{cmp::max, rc::Rc};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -62,15 +62,15 @@ impl TypeBody for ArrowType {
         max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
     }
     
-    fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         if visited.contains(&MinlogType::Arrow(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogType::Arrow(self.clone()));
             
             let mut result = self.arguments.iter()
                 .flat_map(|arg| arg.get_polarized_tvars(current.invert(), visited))
-                .collect::<HashSet<_>>();
+                .collect::<IndexSet<_>>();
             
             result.extend(self.value.get_polarized_tvars(current, visited));
             
@@ -78,15 +78,15 @@ impl TypeBody for ArrowType {
         }
     }
 
-    fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         if visited.contains(&MinlogType::Arrow(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogType::Arrow(self.clone()));
 
             let mut result = self.arguments.iter()
                 .flat_map(|arg| arg.get_polarized_algebras(current.invert(), visited))
-                .collect::<HashSet<_>>();
+                .collect::<IndexSet<_>>();
 
             result.extend(self.value.get_polarized_algebras(current, visited));
 

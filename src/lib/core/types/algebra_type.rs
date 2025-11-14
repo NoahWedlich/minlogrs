@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -21,7 +22,7 @@ pub struct AlgebraType {
 
 impl AlgebraType {
     pub fn create(algebra: Rc<Algebra>, mut parameters: TypeSubstitution) -> Rc<MinlogType> {
-        let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+        let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
             .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
         parameters.restrict(|from| alg_tvars.contains(from));
         
@@ -80,7 +81,7 @@ impl AlgebraType {
             
             if let Some(arrow_type) = constructor_type.to_arrow() {
                 for arg_type in arrow_type.arguments().iter() {
-                    let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive, &mut HashSet::new());
+                    let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive, &mut IndexSet::new());
                     for polarized_alg in polarized_algs.iter() {
                         if !polarized_alg.polarity.is_strictly_positive() &&
                             polarized_alg.value.to_algebra().unwrap().references_algebra(&self_alg_type) {
@@ -93,16 +94,16 @@ impl AlgebraType {
     }
     
     pub fn get_reduction(&self) -> Option<AlgebraReduction> {
-        let null_types = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+        let null_types = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
             .into_iter().filter_map(|ptv| {
                 let original_type = ptv.value;
                 let substituted_type = self.parameters.substitute(&original_type).remove_nulls();
                 if substituted_type.is_none() {
-                    None
-                } else {
                     Some(original_type)
+                } else {
+                    None
                 }
-            }).collect::<HashSet<_>>();
+            }).collect::<IndexSet<_>>();
             
         self.algebra.reduce(&null_types)
     }
@@ -139,27 +140,27 @@ impl TypeBody for AlgebraType {
             .max().unwrap_or(0)
     }
     
-    fn get_polarized_tvars(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         if visited.contains(&MinlogType::Algebra(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogType::Algebra(self.clone()));
             
             self.constructors().iter()
                 .flat_map(|c| c.minlog_type().get_polarized_tvars(current, visited))
-                .collect::<HashSet<_>>()
+                .collect::<IndexSet<_>>()
         }
     }
 
-    fn get_polarized_algebras(&self, current: Polarity, visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
         if visited.contains(&MinlogType::Algebra(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogType::Algebra(self.clone()));
 
             self.constructors().iter()
                 .flat_map(|c| c.minlog_type().get_polarized_algebras(current, visited))
-                .collect::<HashSet<_>>()
+                .collect::<IndexSet<_>>()
         }
     }
     
@@ -229,7 +230,7 @@ impl TypeBody for AlgebraType {
 
 impl PrettyPrintable for AlgebraType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        let tparams = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut HashSet::new())
+        let tparams = self.algebra.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
             .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
         
         if tparams.is_empty() {

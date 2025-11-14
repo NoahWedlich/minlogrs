@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -65,16 +66,16 @@ impl PredicateBody for PredicateVariable {
         TypeVariable::create(name)
     }
     
-    fn get_type_variables(&self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
-        self.arity().get_type_variables(&mut HashSet::new())
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        self.arity().get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
-        self.arity.get_algebra_types(&mut HashSet::new())
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        self.arity.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-        HashSet::from([Polarized {
+    fn get_polarized_pred_vars(&self, current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        IndexSet::from([Polarized {
             polarity: current,
             value: Rc::new(MinlogPredicate::Variable(self.clone())),
         }])

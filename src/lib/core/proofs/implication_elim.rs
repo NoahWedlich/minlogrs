@@ -1,6 +1,8 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 
+use crate::core::terms::application::Application;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
@@ -39,7 +41,7 @@ impl ImplicationElim {
         }
         
         if premises[0] != premise.proved_formula() {
-            panic!("ImplicationElim::create called with a premise that does not match the implication's first premise");
+            panic!("Can't eliminate implication {} with premise {}", implication_formula.debug_string(), premise.proved_formula().debug_string());
         }
         
         let formula = if premises.len() == 1 {
@@ -85,9 +87,9 @@ impl ProofBody for ImplicationElim {
         }))
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -97,9 +99,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -109,9 +111,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -121,9 +123,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -133,9 +135,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_predicate_variables(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -145,9 +147,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_comprehension_terms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -157,9 +159,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_inductive_predicates(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -169,9 +171,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_prime_formulas(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -181,9 +183,9 @@ impl ProofBody for ImplicationElim {
         }
     }
 
-    fn get_goals(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_goals(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             self.premise.get_goals(visited)
@@ -192,9 +194,9 @@ impl ProofBody for ImplicationElim {
         }
     }
 
-    fn get_assumptions(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -204,9 +206,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_axioms(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_axioms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             
@@ -216,9 +218,9 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn get_theorems(&self, visited: &mut HashSet<MinlogProof>) -> HashSet<Rc<MinlogProof>> {
+    fn get_theorems(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
         if visited.contains(&MinlogProof::ImplicationElim(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogProof::ImplicationElim(self.clone()));
             

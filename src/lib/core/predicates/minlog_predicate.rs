@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, hash::Hash, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -32,36 +33,36 @@ crate::wrapper_enum! {
         
         pub fn extracted_type(&Self) -> Rc<MinlogType>
         
-        pub fn get_type_variables(&Self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
         
-        pub fn get_algebra_types(&Self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogType>> {
-            HashSet::new()
+        pub fn get_algebra_types(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+            IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_free_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogTerm>> {
-            HashSet::new()
+        pub fn get_bound_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+            IndexSet::new()
         }
         
-        pub fn get_polarized_pred_vars(&Self, _current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-            HashSet::new()
+        pub fn get_polarized_pred_vars(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+            IndexSet::new()
         }
         
-        pub fn get_polarized_comp_terms(&Self, _current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-            HashSet::new()
+        pub fn get_polarized_comp_terms(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+            IndexSet::new()
         }
         
-        pub fn get_polarized_inductive_preds(&Self, _current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-            HashSet::new()
+        pub fn get_polarized_inductive_preds(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+            IndexSet::new()
         }
         
-        pub fn get_polarized_prime_formulas(&Self, _current: Polarity, _visited: &mut HashSet<MinlogPredicate>) -> HashSet<Polarized<Rc<MinlogPredicate>>> {
-            HashSet::new()
+        pub fn get_polarized_prime_formulas(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+            IndexSet::new()
         }
         
         pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
@@ -115,55 +116,55 @@ impl MinlogPredicate {
         ComprehensionTerm::create(vars, prime_formula)
     }
     
-    pub fn get_predicate_variables(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogPredicate>> {
+    pub fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
         self.get_polarized_pred_vars(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_comprehension_terms(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogPredicate>> {
+    pub fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
         self.get_polarized_comp_terms(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_inductive_predicates(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogPredicate>> {
+    pub fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
         self.get_polarized_inductive_preds(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
 
-    pub fn get_prime_formulas(&self, visited: &mut HashSet<MinlogPredicate>) -> HashSet<Rc<MinlogPredicate>> {
+    pub fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
         self.get_polarized_prime_formulas(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
 
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && self.get_type_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_type_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && self.get_algebra_types(&mut HashSet::new()).contains(alg)
+        alg.is_algebra() && self.get_algebra_types(&mut IndexSet::new()).contains(alg)
     }
     
     pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_free_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_free_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
-        var.is_variable() && self.get_bound_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_bound_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_predicate_variable(&self, pvar: &Rc<MinlogPredicate>) -> bool {
-        pvar.is_variable() && self.get_predicate_variables(&mut HashSet::new()).contains(pvar)
+        pvar.is_variable() && self.get_predicate_variables(&mut IndexSet::new()).contains(pvar)
     }
     
     pub fn contains_comprehension_term(&self, cterm: &Rc<MinlogPredicate>) -> bool {
-        cterm.is_comprehension_term() && self.get_comprehension_terms(&mut HashSet::new()).contains(cterm)
+        cterm.is_comprehension_term() && self.get_comprehension_terms(&mut IndexSet::new()).contains(cterm)
     }
     
     pub fn contains_inductive_predicate(&self, ipred: &Rc<MinlogPredicate>) -> bool {
-        ipred.is_inductive_predicate() && self.get_inductive_predicates(&mut HashSet::new()).contains(ipred)
+        ipred.is_inductive_predicate() && self.get_inductive_predicates(&mut IndexSet::new()).contains(ipred)
     }
     
     pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
-        pform.is_prime() && self.get_prime_formulas(&mut HashSet::new()).contains(pform)
+        pform.is_prime() && self.get_prime_formulas(&mut IndexSet::new()).contains(pform)
     }
 }

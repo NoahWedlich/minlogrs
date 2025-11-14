@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, hash::Hash, collections::HashSet};
+use indexmap::IndexSet;
+use std::{rc::Rc, hash::Hash};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
@@ -30,12 +31,12 @@ crate::wrapper_enum! {
             0
         }
         
-        pub fn get_polarized_tvars(&Self, _current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
-            HashSet::new()
+        pub fn get_polarized_tvars(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+            IndexSet::new()
         }
 
-        pub fn get_polarized_algebras(&Self, _current: Polarity, _visited: &mut HashSet<MinlogType>) -> HashSet<Polarized<Rc<MinlogType>>> {
-            HashSet::new()
+        pub fn get_polarized_algebras(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+            IndexSet::new()
         }
         
         pub fn substitute(&Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType>
@@ -90,21 +91,21 @@ impl MinlogType {
         self.is_constant() || matches!(self, MinlogType::Variable(_) | MinlogType::Algebra(_))
     }
     
-    pub fn get_type_variables(&self, visited: &mut HashSet<MinlogType>) -> HashSet<Rc<MinlogType>> {
+    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogType>) -> IndexSet<Rc<MinlogType>> {
         self.get_polarized_tvars(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_algebra_types(&self, visited: &mut HashSet<MinlogType>) -> HashSet<Rc<MinlogType>> {
+    pub fn get_algebra_types(&self, visited: &mut IndexSet<MinlogType>) -> IndexSet<Rc<MinlogType>> {
         self.get_polarized_algebras(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
     pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
-        var.is_variable() && self.get_type_variables(&mut HashSet::new()).contains(var)
+        var.is_variable() && self.get_type_variables(&mut IndexSet::new()).contains(var)
     }
     
     pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
-        alg.is_algebra() && self.get_algebra_types(&mut HashSet::new()).contains(alg)
+        alg.is_algebra() && self.get_algebra_types(&mut IndexSet::new()).contains(alg)
     }
 }

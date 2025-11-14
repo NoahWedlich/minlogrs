@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::{utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
@@ -104,9 +105,9 @@ impl TermBody for MatchTerm {
         0
     }
     
-    fn get_type_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -114,14 +115,14 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)|
                     p.get_type_variables(visited)
                         .union(&i.get_type_variables(visited))
-                        .cloned().collect::<HashSet<_>>())
+                        .cloned().collect::<IndexSet<_>>())
                 .collect()
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -129,15 +130,15 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_algebra_types(visited)
                         .union(&i.get_algebra_types(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }
     }
     
-    fn get_free_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -145,15 +146,15 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_free_variables(visited)
                         .union(&i.get_free_variables(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -161,15 +162,15 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_bound_variables(visited)
                         .union(&i.get_bound_variables(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }
     }
     
-    fn get_constructors(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -177,15 +178,15 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_constructors(visited)
                         .union(&i.get_constructors(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }
     }
     
-    fn get_program_terms(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -193,15 +194,15 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_program_terms(visited)
                         .union(&i.get_program_terms(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }
     }
     
-    fn get_internal_constants(&self, visited: &mut HashSet<MinlogTerm>) -> HashSet<Rc<MinlogTerm>> {
+    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            HashSet::new()
+            IndexSet::new()
         } else {
             visited.insert(MinlogTerm::MatchTerm(self.clone()));
             
@@ -209,7 +210,7 @@ impl TermBody for MatchTerm {
                 .flat_map(|(p, i)| {
                     p.get_internal_constants(visited)
                         .union(&i.get_internal_constants(visited))
-                        .cloned().collect::<HashSet<_>>()
+                        .cloned().collect::<IndexSet<_>>()
                 })
                 .collect()
         }

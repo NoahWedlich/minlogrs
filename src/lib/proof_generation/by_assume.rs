@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::HashSet};
+use indexmap::IndexSet;
+use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 use crate::core::proofs::{assumption::Assumption, bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro};
 use crate::core::proofs::goal::Goal;
@@ -106,5 +107,5 @@ pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &
         }
     }
     
-    BundledProof::create(proof, "by_assume".to_string(), HashSet::from([goal]))
+    BundledProof::create(proof, "by_assume".to_string(), IndexSet::from([goal]))
 }

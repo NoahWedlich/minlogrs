@@ -1,5 +1,6 @@
 
-use std::{rc::Rc, collections::{HashMap, HashSet}};
+use indexmap::{IndexMap, IndexSet};
+use std::rc::Rc;
 use lib::{builtin::{elimination::extract_elimination_axiom, totality::extract_totality},
 core::{predicates::comprehension_term::ComprehensionTerm,
     proofs::{minlog_proof::{MinlogProof, ProofBody},
@@ -129,7 +130,7 @@ fn main() {
     println!("Algebra:");
     println!("{}", nat.debug_string());
     
-    let nat_total = extract_totality(&nat, &mut HashMap::new());
+    let nat_total = extract_totality(&nat, &mut IndexMap::new());
     println!("Totality Predicate:");
     println!("{}", nat_total.to_inductive_predicate().unwrap().definition().debug_string());
     
@@ -217,7 +218,7 @@ fn main() {
     println!("Algebra:");
     println!("{}", algebra.debug_string());
     
-    algebra.add_reduction(HashSet::from([tvar.clone()]), nat.clone());
+    algebra.add_reduction(IndexSet::from([tvar.clone()]), nat.clone());
     
     let test_subst = TypeSubstitution::from_pairs(
         vec![(tvar.clone(), TypeConstant::create_null())]
@@ -263,7 +264,7 @@ fn main() {
     println!("Assume Proof:");
     println!("{}", assume_proof.render_proof_tree());
     
-    let goal0 = assume_proof.get_goals(&mut HashSet::new()).iter().next().unwrap()
+    let goal0 = assume_proof.get_goals(&mut IndexSet::new()).iter().next().unwrap()
         .to_goal().unwrap().clone();
     let context0 = goal0.get_context().clone();
 
@@ -278,7 +279,7 @@ fn main() {
     println!("Subproof by Introduction:");
     println!("{}", subproof0.render_proof_tree());
     
-    let goal1 = subproof0.get_goals(&mut HashSet::new()).iter().next().unwrap()
+    let goal1 = subproof0.get_goals(&mut IndexSet::new()).iter().next().unwrap()
         .to_goal().unwrap().clone();
     let context1 = goal1.get_context().clone();
     
@@ -326,7 +327,7 @@ fn main() {
     println!("Normalized Proof:");
     println!("{}", normalized_proof.render_proof_tree());
     
-    let goal2 = normalized_proof.get_goals(&mut HashSet::new()).iter().next().unwrap()
+    let goal2 = normalized_proof.get_goals(&mut IndexSet::new()).iter().next().unwrap()
         .to_goal().unwrap().clone();
     let context2 = goal2.get_context().clone();
     
@@ -342,7 +343,7 @@ fn main() {
     println!("Subproof by Assume:");
     println!("{}", subproof2.render_proof_tree());
     
-    let goal3 = subproof2.get_goals(&mut HashSet::new()).iter().next().unwrap()
+    let goal3 = subproof2.get_goals(&mut IndexSet::new()).iter().next().unwrap()
         .to_goal().unwrap().clone();
     let context3 = goal3.get_context().clone();
     
@@ -388,7 +389,7 @@ fn main() {
     println!("Normalized Proof:");
     println!("{}", normalized_proof2.render_proof_tree());
     
-    let goal4 = normalized_proof2.get_goals(&mut HashSet::new()).iter().next().unwrap()
+    let goal4 = normalized_proof2.get_goals(&mut IndexSet::new()).iter().next().unwrap()
         .to_goal().unwrap().clone();
     let context4 = goal4.get_context().clone();
     
