@@ -26,6 +26,10 @@ pub struct PrimeFormula {
 
 impl PrimeFormula {
     pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogPredicate> {
+        let arguments = arguments.into_iter()
+            .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
+            .collect::<Vec<Rc<MinlogTerm>>>();
+        
         if arguments.is_empty() {
             return body;
         }

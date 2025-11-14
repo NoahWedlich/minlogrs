@@ -25,6 +25,10 @@ pub struct ComprehensionTerm {
 
 impl ComprehensionTerm {
     pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        let vars = vars.into_iter()
+            .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
+            .collect::<Vec<Rc<MinlogTerm>>>();
+        
         if vars.is_empty() {
             return body;
         }
