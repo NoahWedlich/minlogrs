@@ -244,7 +244,7 @@ impl PrettyPrintable for AlgebraType {
                             substituted.to_enclosed_pp_element(detail)
                         ], BreakType::Flexible, 0)
                     } else {
-                        param.to_enclosed_pp_element(detail)
+                        substituted.to_enclosed_pp_element(detail)
                     }
                 }).collect(),
                 PPElement::break_elem(0, 4, false),
