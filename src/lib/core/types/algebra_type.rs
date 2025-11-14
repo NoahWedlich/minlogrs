@@ -168,14 +168,10 @@ impl TypeBody for AlgebraType {
         if from.is_algebra() && self == from.to_algebra().unwrap() {
             to.clone()
         } else {
-            let new_parameters = TypeSubstitution::from_pairs(
-                self.parameters.pairs().into_iter()
-                    .map(|(f, t)| {
-                        (f.substitute(from, to), t.substitute(from, to))
-                    })
-                    .collect()
-            );
-            AlgebraType::create(self.algebra.clone(), new_parameters)
+            let mut new_params = self.parameters.clone();
+            new_params.extend((from.clone(), to.clone()));
+            
+            AlgebraType::create(self.algebra.clone(), new_params)
         }
     }
     

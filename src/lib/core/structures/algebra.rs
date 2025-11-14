@@ -88,13 +88,16 @@ impl Algebra {
         let mut constructor_mapping = IndexMap::new();
         let mut remaining_constructors = reduced_algebra.constructors.borrow().clone();
         
-        for constructor in self.constructors.borrow().iter() {
             let subst = TypeSubstitution::from_pairs(
                 relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
             );
+        
+        let substituded_self = subst.substitute(&self_type);
+        
+        for constructor in self.constructors.borrow().iter() {
             
             let mut reduced_type = subst.substitute(&constructor.minlog_type());
-            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.substitute(&substituded_self, &reduced_algebra_type);
             reduced_type = reduced_type.remove_nulls().unwrap();
             
             let possible_constructors = remaining_constructors.iter().filter_map(|c| {
@@ -137,13 +140,16 @@ impl Algebra {
         let self_type = AlgebraType::create(Rc::new(self.clone()), TypeSubstitution::make_empty());
         let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
         
-        for constructor in self.constructors.borrow().iter() {
             let subst = TypeSubstitution::from_pairs(
                 relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
             );
+        
+        let substituded_self = subst.substitute(&self_type);
+        
+        for constructor in self.constructors.borrow().iter() {
             
             let mut reduced_type = subst.substitute(&constructor.minlog_type());
-            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.substitute(&substituded_self, &reduced_algebra_type);
             reduced_type = reduced_type.remove_nulls().unwrap();
             
             if let Some(reduced_constructor_name) = constructor_mapping.get(constructor.to_constructor().unwrap().name()) {
@@ -184,13 +190,16 @@ impl Algebra {
         let reduced_algebra = Algebra::create(name);
         let reduced_algebra_type = AlgebraType::create(reduced_algebra.clone(), TypeSubstitution::make_empty());
         
-        for constructor in self.constructors.borrow().iter() {
             let subst = TypeSubstitution::from_pairs(
                 relevant_null_types.iter().map(|t| (t.clone(), TypeConstant::create_null())).collect()
             );
+        
+        let substituded_self = subst.substitute(&self_type);
+        
+        for constructor in self.constructors.borrow().iter() {
             
             let mut reduced_type = subst.substitute(&constructor.minlog_type());
-            reduced_type = reduced_type.substitute(&self_type, &reduced_algebra_type);
+            reduced_type = reduced_type.substitute(&substituded_self, &reduced_algebra_type);
             reduced_type = reduced_type.remove_nulls().unwrap();
             
             let reduced_constructor = Constructor::create(
