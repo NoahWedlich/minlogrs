@@ -20,22 +20,27 @@ use crate::core::{
     }
 };
 
-pub fn extract_totality(algebra: &Rc<Algebra>, totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>) -> Rc<MinlogPredicate> {
-    let alg_type = AlgebraType::create(algebra.clone(), TypeSubstitution::make_empty());
+pub fn extract_totality(algebra: &Rc<MinlogType>, totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>) -> Rc<MinlogPredicate> {
+    if !algebra.is_algebra() {
+        panic!("extract_totality called with a non-algebra type");
+    }
     
-    if let Some(pred) = totalities.get(&alg_type) {
+    if let Some(pred) = totalities.get(algebra) {
         pred.clone()
     } else {
-        let totality_def = InductiveConstant::create("Total".to_string(), alg_type.clone());
+        let totality_def = InductiveConstant::create(
+            format!("{}Total", algebra.to_algebra().unwrap().name()),
+            algebra.clone()
+        );
         
         let totality_pred = InductivePredicate::create(
             totality_def.clone(), 
             PredicateSubstitution::make_empty()
         );
         
-        totalities.insert(alg_type.clone(), totality_pred.clone());
+        totalities.insert(algebra.clone(), totality_pred.clone());
         
-        for constructor in algebra.constructors() {
+        for constructor in algebra.to_algebra().unwrap().constructors() {
             let clause = constructor_to_totality_clause(&constructor, totalities);
             totality_def.add_clause(format!("{}Total", constructor.to_constructor().unwrap().name()), clause);
         }
@@ -55,8 +60,8 @@ fn constructor_to_totality_clause(
     }
     
     match constructor.minlog_type().as_ref() {
-        MinlogType::Algebra(alg_type) => {
-            let totality_pred = extract_totality(alg_type.algebra(), totalities);
+        MinlogType::Algebra(_) => {
+            let totality_pred = extract_totality(&constructor.minlog_type(), totalities);
             PrimeFormula::create(totality_pred, vec![constructor.clone()])
         },
         MinlogType::Arrow(arrow_type) => {
@@ -110,8 +115,8 @@ fn term_to_totality_condition(
                 panic!("No totality predicate found for type variable");
             }
         },
-        MinlogType::Algebra(alg_type) => {
-            let totality = extract_totality(alg_type.algebra(), totalities);
+        MinlogType::Algebra(_) => {
+            let totality = extract_totality(&term.minlog_type(), totalities);
             Some(PrimeFormula::create(totality, vec![term]))
         },
         MinlogType::Arrow(arrow_type) => {
