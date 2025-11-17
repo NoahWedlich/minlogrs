@@ -10,6 +10,7 @@ use crate::core::types::minlog_type::MinlogType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::terms::term_variable::TermVariable;
+use crate::core::terms::term_substitution::TermSubstitution;
 
 use crate::core::predicates::predicate_wildcard::PredicateWildcard;
 use crate::core::predicates::predicate_variable::PredicateVariable;
@@ -33,6 +34,7 @@ crate::wrapper_enum! {
         
         pub fn extracted_type_pattern(&Self) -> Rc<MinlogType>
         pub fn extracted_type(&Self) -> Rc<MinlogType>
+        pub fn et_pattern_to_et(&Self) -> TermSubstitution
         
         pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()

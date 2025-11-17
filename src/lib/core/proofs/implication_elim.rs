@@ -97,7 +97,7 @@ impl ProofBody for ImplicationElim {
             } else {
                 imp_term
             }
-        })
+        })?.remove_nulls()
     }
     
     fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {

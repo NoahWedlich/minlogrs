@@ -50,8 +50,11 @@ impl Axiom {
     }
     
     pub fn set_content(&self, content: Rc<MinlogTerm>) {
-        if content.minlog_type() != self.formula.extracted_type().remove_nulls().unwrap() {
-            panic!("Tried to set axiom content with mismatching type");
+        if content.minlog_type() != self.formula.extracted_type_pattern() {
+            panic!("Tried to set axiom content with mismatching type, expected {}, got {}",
+                self.formula.extracted_type_pattern().debug_string(),
+                content.minlog_type().debug_string()
+            );
         }
         
         *self.content.borrow_mut() = Some(content);

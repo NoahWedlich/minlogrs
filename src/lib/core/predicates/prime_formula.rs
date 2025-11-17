@@ -12,6 +12,7 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::tuple_type::TupleType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
+use crate::core::terms::term_substitution::TermSubstitution;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
@@ -167,6 +168,10 @@ impl PredicateBody for PrimeFormula {
     
     fn extracted_type(&self) -> Rc<MinlogType> {
         self.body.extracted_type()
+    }
+    
+    fn et_pattern_to_et(&self) -> TermSubstitution {
+        self.body.et_pattern_to_et()
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

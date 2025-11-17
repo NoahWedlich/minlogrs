@@ -34,6 +34,15 @@ pub fn generate_proof_by_intro(target: &Rc<MinlogPredicate>, clause: &String, co
                 clause_pred.clone()
             );
             
+            if let Some(content) = inductive_predicate.to_inductive_predicate()
+                .unwrap().get_computational_content()
+            {
+                let constr_name = content.clause_mapping.get(name).unwrap().clone();
+                let constr = inductive_predicate.extracted_type_pattern().to_algebra()
+                    .unwrap().constructor(&constr_name).unwrap();
+                intro_axiom.to_axiom().unwrap().set_content(constr);
+            }
+            
             generate_proof_by_use(
                 target,
                 &intro_axiom,

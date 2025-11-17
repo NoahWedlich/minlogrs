@@ -11,6 +11,7 @@ use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::arrow_type::ArrowType;
 
 use crate::core::terms::minlog_term::MinlogTerm;
+use crate::core::terms::term_substitution::TermSubstitution;
 
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
@@ -107,6 +108,16 @@ impl PredicateBody for Implication {
         
         ArrowType::create(premise_types, conclusion_type)
             .remove_nulls().unwrap_or(TypeConstant::create_null())
+    }
+    
+    fn et_pattern_to_et(&self) -> TermSubstitution {
+        let mut subst = self.conclusion.et_pattern_to_et();
+        
+        for premise in &self.premises {
+            subst.compose(&premise.et_pattern_to_et());
+        }
+        
+        subst
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

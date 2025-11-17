@@ -57,10 +57,23 @@ impl InductiveConstant {
         self.clauses.borrow().clone()
     }
     
-    pub fn make_computational(&self, algebra_type: Rc<MinlogType>, existing: bool) {
+    pub fn register_computational_content(&self, algebra_type: Rc<MinlogType>) {
         if !algebra_type.is_algebra() {
-            panic!("make_computational called with a non-algebra type");
+            panic!("register_computational_content called with a non-algebra type");
         }
+        
+        self.computational_content.borrow_mut().replace(IDPComputationalContent {
+            algebra: algebra_type,
+            clause_mapping: IndexMap::new(),
+        });
+    }
+    
+    pub fn make_computational(&self, existing: bool) {
+        let algebra_type = if let Some(content) = self.computational_content.borrow().clone() {
+            content.algebra.clone()
+        } else {
+            panic!("Inductive constant '{}' has no registered computational content", self.name);
+        };
         
         let algebra = algebra_type.to_algebra().unwrap();
         

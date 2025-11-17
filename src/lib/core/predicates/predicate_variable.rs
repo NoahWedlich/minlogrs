@@ -11,6 +11,8 @@ use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_constant::TypeConstant;
 use crate::core::types::type_variable::TypeVariable;
 
+use crate::core::terms::term_substitution::TermSubstitution;
+
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
@@ -69,6 +71,13 @@ impl PredicateBody for PredicateVariable {
     
     fn extracted_type(&self) -> Rc<MinlogType> {
         TypeConstant::create_null()
+    }
+    
+    fn et_pattern_to_et(&self) -> TermSubstitution {
+        let pattern = self.extracted_type_pattern();
+        let et = self.extracted_type();
+        
+        TermSubstitution::from_pairs(vec![(pattern.into(), et.into())])
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

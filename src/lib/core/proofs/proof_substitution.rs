@@ -104,7 +104,8 @@ impl Substitutable for ProofSubstEntry {
                 ProofSubstEntry::Term(tm.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
             },
             ProofSubstEntry::Predicate(p) if from.is_pred_subst_entry() && to.is_pred_subst_entry() => {
-                ProofSubstEntry::Predicate(p.substitute(&from.to_pred_subst_entry().unwrap(), &to.to_pred_subst_entry().unwrap()))
+                let psubstentry: PredSubstEntry = p.clone().into();
+                ProofSubstEntry::Predicate(psubstentry.substitute(&from.to_pred_subst_entry().unwrap(), &to.to_pred_subst_entry().unwrap()).to_predicate().unwrap())
             },
             ProofSubstEntry::Proof(pr) => {
                 ProofSubstEntry::Proof(pr.substitute(from, to))
@@ -139,8 +140,8 @@ impl Substitutable for ProofSubstEntry {
         match (self, to) {
             (ProofSubstEntry::Proof(p1), ProofSubstEntry::Proof(p2)) => {
                 p1.is_goal() && !p2.contains_goal(p1)
-                && p2.get_assumptions(&mut IndexSet::new()).is_subset(&p1.get_assumptions(&mut IndexSet::new()))
-                && p2.get_free_variables(&mut IndexSet::new()).is_subset(&p1.get_free_variables(&mut IndexSet::new()))
+                && p2.get_assumptions().is_subset(&p1.get_assumptions())
+                && p2.get_free_variables().is_subset(&p1.get_free_variables())
             },
             (_, _) if self.is_pred_subst_entry() && to.is_pred_subst_entry() => {
                 let from_pse = self.to_pred_subst_entry().unwrap();

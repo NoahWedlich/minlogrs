@@ -9,6 +9,8 @@ use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_constant::TypeConstant;
 
+use crate::core::terms::term_substitution::TermSubstitution;
+
 use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
 
 use crate::core::predicates::predicate_substitution::PredSubstEntry;
@@ -39,6 +41,10 @@ impl PredicateBody for PredicateWildcard {
     
     fn extracted_type(&self) -> Rc<MinlogType> {
         TypeConstant::create_null()
+    }
+    
+    fn et_pattern_to_et(&self) -> TermSubstitution {
+        TermSubstitution::make_empty()
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {

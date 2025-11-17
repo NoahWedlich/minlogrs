@@ -1,7 +1,7 @@
 
 use indexmap::IndexSet;
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
-use crate::utils::pretty_printer::*;
+use crate::{core::terms::{application::Application, term_variable::TermVariable}, utils::pretty_printer::*};
 
 use crate::core::substitution::SubstitutableWith;
 
@@ -34,20 +34,38 @@ impl RewriteRule {
             
             let pc = app.operator().to_program_term().unwrap();
             
-            if app.operands().len() != pc.minlog_type().arity() {
-                panic!("Rewrite rule pattern must be a full application of the program constant");
-            }
-            
             for (op, arg) in app.operands().iter().zip(pc.minlog_type().to_arrow().unwrap().arguments()) {
                 if op.minlog_type() != *arg {
                     panic!("Rewrite rule pattern operand types must match the program constant argument types");
                 }
             }
         } else {
-            panic!("Rewrite rule must either be a program constant or a full application of a program constant");
+            panic!("Rewrite rule must either be a program constant or a full application of a program constant: found {}", pattern.debug_string());
         }
         
-        Rc::new(RewriteRule { pattern, result })
+        if let Some(arrow) = result.minlog_type().to_arrow() {
+            let idx_offset = 0; // TODO: Calculate from the vars in the pattern
+            let vars = arrow.arguments().iter().enumerate().map(|(i, t)|
+                TermVariable::create(
+                    format!("aux{}", i + idx_offset),
+                    t.clone()
+                )
+            ).collect::<Vec<_>>();
+            
+            let wrapped_pattern = Application::create(
+                pattern.clone(),
+                vars.clone()
+            );
+            
+            let wrapped_result = Application::create(
+                result.clone(),
+                vars
+            );
+            
+            Rc::new(RewriteRule { pattern: wrapped_pattern, result: wrapped_result })
+        } else {
+            Rc::new(RewriteRule { pattern, result })
+        }
     }
     
     pub fn pattern(&self) -> Rc<MinlogTerm> {
@@ -240,22 +258,6 @@ impl ProgramConstant {
         }
         
         self.rewrite_rules.borrow_mut().push(rule);
-    }
-    
-    pub fn compute(&self, term: &Rc<MinlogTerm>) -> (Rc<MinlogTerm>, bool) {
-        for rule in self.computation_rules.borrow().iter() {
-            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
-            }
-        }
-        
-        for rule in self.rewrite_rules.borrow().iter() {
-            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
-            }
-        }
-        
-        (term.clone(), false)
     }
     
     pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {

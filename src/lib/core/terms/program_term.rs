@@ -51,6 +51,22 @@ impl ProgramTerm {
             .collect()
     }
     
+    pub fn compute(&self, term: &Rc<MinlogTerm>) -> (Rc<MinlogTerm>, bool) {
+        for rule in self.computation_rules().iter() {
+            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
+                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
+            }
+        }
+        
+        for rule in self.rewrite_rules().iter() {
+            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
+                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
+            }
+        }
+        
+        (term.clone(), false)
+    }
+    
     pub fn parameters(&self) -> &TermSubstitution {
         &self.parameters
     }
@@ -162,11 +178,9 @@ impl TermBody for ProgramTerm {
         if let Some(tm) = from.to_term() && tm.is_program_term() && self == tm.to_program_term().unwrap() {
             to.to_term().unwrap()
         } else {
-            let new_params = TermSubstitution::from_pairs(
-                self.parameters.pairs().iter()
-                    .map(|(f, t)| (f.substitute(from, to), t.substitute(from, to)))
-                    .collect()
-            );
+            let mut new_params = self.parameters.clone();
+            new_params.extend((from.clone(), to.clone()));
+            
             ProgramTerm::create(self.pconst.clone(), new_params)
         }
     }
@@ -295,13 +309,24 @@ impl PrettyPrintable for ProgramTerm {
                 BreakType::Consistent
             );
             
+            let type_object = if detail {
+                PPElement::group(vec![
+                    PPElement::text(":".to_string()),
+                    PPElement::break_elem(1, 4, false),
+                    self.minlog_type().to_enclosed_pp_element(detail)
+                ], BreakType::Flexible, 0)
+            } else {
+                PPElement::text("".to_string())
+            };
+            
             PPElement::group(vec![
                 PPElement::text(self.pconst.name().clone()),
                 PPElement::text("<".to_string()),
                 PPElement::break_elem(1, 4, false),
                 variables,
                 PPElement::break_elem(1, 0, false),
-                PPElement::text(">".to_string())
+                PPElement::text(">".to_string()),
+                type_object,
             ], BreakType::Consistent, 0)
         }
     }

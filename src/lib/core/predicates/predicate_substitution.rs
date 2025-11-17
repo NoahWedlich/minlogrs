@@ -78,8 +78,19 @@ impl Substitutable for PredSubstEntry {
             (PredSubstEntry::Term(tm), _, _) if from.is_term_subst_entry() && to.is_term_subst_entry() => {
                 PredSubstEntry::Term(tm.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
             },
-            (PredSubstEntry::Predicate(p), _, _) => {
-                PredSubstEntry::Predicate(p.substitute(from, to))
+            (PredSubstEntry::Predicate(p), f, t) => {
+                let substituted = p.substitute(from, to);
+                match (f, t) {
+                    (PredSubstEntry::Predicate(from_pred), PredSubstEntry::Predicate(to_pred)) => {
+                        substituted.substitute(
+                            &from_pred.extracted_type_pattern().into(),
+                            &to_pred.extracted_type_pattern().into()
+                        ).into()
+                    },
+                    _ => {
+                        substituted.into()
+                    }
+                }
             },
             _ => {
                 self.clone()
@@ -330,9 +341,12 @@ impl <T: SubstitutableWith<TermSubstEntry>> SubstitutableWith<PredSubstEntry> fo
                 let to_tse = to.to_term_subst_entry().unwrap();
                 self.substitute_with(&from_tse, &to_tse)
             },
+            (PredSubstEntry::Predicate(from_p), PredSubstEntry::Predicate(to_p)) => {
+                self.substitute_with(&from_p.extracted_type_pattern().into(), &to_p.extracted_type_pattern().into())
+            },
             _ => {
                 self.clone()
-            }
+            }            
         }
     }
 }

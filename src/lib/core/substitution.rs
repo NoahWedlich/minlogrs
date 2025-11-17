@@ -91,7 +91,7 @@ impl<T: Substitutable> Substitution<T> {
     pub fn extend(&mut self, pair: (T, T)) {
         if pair.0 != pair.1 {
             if !pair.0.valid_substitution(&pair.1) {
-                panic!("Invalid substitution: {} -> {}", pair.0.debug_string(), pair.1.debug_string());
+                panic!("Invalid substitution: {} |-> {}", pair.0.debug_string(), pair.1.debug_string());
             }
             
             for (_, v) in self.map.iter_mut() {
@@ -283,7 +283,7 @@ impl<T: Substitutable> PrettyPrintable for Substitution<T> {
                 PPElement::group(vec![
                     k.to_enclosed_pp_element(detail),
                     PPElement::break_elem(1, 0, false),
-                    PPElement::text("->".to_string()),
+                    PPElement::text("|->".to_string()),
                     PPElement::break_elem(1, 0, false),
                     v.to_enclosed_pp_element(detail),
                 ], BreakType::Flexible, 0)

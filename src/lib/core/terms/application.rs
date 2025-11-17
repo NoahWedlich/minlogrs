@@ -40,11 +40,15 @@ impl Application {
         
         for (i, op) in operands.iter().enumerate() {
             if !op.minlog_type().eq(&arrow.arguments()[i]) {
-                panic!("Tried to create an Application with an operand of the wrong type");
+                panic!("Tried to create an Application with an operand of the wrong type: expected {}, got {}",
+                    arrow.arguments()[i].debug_string(),
+                    op.minlog_type().debug_string()
+                );
             }
         }
         
         let remaining_arg_types = arrow.arguments()[operands.len()..].to_vec();
+        
         let minlog_type = if remaining_arg_types.is_empty() {
             Rc::clone(arrow.value())
         } else {
@@ -137,21 +141,21 @@ impl TermBody for Application {
             
             let remaining_vars = abs.vars()[applicable..].to_vec();
             let inner_term = if remaining_vars.is_empty() {
-                kernel.normalize(eta, pi)
+                kernel
             } else {
-                Abstraction::create(remaining_vars, kernel).normalize(eta, pi)
+                Abstraction::create(remaining_vars, kernel)
             };
             
             let remaining_operands = self.operands[applicable..].iter()
                 .map(|op| op.normalize(eta, pi)).collect::<Vec<_>>();
             
             if remaining_operands.is_empty() {
-                return inner_term;
+                return inner_term.normalize(eta, pi);
             } else {
-                return Application::create(inner_term, remaining_operands);
+                return Application::create(inner_term, remaining_operands).normalize(eta, pi);
             }
         } else if self.operator.is_program_term() {
-            let (computed, success) = self.operator.to_program_term().unwrap().pconst().compute(
+            let (computed, success) = self.operator.to_program_term().unwrap().compute(
                 &Application::create(self.operator.clone(), self.operands.clone())
             );
             
@@ -205,33 +209,33 @@ impl TermBody for Application {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            self.operator.get_free_variables(visited)
-                .union(&self.operands.iter().flat_map(|op| op.get_free_variables(visited)).collect::<IndexSet<_>>())
-                .cloned().collect()
+        self.operator.get_free_variables(visited)
+            .union(&self.operands.iter().flat_map(|op| op.get_free_variables(visited)).collect::<IndexSet<_>>())
+            .cloned().collect()
     }
 
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            self.operator.get_bound_variables(visited)
-                .union(&self.operands.iter().flat_map(|op| op.get_bound_variables(visited)).collect::<IndexSet<_>>())
-                .cloned().collect()
+        self.operator.get_bound_variables(visited)
+            .union(&self.operands.iter().flat_map(|op| op.get_bound_variables(visited)).collect::<IndexSet<_>>())
+            .cloned().collect()
     }
 
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            self.operator.get_constructors(visited)
-                .union(&self.operands.iter().flat_map(|op| op.get_constructors(visited)).collect::<IndexSet<_>>())
-                .cloned().collect()
+        self.operator.get_constructors(visited)
+            .union(&self.operands.iter().flat_map(|op| op.get_constructors(visited)).collect::<IndexSet<_>>())
+            .cloned().collect()
     }
 
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            self.operator.get_program_terms(visited)
-                .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect::<IndexSet<_>>())
-                .cloned().collect()
+        self.operator.get_program_terms(visited)
+            .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect::<IndexSet<_>>())
+            .cloned().collect()
     }
 
     fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            self.operator.get_internal_constants(visited)
-                .union(&self.operands.iter().flat_map(|op| op.get_internal_constants(visited)).collect::<IndexSet<_>>())
-                .cloned().collect()
+        self.operator.get_internal_constants(visited)
+            .union(&self.operands.iter().flat_map(|op| op.get_internal_constants(visited)).collect::<IndexSet<_>>())
+            .cloned().collect()
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

@@ -158,9 +158,13 @@ impl TypeBody for AlgebraType {
         } else {
             visited.insert(MinlogType::Algebra(self.clone()));
 
-            self.constructors().iter()
+            let mut algebras = self.constructors().iter()
                 .flat_map(|c| c.minlog_type().get_polarized_algebras(current, visited))
-                .collect::<IndexSet<_>>()
+                .collect::<IndexSet<_>>();
+            
+            algebras.insert(Polarized::new(current, Rc::new(MinlogType::Algebra(self.clone()))));
+            
+            algebras
         }
     }
     

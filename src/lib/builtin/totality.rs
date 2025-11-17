@@ -11,12 +11,11 @@ use crate::core::{
         implication::Implication,
         all_quantifier::AllQuantifier
     }, structures::{
-        algebra::Algebra,
         inductive_constant::InductiveConstant
     }, terms::{
         application::Application, minlog_term::MinlogTerm, projection::Projection, term_variable::TermVariable
     }, types::{
-        algebra_type::AlgebraType, minlog_type::MinlogType, type_substitution::TypeSubstitution
+        minlog_type::MinlogType
     }
 };
 
@@ -45,7 +44,8 @@ pub fn extract_totality(algebra: &Rc<MinlogType>, totalities: &mut IndexMap<Rc<M
             totality_def.add_clause(format!("{}Total", constructor.to_constructor().unwrap().name()), clause);
         }
         
-        totality_def.make_computational(algebra.clone(), true);
+        totality_def.register_computational_content(algebra.clone());
+        totality_def.make_computational(true);
         
         totality_pred
     }

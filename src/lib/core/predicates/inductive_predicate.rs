@@ -1,7 +1,7 @@
 
 use indexmap::IndexSet;
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
-use crate::{utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
+use std::rc::Rc;
+use crate::{core::structures::inductive_constant::IDPComputationalContent, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
 use crate::core::substitution::{MatchContext, MatchOutput};
 use crate::core::polarity::{Polarity, Polarized};
@@ -13,16 +13,15 @@ use crate::core::terms::minlog_term::MinlogTerm;
 use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate};
 
 use crate::core::types::type_substitution::TypeSubstitution;
-use crate::core::terms::term_substitution::TermSubstEntry;
+use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
 use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
 
 use crate::core::structures::inductive_constant::InductiveConstant;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct InductivePredicate {
     definition: Rc<InductiveConstant>,
     params: PredicateSubstitution,
-    blocked_collection: RefCell<bool>,
 }
 
 impl InductivePredicate {
@@ -37,7 +36,6 @@ impl InductivePredicate {
         Rc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
             definition,
             params,
-            blocked_collection: RefCell::new(false)
         }))
     }
     
@@ -61,7 +59,7 @@ impl InductivePredicate {
             )).collect()
     }
     
-    pub fn get_algebra(&self) -> Option<Rc<MinlogType>> {
+    pub fn get_computational_content(&self) -> Option<IDPComputationalContent> {
         let type_subst = TypeSubstitution::from_pairs(
             self.params.pairs().iter().filter_map(|(from, to)| {
                 if let PredSubstEntry::Type(tv) = from {
@@ -73,8 +71,15 @@ impl InductivePredicate {
         );
         
         self.definition.get_computational_content().map(|content| {
-            type_subst.substitute(&content.algebra.clone())
+            IDPComputationalContent {
+                algebra: type_subst.substitute(&content.algebra),
+                clause_mapping: content.clause_mapping.clone(),
+            }
         })
+    }
+    
+    pub fn get_algebra(&self) -> Option<Rc<MinlogType>> {
+        self.get_computational_content().map(|content| content.algebra)
     }
     
     pub fn references_idp(&self, idp: &Rc<MinlogPredicate>) -> bool {
@@ -93,6 +98,20 @@ impl InductivePredicate {
                 false
             }
         })
+    }
+    
+    pub fn collect_relevant_idps(&self, ridps: &mut IndexSet<Rc<MinlogPredicate>>) {
+        if ridps.contains(&Rc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
+            return;
+        }
+        
+        ridps.insert(Rc::new(MinlogPredicate::InductivePredicate(self.clone())));
+        
+        for idp in self.get_polarized_inductive_preds(Polarity::Unknown, &mut IndexSet::new()).iter() {
+            if idp.value.to_inductive_predicate().unwrap().references_idp(&Rc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
+                idp.value.to_inductive_predicate().unwrap().collect_relevant_idps(ridps);
+            }
+        }
     }
     
     pub fn ensure_well_founded(&self) {
@@ -168,6 +187,18 @@ impl PredicateBody for InductivePredicate {
         } else {
             TypeConstant::create_null()
         }
+    }
+    
+    fn et_pattern_to_et(&self) -> TermSubstitution {
+        let pred_vars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
+            .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
+        
+        TermSubstitution::from_pairs(
+            pred_vars.into_iter().map(|pv| {
+                let to = self.params.substitute::<PredSubstEntry>(&pv.clone().into()).to_predicate().unwrap();
+                (pv.extracted_type_pattern().into(), to.extracted_type().into())
+            }).collect()
+        )
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
@@ -276,16 +307,10 @@ impl PredicateBody for InductivePredicate {
         } else {
             visited.insert(MinlogPredicate::InductivePredicate(self.clone()));
             
-            let mut results = self.definition.get_polarized_inductive_preds(current, visited).iter()
-                .flat_map(|pol| {
-                    self.params.substitute::<PredSubstEntry>(&pol.value.clone().into()).to_predicate().unwrap()
-                        .get_polarized_inductive_preds(current, visited)
-                }).collect::<IndexSet<_>>();
-                
-            results.extend(
-                self.clauses().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited))
-            );
-    
+            let mut results = self.clauses().iter()
+                .flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited))
+                .collect::<IndexSet<_>>();
+            
             results.insert(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
     
             results
@@ -478,12 +503,5 @@ impl PrettyPrintable for InductivePredicate {
     
     fn requires_parens(&self, _detail: bool) -> bool {
         false
-    }
-}
-
-impl Hash for InductivePredicate {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.definition.hash(state);
-        self.params.hash(state);
     }
 }
