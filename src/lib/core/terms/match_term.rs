@@ -19,6 +19,7 @@ pub struct MatchTerm {
     branches: Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>,
 }
 
+// TODO: Allow anonymous recursion
 impl MatchTerm {
     pub fn create(minlog_type: Rc<MinlogType>, branches: Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)>) -> Rc<MinlogTerm> {
         if let Some(arr_type) = minlog_type.to_arrow() {

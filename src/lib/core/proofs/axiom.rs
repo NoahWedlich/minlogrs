@@ -78,47 +78,48 @@ impl ProofBody for Axiom {
     fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
         self.formula.extracted_type().remove_nulls().map(|t| {
             if let Some(content) = self.content.borrow().clone() {
-                content
+                let et_subst = self.formula.et_pattern_to_et();
+                et_subst.substitute(&content)
             } else {
                 let pconst = ProgramConstant::create(self.name.clone(), t);
                 ProgramTerm::create(pconst, TermSubstitution::make_empty())
             }
-        })
+        })?.remove_nulls()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
         self.formula.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
         self.formula.get_free_variables(&mut IndexSet::new())
     }
     
-    fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     
-    fn get_predicate_variables(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
         self.formula.get_predicate_variables(&mut IndexSet::new())
     }
     
-    fn get_comprehension_terms(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
         self.formula.get_comprehension_terms(&mut IndexSet::new())
     }
     
-    fn get_inductive_predicates(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
         self.formula.get_inductive_predicates(&mut IndexSet::new())
     }
     
-    fn get_prime_formulas(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
         self.formula.get_prime_formulas(&mut IndexSet::new())
     }
     
-    fn get_axioms(&self, _visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
         IndexSet::from([Rc::new(MinlogProof::Axiom(self.clone()))])
     }
     
@@ -126,10 +127,11 @@ impl ProofBody for Axiom {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_axiom() && self == from_proof.to_axiom().unwrap() {
             to.to_proof().unwrap()
         } else {
-            Axiom::create(
-                self.name.clone(),
-                self.formula.substitute_with(from, to),
-            )
+            Rc::new(MinlogProof::Axiom(Axiom {
+                name: self.name.clone(),
+                formula: self.formula.substitute_with(from, to),
+                content: RefCell::new(self.content.borrow().as_ref().map(|c| c.substitute_with(from, to)).clone()),
+            }))
         }
     }
     

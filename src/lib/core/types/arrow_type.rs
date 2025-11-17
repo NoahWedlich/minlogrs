@@ -63,35 +63,23 @@ impl TypeBody for ArrowType {
     }
     
     fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        if visited.contains(&MinlogType::Arrow(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogType::Arrow(self.clone()));
-            
-            let mut result = self.arguments.iter()
-                .flat_map(|arg| arg.get_polarized_tvars(current.invert(), visited))
-                .collect::<IndexSet<_>>();
-            
-            result.extend(self.value.get_polarized_tvars(current, visited));
-            
-            result
-        }
+        let mut result = self.arguments.iter()
+            .flat_map(|arg| arg.get_polarized_tvars(current.invert(), visited))
+            .collect::<IndexSet<_>>();
+        
+        result.extend(self.value.get_polarized_tvars(current, visited));
+        
+        result
     }
 
     fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        if visited.contains(&MinlogType::Arrow(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogType::Arrow(self.clone()));
+        let mut result = self.arguments.iter()
+            .flat_map(|arg| arg.get_polarized_algebras(current.invert(), visited))
+            .collect::<IndexSet<_>>();
 
-            let mut result = self.arguments.iter()
-                .flat_map(|arg| arg.get_polarized_algebras(current.invert(), visited))
-                .collect::<IndexSet<_>>();
+        result.extend(self.value.get_polarized_algebras(current, visited));
 
-            result.extend(self.value.get_polarized_algebras(current, visited));
-
-            result
-        }
+        result
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

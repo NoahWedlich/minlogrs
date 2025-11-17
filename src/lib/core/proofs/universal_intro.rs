@@ -26,7 +26,7 @@ pub struct UniversalIntro {
 
 impl UniversalIntro {
     pub fn create(proof: Rc<MinlogProof>, variable: Rc<MinlogTerm>) -> Rc<MinlogProof> {
-        if proof.get_assumptions(&mut IndexSet::new()).iter().any(|assump| assump.contains_free_variable(&variable)) {
+        if proof.get_assumptions().iter().any(|assump| assump.contains_free_variable(&variable)) {
             panic!("UniversalIntro::create called with a proof that has assumptions depending on the variable");
         }
         
@@ -74,128 +74,56 @@ impl ProofBody for UniversalIntro {
         self.proof.extracted_term()
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_type_variables(visited)
-        }
+    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+        self.proof.get_type_variables()
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_algebra_types(visited)
-        }
+    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+        self.proof.get_algebra_types()
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_free_variables(visited)
-                .difference(&IndexSet::from([self.variable.clone()]))
-                .cloned().collect()
-        }
+    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        self.proof.get_free_variables()
+            .difference(&IndexSet::from([self.variable.clone()]))
+            .cloned().collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_bound_variables(visited)
-                .union(&IndexSet::from([self.variable.clone()]))
-                .cloned().collect()
-        }
+    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        self.proof.get_bound_variables()
+            .union(&IndexSet::from([self.variable.clone()]))
+            .cloned().collect()
     }
     
-    fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_predicate_variables(visited)
-        }
+    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.proof.get_predicate_variables()
     }
     
-    fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_comprehension_terms(visited)
-        }
+    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.proof.get_comprehension_terms()
     }
     
-    fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_inductive_predicates(visited)
-        }
+    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.proof.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_prime_formulas(visited)
-        }
+    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.proof.get_prime_formulas()
     }
 
-    fn get_goals(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_goals(visited)
-        }
+    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.proof.get_goals()
     }
 
-    fn get_assumptions(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_assumptions(visited)
-        }
+    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.proof.get_assumptions()
     }
     
-    fn get_axioms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_axioms(visited)
-        }
+    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.proof.get_axioms()
     }
     
-    fn get_theorems(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::UniversalIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::UniversalIntro(self.clone()));
-            
-            self.proof.get_theorems(visited)
-        }
+    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.proof.get_theorems()
     }
     
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {

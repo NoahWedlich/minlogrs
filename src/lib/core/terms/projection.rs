@@ -98,48 +98,23 @@ impl TermBody for Projection {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Projection(self.clone()));
-            self.term.get_free_variables(visited)
-        }
+        self.term.get_free_variables(visited)
     }
 
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Projection(self.clone()));
-            self.term.get_bound_variables(visited)
-        }
+        self.term.get_bound_variables(visited)
     }
     
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Projection(self.clone()));
-            self.term.get_constructors(visited)
-        }
+        self.term.get_constructors(visited)
     }
 
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Projection(self.clone()));
-            self.term.get_program_terms(visited)
-        }
+        self.term.get_program_terms(visited)
     }
     
     fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Projection(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Projection(self.clone()));
-            self.term.get_internal_constants(visited)
-        }
+        self.term.get_internal_constants(visited)
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

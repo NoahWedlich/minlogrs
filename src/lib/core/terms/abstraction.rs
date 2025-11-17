@@ -147,55 +147,25 @@ impl TermBody for Abstraction {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Abstraction(self.clone()));
-            
-            self.kernel.get_free_variables(visited).into_iter()
-                .filter(|v| !self.vars.contains(v))
-                .collect()
-        }
+        self.kernel.get_free_variables(visited).into_iter()
+            .filter(|v| !self.vars.contains(v))
+            .collect()
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Abstraction(self.clone()));
-            
-            self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
-        }
+        self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
     }
     
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Abstraction(self.clone()));
-            
-            self.kernel.get_constructors(visited)
-        }
+        self.kernel.get_constructors(visited)
     }
     
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Abstraction(self.clone()));
-            
-            self.kernel.get_program_terms(visited)
-        }
+        self.kernel.get_program_terms(visited)
     }
     
     fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Abstraction(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Abstraction(self.clone()));
-            
-            self.kernel.get_internal_constants(visited)
-        }
+        self.kernel.get_internal_constants(visited)
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,

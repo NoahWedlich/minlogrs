@@ -126,89 +126,41 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.vars.iter().flat_map(|v| v.get_type_variables(&mut IndexSet::new())).chain(
-                self.body.get_type_variables(visited)
-            ).collect()
-        }
+        self.vars.iter().flat_map(|v| v.get_type_variables(&mut IndexSet::new())).chain(
+            self.body.get_type_variables(visited)
+        ).collect()
     }
 
     fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.vars.iter().flat_map(|v| v.get_algebra_types(&mut IndexSet::new())).chain(
-                self.body.get_algebra_types(visited)
-            ).collect()
-        }
+        self.vars.iter().flat_map(|v| v.get_algebra_types(&mut IndexSet::new())).chain(
+            self.body.get_algebra_types(visited)
+        ).collect()
     }
 
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.body.get_free_variables(visited).difference(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
-        }
+        self.body.get_free_variables(visited).difference(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-
-            self.body.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
-        }
+        self.body.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
     }
     
     fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.body.get_polarized_pred_vars(current, visited)
-        }
+        self.body.get_polarized_pred_vars(current, visited)
     }
 
     fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            let mut result = self.body.get_polarized_comp_terms(current, visited);
-            result.insert(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
-            result
-        }
+        let mut result = self.body.get_polarized_comp_terms(current, visited);
+        result.insert(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
+        result
     }
     
     fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.body.get_polarized_inductive_preds(current, visited)
-        }
+        self.body.get_polarized_inductive_preds(current, visited)
     }
     
     fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        if visited.contains(&MinlogPredicate::Comprehension(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogPredicate::Comprehension(self.clone()));
-            
-            self.body.get_polarized_prime_formulas(current, visited)
-        }
+        self.body.get_polarized_prime_formulas(current, visited)
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {

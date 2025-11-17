@@ -45,25 +45,15 @@ impl TypeBody for TupleType {
     }
 
     fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        if visited.contains(&MinlogType::Tuple(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogType::Tuple(self.clone()));
-            self.types.iter()
-                .flat_map(|t| t.get_polarized_tvars(current, visited))
-                .collect()
-        }
+        self.types.iter()
+            .flat_map(|t| t.get_polarized_tvars(current, visited))
+            .collect()
     }
 
     fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        if visited.contains(&MinlogType::Tuple(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogType::Tuple(self.clone()));
-            self.types.iter()
-                .flat_map(|t| t.get_polarized_algebras(current, visited))
-                .collect()
-        }
+        self.types.iter()
+            .flat_map(|t| t.get_polarized_algebras(current, visited))
+            .collect()
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {

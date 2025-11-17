@@ -1,5 +1,5 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::{builtin::elimination::extract_elimination_axiom, core::proofs::{assumption::Assumption,
     bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro},
@@ -11,7 +11,7 @@ use crate::core::proofs::universal_elim::UniversalElim;
 use crate::core::proofs::proof_context::ProofContext;
 
 pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogProof> {
-    let elim_axiom = extract_elimination_axiom(inductive_predicate);
+    let elim_axiom = extract_elimination_axiom(inductive_predicate, &mut IndexMap::new());
     
     let mut proof = elim_axiom;
     

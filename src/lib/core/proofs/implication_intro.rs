@@ -82,151 +82,79 @@ impl ProofBody for ImplicationIntro {
             } else {
                 term
             }
-        })
+        })?.remove_nulls()
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_type_variables(visited)
-                .union(&self.conclusion.get_type_variables(visited))
-                .cloned().collect()
-        }
+    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+        self.assumption.get_type_variables()
+            .union(&self.conclusion.get_type_variables())
+            .cloned().collect()
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_algebra_types(visited)
-                .union(&self.conclusion.get_algebra_types(visited))
-                .cloned().collect()
-        }
+    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+        self.assumption.get_algebra_types()
+            .union(&self.conclusion.get_algebra_types())
+            .cloned().collect()
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_free_variables(visited)
-                .union(&self.conclusion.get_free_variables(visited))
-                .cloned().collect()
-        }
+    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        self.assumption.get_free_variables()
+            .union(&self.conclusion.get_free_variables())
+            .cloned().collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_bound_variables(visited)
-                .union(&self.conclusion.get_bound_variables(visited))
-                .cloned().collect()
-        }
+    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        self.assumption.get_bound_variables()
+            .union(&self.conclusion.get_bound_variables())
+            .cloned().collect()
     }
     
-    fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_predicate_variables(visited)
-                .union(&self.conclusion.get_predicate_variables(visited))
-                .cloned().collect()
-        }
+    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.assumption.get_predicate_variables()
+            .union(&self.conclusion.get_predicate_variables())
+            .cloned().collect()
     }
     
-    fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_comprehension_terms(visited)
-                .union(&self.conclusion.get_comprehension_terms(visited))
-                .cloned().collect()
-        }
+    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.assumption.get_comprehension_terms()
+            .union(&self.conclusion.get_comprehension_terms())
+            .cloned().collect()
     }
     
-    fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_inductive_predicates(visited)
-                .union(&self.conclusion.get_inductive_predicates(visited))
-                .cloned().collect()
-        }
+    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.assumption.get_inductive_predicates()
+            .union(&self.conclusion.get_inductive_predicates())
+            .cloned().collect()
     }
     
-    fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogPredicate>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_prime_formulas(visited)
-                .union(&self.conclusion.get_prime_formulas(visited))
-                .cloned().collect()
-        }
+    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+        self.assumption.get_prime_formulas()
+            .union(&self.conclusion.get_prime_formulas())
+            .cloned().collect()
     }
 
-    fn get_goals(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.conclusion.get_goals(visited)
-                .union(&self.assumption.get_goals(visited))
-                .cloned().collect()
-        }
+    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.conclusion.get_goals()
+            .union(&self.assumption.get_goals())
+            .cloned().collect()
     }
 
-    fn get_assumptions(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.conclusion.get_assumptions(visited)
-                .difference(&IndexSet::from([self.assumption.clone()]))
-                .cloned().collect()
-        }
+    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.conclusion.get_assumptions()
+            .difference(&IndexSet::from([self.assumption.clone()]))
+            .cloned().collect()
     }
     
-    fn get_axioms(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_axioms(visited)
-                .union(&self.conclusion.get_axioms(visited))
-                .cloned().collect()
-        }
+    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.assumption.get_axioms()
+            .union(&self.conclusion.get_axioms())
+            .cloned().collect()
     }
     
-    fn get_theorems(&self, visited: &mut IndexSet<MinlogProof>) -> IndexSet<Rc<MinlogProof>> {
-        if visited.contains(&MinlogProof::ImplicationIntro(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogProof::ImplicationIntro(self.clone()));
-            
-            self.assumption.get_theorems(visited)
-                .union(&self.conclusion.get_theorems(visited))
-                .cloned().collect()
-        }
+    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+        self.assumption.get_theorems()
+            .union(&self.conclusion.get_theorems())
+            .cloned().collect()
     }
     
     fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {

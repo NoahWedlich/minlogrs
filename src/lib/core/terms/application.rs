@@ -205,63 +205,33 @@ impl TermBody for Application {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Application(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Application(self.clone()));
-            
             self.operator.get_free_variables(visited)
                 .union(&self.operands.iter().flat_map(|op| op.get_free_variables(visited)).collect::<IndexSet<_>>())
                 .cloned().collect()
-        }
     }
 
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Application(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Application(self.clone()));
-            
             self.operator.get_bound_variables(visited)
                 .union(&self.operands.iter().flat_map(|op| op.get_bound_variables(visited)).collect::<IndexSet<_>>())
                 .cloned().collect()
-        }
     }
 
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Application(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Application(self.clone()));
-            
             self.operator.get_constructors(visited)
                 .union(&self.operands.iter().flat_map(|op| op.get_constructors(visited)).collect::<IndexSet<_>>())
                 .cloned().collect()
-        }
     }
 
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Application(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Application(self.clone()));
-            
             self.operator.get_program_terms(visited)
                 .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect::<IndexSet<_>>())
                 .cloned().collect()
-        }
     }
 
     fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Application(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Application(self.clone()));
-            
             self.operator.get_internal_constants(visited)
                 .union(&self.operands.iter().flat_map(|op| op.get_internal_constants(visited)).collect::<IndexSet<_>>())
                 .cloned().collect()
-        }
     }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
