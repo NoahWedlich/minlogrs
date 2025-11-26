@@ -1,5 +1,5 @@
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use std::{hash::{Hash, Hasher}};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
@@ -10,7 +10,7 @@ pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
     
     fn valid_substitution(&self, to: &Self) -> bool;
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self>;
+    fn match_with(&self, instance: &Self) -> MatchOutput<Self>;
 }
 
 impl<T: Substitutable> SubstitutableWith<T> for T {
@@ -190,84 +190,69 @@ impl<T: Substitutable> Substitution<T> {
             return None;
         }
         
-        let mut ctx = MatchContextImpl::new(&mut patterns.to_vec(), &mut instances.to_vec());
-        Self::match_on(&mut ctx)
+        let mapping = patterns.iter().cloned()
+            .zip(instances.iter().cloned())
+            .collect::<IndexMap<T, T>>();
+        
+        Self::match_on(mapping)
     }
 
-    pub fn match_on(ctx: &mut impl MatchContext<T>) -> Option<Self> {
-
-        let mut substitution = Self::make_empty();
+    pub fn match_on(mapping: IndexMap<T, T>) -> Option<Self> {
+        let mut ctx = MatchContext::new(mapping);
         
-        while let Some(pattern) = ctx.next_pattern() {
-            if let Some(instance) = ctx.next_instance() {
-
-                if ctx.is_restricted(&pattern) {
-                    if pattern == instance {
-                        ctx.skip_current();
-                        continue;
+        while let Some((pattern, instance)) = ctx.next_pair() {
+            if ctx.is_restricted(&pattern) {
+                if pattern == instance {
+                    continue;
+                } else {
+                    return None;
+                }
+            }
+            
+            if pattern == instance {
+                if pattern.valid_substitution(&instance) {
+                    ctx.substitute(&pattern, &instance);
+                    ctx.restrict(&pattern);
+                }
+                continue;
+            }
+            
+            match pattern.match_with(&instance) {
+                MatchOutput::Substitution(from, to) => {
+                    if from.valid_substitution(&to) {
+                        ctx.substitute(&from, &to);
+                        ctx.restrict(&from);
                     } else {
                         return None;
                     }
                 }
-                
-                if pattern == instance {
-                    if pattern.valid_substitution(&instance) {
-                        ctx.substitute(&pattern, &instance);
-                        substitution.extend((pattern.clone(), instance.clone()));
-                        
-                        ctx.restrict(&pattern);
-                    }
-                    
-                    ctx.skip_current();
-                    continue;
+                MatchOutput::Matched(conditions) => {
+                    ctx.extend(conditions);
                 }
-                
-                match pattern.match_with(ctx) {
-                    MatchOutput::Matched => {}
-                    MatchOutput::FailedMatch => {
-                        return None;
-                    },
-                    MatchOutput::Substitution(from, to) => {
-                        if from.valid_substitution(&to) {
-                            ctx.skip_current();
-                            
-                            ctx.substitute(&from, &to);
-                            
-                            substitution.extend((from.clone(), to.clone()));
-                            ctx.restrict(&from);
-                        }
-                    }
-                }
-                
-            } else {
-                return None;
+                MatchOutput::FailedMatch => {
+                    return None;
+                },
             }
         }
+        
+        let mut substitution = ctx.get_substitution();
         
         substitution.collapse();
         Some(substitution)
     }
     
-    pub fn match_subst(pattern_subst: &Self, instance_subst: &Self) -> Option<Self> {
-        let mut arguments = pattern_subst.map.keys().cloned().collect::<Vec<T>>();
-        arguments.extend(instance_subst.map.keys().cloned());
+    pub fn collect_match_conditions(pattern_subst: &Self, instance_subst: &Self) -> IndexMap<T, T> {
+        let arguments = pattern_subst.map.keys().cloned()
+            .chain(instance_subst.map.keys().cloned())
+            .collect::<IndexSet<T>>();
         
-        let patterns = arguments.iter().map(|a| pattern_subst.apply(a)).collect::<Vec<T>>();
-        let instances = arguments.iter().map(|a| instance_subst.apply(a)).collect::<Vec<T>>();
-        
-        Self::match_all(&mut patterns.clone(), &mut instances.clone())
+        arguments.iter().map(|arg| {
+            (pattern_subst.substitute(arg), instance_subst.substitute(arg))
+        }).filter(|(p, i)| p != i).collect()
     }
     
-    pub fn add_subst_match(&self, other: &Self, ctx: &mut impl MatchContext<T>) {
-        let mut arguments = self.map.keys().cloned().collect::<Vec<T>>();
-        arguments.extend(other.map.keys().cloned());
-        
-        let patterns = arguments.iter().map(|a| self.apply(a)).collect::<Vec<T>>();
-        let instances = arguments.iter().map(|a| other.apply(a)).collect::<Vec<T>>();
-        
-        for (p, i) in patterns.iter().zip(instances.iter()) {
-            ctx.extend(p, i);
-        }
+    pub fn match_subst(pattern_subst: &Self, instance_subst: &Self) -> Option<Self> {
+        Self::match_on(Self::collect_match_conditions(pattern_subst, instance_subst))
     }
 }
 
@@ -345,77 +330,52 @@ impl<T: Substitutable> PartialEq for Substitution<T> {
 
 impl<T: Substitutable> Eq for Substitution<T> {}
 
-pub trait MatchContext<T: Substitutable> {
-    fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self;
-    
-    fn extend(&mut self, pattern: &T, instance: &T);
-    
-    fn next_pattern(&mut self) -> Option<T>;
-    fn next_instance(&mut self) -> Option<T>;
-    fn skip_current(&mut self);
-    
-    fn restrict(&mut self, element: &T);
-    fn is_restricted(&self, element: &T) -> bool;
-    
-    fn substitute(&mut self, from: &T, to: &T);
+struct MatchContext<T: Substitutable> {
+    mapping: IndexMap<T, T>,
+    restricted: IndexSet<T>,
+    substitution: Substitution<T>,
 }
 
-pub struct MatchContextImpl<T> {
-    patterns: Vec<T>,
-    instances: Vec<T>,
-    restricted: Vec<T>,
-}
-
-impl<T: Substitutable> MatchContext<T> for MatchContextImpl<T> {
-    fn new(patterns: &mut Vec<T>, instances: &mut Vec<T>) -> Self {
+impl<T: Substitutable> MatchContext<T> {
+    fn new(mapping: IndexMap<T, T>) -> Self {
         Self {
-            patterns: std::mem::take(patterns),
-            instances: std::mem::take(instances),
-            restricted: vec![],
+            mapping,
+            restricted: IndexSet::new(),
+            substitution: Substitution::make_empty(),
         }
     }
 
-    fn extend(&mut self, pattern: &T, instance: &T) {
-        if pattern != instance && (!self.patterns.contains(pattern) || !self.instances.contains(instance)) {
-            self.patterns.push(pattern.clone());
-            self.instances.push(instance.clone());
-        }
+    fn extend(&mut self, new_mapping: IndexMap<T, T>) {
+        self.mapping.extend(new_mapping);
     }
     
-    fn next_pattern(&mut self) -> Option<T> {
-        self.patterns.last().cloned()
-    }
-
-    fn next_instance(&mut self) -> Option<T> {
-        self.instances.last().cloned()
-    }
-    
-    fn skip_current(&mut self) {
-        self.patterns.pop();
-        self.instances.pop();
+    fn next_pair(&mut self) -> Option<(T, T)> {
+        self.mapping.pop()
     }
     
     fn restrict(&mut self, element: &T) {
-        self.restricted.push(element.clone());
+        self.restricted.insert(element.clone());
     }
     
     fn is_restricted(&self, element: &T) -> bool {
-        self.restricted.iter().any(|e| e == element)
+        self.restricted.contains(element)
     }
     
     fn substitute(&mut self, from: &T, to: &T) {
-        for pattern in self.patterns.iter_mut() {
-            *pattern = pattern.substitute(from, to);
-        }
+        self.mapping = self.mapping.iter().map(|(k, v)| {
+            (k.substitute(from, to), v.substitute(from, to))
+        }).collect();
         
-        for instance in self.instances.iter_mut() {
-            *instance = instance.substitute(from, to);
-        }
+        self.substitution.extend((from.clone(), to.clone()));
+    }
+    
+    fn get_substitution(self) -> Substitution<T> {
+        self.substitution
     }
 }
 
 pub enum MatchOutput<T> {
     Substitution(T, T),
-    Matched,
+    Matched(IndexMap<T, T>),
     FailedMatch,
 }

@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{rc::Rc, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -138,35 +138,28 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_bundled_proof() || !i.is_bundled_proof() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let bundled_pattern = p.to_bundled_proof().unwrap();
-                let bundled_instance = i.to_bundled_proof().unwrap();
-                
-                if bundled_pattern.name() != bundled_instance.name() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if bundled_pattern.proved_formula() != bundled_instance.proved_formula() {
-                    ctx.extend(&bundled_pattern.proved_formula().into(), &bundled_instance.proved_formula().into());
-                }
-                
-                if bundled_pattern.proof() != bundled_instance.proof() {
-                    ctx.extend(&bundled_pattern.proof().clone().into(), &bundled_instance.proof().clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_bundled_proof() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let bundled_instance = instance.to_bundled_proof().unwrap();
+        
+        if self.name() != bundled_instance.name() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = IndexMap::new();
+        
+        if self.proved_formula() != bundled_instance.proved_formula() {
+            conditions.insert(self.proved_formula().into(), bundled_instance.proved_formula().into());
+        }
+        
+        if self.proof() != bundled_instance.proof() {
+            conditions.insert(self.proof().clone().into(), bundled_instance.proof().clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

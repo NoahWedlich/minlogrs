@@ -1,9 +1,9 @@
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -198,37 +198,32 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if !p.is_all_quantifier() || !i.is_all_quantifier() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let aq_pattern = p.to_all_quantifier().unwrap();
-                let aq_instance = i.to_all_quantifier().unwrap();
-                
-                if aq_pattern.vars.len() != aq_instance.vars.len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (v1, v2) in aq_pattern.vars.iter().zip(aq_instance.vars.iter()) {
-                    if v1 != v2 {
-                        ctx.extend(&v1.clone().into(), &v2.clone().into());
-                    }
-                }
-                
-                if aq_pattern.body != aq_instance.body {
-                    ctx.extend(&aq_pattern.body.clone().into(), &aq_instance.body.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if !instance.is_all_quantifier() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let aq_instance = instance.to_all_quantifier().unwrap();
+        
+        if self.vars.len() != aq_instance.vars.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = self.vars.iter().zip(aq_instance.vars.iter())
+            .filter_map(|(v1, v2)| {
+                if v1 != v2 {
+                    Some((v1.clone().into(), v2.clone().into()))
+                } else {
+                    None
+                }
+            })
+            .collect::<IndexMap<_, _>>();
+        
+        if self.body != aq_instance.body {
+            conditions.insert(self.body.clone().into(), aq_instance.body.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
@@ -104,26 +104,23 @@ impl TypeBody for TupleType {
         None
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-
-        if !pattern.is_tuple() || !instance.is_tuple() {
+    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+        if !instance.is_tuple() {
             return MatchOutput::FailedMatch;
         }
         
-        let pattern_tuple = pattern.to_tuple().unwrap();
         let instance_tuple = instance.to_tuple().unwrap();
 
-        if pattern_tuple.types.len() != instance_tuple.types.len() {
+        if self.types.len() != instance_tuple.types.len() {
             return MatchOutput::FailedMatch;
         }
-
-        for (t1, t2) in pattern_tuple.types.iter().zip(instance_tuple.types.iter()) {
-            ctx.extend(t1, t2);
-        }
         
-        MatchOutput::Matched
+        let conditions = self.types.iter().cloned()
+            .zip(instance_tuple.types.iter().cloned())
+            .filter(|(t1, t2)| t1 != t2)
+            .collect::<IndexMap<_, _>>();
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

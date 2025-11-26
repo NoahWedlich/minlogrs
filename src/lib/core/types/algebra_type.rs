@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::rc::Rc;
 use crate::utils::pretty_printer::*;
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{MinlogType, TypeBody};
@@ -207,24 +207,23 @@ impl TypeBody for AlgebraType {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        if !pattern.is_algebra() || !instance.is_algebra() {
+    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+        if !instance.is_algebra() {
             return MatchOutput::FailedMatch;
         }
         
-        let pattern_alg = pattern.to_algebra().unwrap();
         let instance_alg = instance.to_algebra().unwrap();
         
-        if pattern_alg.algebra.as_ref() != instance_alg.algebra.as_ref() {
+        if self.algebra.as_ref() != instance_alg.algebra.as_ref() {
             return MatchOutput::FailedMatch;
         }
         
-        pattern_alg.parameters.add_subst_match(&instance_alg.parameters, ctx);
+        let conditions = TypeSubstitution::collect_match_conditions(
+            &self.parameters,
+            &instance_alg.parameters
+        );
         
-        MatchOutput::Matched
+        MatchOutput::Matched(conditions)
     }
 }
 

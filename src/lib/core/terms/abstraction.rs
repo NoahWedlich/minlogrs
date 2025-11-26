@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
@@ -250,38 +250,31 @@ impl TermBody for Abstraction {
         }
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_abstraction() || !i.is_abstraction() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.minlog_type() != i.minlog_type() {
-                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
-                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return MatchOutput::Matched;
-                }
-                
-                let abs_pattern = p.to_abstraction().unwrap();
-                let abs_instance = i.to_abstraction().unwrap();
-
-                if abs_pattern.arity() != abs_instance.arity() {
-                    return MatchOutput::FailedMatch;
-                }
-
-                for (v1, v2) in abs_pattern.vars.iter().zip(abs_instance.vars.iter()) {
-                    ctx.extend(&TermSubstEntry::Term(v1.clone()), &TermSubstEntry::Term(v2.clone()));
-                }
-                
-                ctx.extend(&TermSubstEntry::Term(abs_pattern.kernel.clone()), &TermSubstEntry::Term(abs_instance.kernel.clone()));
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_abstraction() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let abs_instance = instance.to_abstraction().unwrap();
+        
+        if self.arity() != abs_instance.arity() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = self.vars.iter().zip(abs_instance.vars.iter())
+            .filter_map(|(v1, v2)| {
+                if v1 != v2 {
+                    Some((v1.into(), v2.into()))
+                } else {
+                    None
+                }
+            }).collect::<IndexMap<_, _>>();
+            
+        if self.kernel != abs_instance.kernel {
+            conditions.insert(self.kernel.clone().into(), abs_instance.kernel.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

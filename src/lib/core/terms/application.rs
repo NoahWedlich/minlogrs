@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{cmp::{max, min}, rc::Rc};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
@@ -295,40 +295,31 @@ impl TermBody for Application {
         None
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_application() || !i.is_application() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.minlog_type() != i.minlog_type() {
-                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
-                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return MatchOutput::Matched;
-                }
-                
-                let app_pattern = p.to_application().unwrap();
-                let app_instance = i.to_application().unwrap();
-                
-                if app_pattern.operand_count() != app_instance.operand_count() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (op_p, op_i) in app_pattern.operands().iter().zip(app_instance.operands().iter()) {
-                    ctx.extend(&TermSubstEntry::Term(op_p.clone()), &TermSubstEntry::Term(op_i.clone()));
-                }
-                
-                ctx.extend(&TermSubstEntry::Term(app_pattern.operator().clone()), &TermSubstEntry::Term(app_instance.operator().clone()));
-                MatchOutput::Matched
-            },
-            _ => {
-                MatchOutput::FailedMatch
-            }
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_application() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let app_instance = instance.to_application().unwrap();
+        
+        if self.operands.len() != app_instance.operands.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = self.operands.iter().zip(app_instance.operands.iter())
+            .filter_map(|(p_op, i_op)| {
+                if p_op != i_op {
+                    Some((p_op.into(), i_op.into()))
+                } else {
+                    None
+                }
+            }).collect::<IndexMap<_, _>>();
+        
+        if self.operator != app_instance.operator {
+            conditions.insert(self.operator.clone().into(), app_instance.operator().clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

@@ -1,9 +1,9 @@
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -216,37 +216,31 @@ impl PredicateBody for Implication {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if !p.is_implication() || !i.is_implication() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let imp_pattern = p.to_implication().unwrap();
-                let imp_instance = i.to_implication().unwrap();
-                
-                if imp_pattern.premises.len() != imp_instance.premises.len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (prem_pattern, prem_instance) in imp_pattern.premises.iter().zip(imp_instance.premises.iter()) {
-                    if prem_pattern != prem_instance {
-                        ctx.extend(&prem_pattern.clone().into(), &prem_instance.clone().into());
-                    }
-                }
-                
-                if imp_pattern.conclusion != imp_instance.conclusion {
-                    ctx.extend(&imp_pattern.conclusion.clone().into(), &imp_instance.conclusion.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if !instance.is_implication() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let imp_instance = instance.to_implication().unwrap();
+        
+        if self.premises.len() != imp_instance.premises.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conclusion = self.premises.iter().zip(imp_instance.premises.iter())
+            .filter_map(|(p1, p2)| {
+                if p1 != p2 {
+                    Some((p1.clone().into(), p2.clone().into()))
+                } else {
+                    None
+                }
+            }).collect::<IndexMap<_, _>>();
+            
+        if self.conclusion != imp_instance.conclusion {
+            conclusion.insert(self.conclusion.clone().into(), imp_instance.conclusion.clone().into());
+        }
+        
+        MatchOutput::Matched(conclusion)
     }
 }
 

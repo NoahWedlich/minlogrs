@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -77,7 +77,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry>
+        pub fn match_with(&Self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
@@ -171,7 +171,7 @@ impl TermBody for EmptyTermBody {
         unimplemented!()
     }
     
-    fn match_with(&self, _ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-            unimplemented!()
+    fn match_with(&self, _instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        unimplemented!()
     }
 }

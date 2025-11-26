@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -126,26 +126,17 @@ impl ProofBody for Theorem {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_theorem() {
+            return MatchOutput::FailedMatch;
+        }
         
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_theorem() || !i.is_theorem() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let thm_pattern = p.to_theorem().unwrap();
-                let thm_instance = i.to_theorem().unwrap();
-                
-                if thm_pattern.name() != thm_instance.name() {
-                    MatchOutput::FailedMatch
-                } else {
-                    MatchOutput::Matched
-                }
-            },
-            _ => MatchOutput::FailedMatch,
+        let thm_instance = instance.to_theorem().unwrap();
+        
+        if self.name() != thm_instance.name() {
+            MatchOutput::FailedMatch
+        } else {
+            MatchOutput::Matched(IndexMap::new())
         }
     }
 }

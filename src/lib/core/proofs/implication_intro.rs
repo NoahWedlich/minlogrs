@@ -1,12 +1,12 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::core::terms::abstraction::Abstraction;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -184,31 +184,24 @@ impl ProofBody for ImplicationIntro {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_implication_intro() || !i.is_implication_intro() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let intro_pattern = p.to_implication_intro().unwrap();
-                let intro_instance = i.to_implication_intro().unwrap();
-                
-                if intro_pattern.assumption != intro_instance.assumption {
-                    ctx.extend(&intro_pattern.assumption.clone().into(), &intro_instance.assumption.clone().into());
-                }
-                
-                if intro_pattern.conclusion != intro_instance.conclusion {
-                    ctx.extend(&intro_pattern.conclusion.clone().into(), &intro_instance.conclusion.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_implication_intro() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let intro_instance = instance.to_implication_intro().unwrap();
+        
+        let mut conditions = IndexMap::new();
+        
+        if self.assumption != intro_instance.assumption {
+            conditions.insert(self.assumption.clone().into(), intro_instance.assumption.clone().into());
+        }
+        
+        if self.conclusion != intro_instance.conclusion {
+            conditions.insert(self.conclusion.clone().into(), intro_instance.conclusion.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{cmp::max, rc::Rc};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
@@ -135,27 +135,24 @@ impl TypeBody for ArrowType {
         self.value.first_conflict_with(&other_arrow.value)
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        if !pattern.is_arrow() || !instance.is_arrow() {
+    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+        if !instance.is_arrow() {
             return MatchOutput::FailedMatch;
         }
 
-        let pattern_arrow = pattern.to_arrow().unwrap();
         let instance_arrow = instance.to_arrow().unwrap();
 
-        if pattern_arrow.arguments.len() != instance_arrow.arguments.len() {
+        if self.arguments.len() != instance_arrow.arguments.len() {
             return MatchOutput::FailedMatch;
         }
-
-        for (arg1, arg2) in pattern_arrow.arguments.iter().zip(instance_arrow.arguments.iter()) {
-            ctx.extend(arg1, arg2);
-        }
         
-        ctx.extend(&self.value, &instance_arrow.value);
-        MatchOutput::Matched
+        let mut conditions = self.arguments.iter().cloned()
+            .zip(instance_arrow.arguments.iter().cloned())
+            .filter(|(t1, t2)| t1 != t2)
+            .collect::<IndexMap<_, _>>();
+        conditions.insert(self.value.clone(), instance_arrow.value.clone());
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

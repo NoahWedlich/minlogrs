@@ -4,7 +4,7 @@ use std::{rc::Rc, hash::Hash};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::type_constant::TypeConstant;
@@ -43,7 +43,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>>
+        pub fn match_with(&Self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>>
     }
     
     #[derive(PartialEq, Eq, Hash)]

@@ -1,10 +1,10 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -232,41 +232,32 @@ impl PredicateBody for ComprehensionTerm {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if !p.is_comprehension_term() || !i.is_comprehension_term() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.arity() != i.arity() {
-                    ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
-                }
-                
-                let cterm_pattern = p.to_comprehension_term().unwrap();
-                let cterm_instance = i.to_comprehension_term().unwrap();
-                
-                if cterm_pattern.vars.len() != cterm_instance.vars.len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (pvar, ivar) in cterm_pattern.vars.iter().zip(cterm_instance.vars.iter()) {
-                    if pvar != ivar {
-                        ctx.extend(&PredSubstEntry::Term(pvar.clone()), &PredSubstEntry::Term(ivar.clone()));
-                    }
-                }
-                
-                if cterm_pattern.body != cterm_instance.body {
-                    ctx.extend(&cterm_pattern.body.clone().into(), &cterm_instance.body.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if !instance.is_comprehension_term() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let cterm_instance = instance.to_comprehension_term().unwrap();
+        
+        if self.vars.len() != cterm_instance.vars.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = self.vars.iter().zip(cterm_instance.vars.iter())
+            .filter_map(|(v1, v2)| {
+                if v1 != v2 {
+                    Some((v1.clone().into(), v2.clone().into()))
+                } else {
+                    None
+                }
+            })
+            .collect::<IndexMap<_, _>>();
+        
+        if self.body != cterm_instance.body {
+            conditions.insert(self.body.clone().into(), cterm_instance.body.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

@@ -1,7 +1,7 @@
 
 use indexmap::IndexSet;
 use std::rc::Rc;
-use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
+use crate::core::substitution::{MatchOutput,
     Substitutable, SubstitutableWith, Substitution};
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -82,19 +82,15 @@ impl Substitutable for TermSubstEntry {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self> {
-        match self {
-            TermSubstEntry::Type(t) => {
-                match t.match_with(ctx) {
-                    MatchOutput::Substitution(p, i)
-                        => MatchOutput::Substitution(TermSubstEntry::Type(p), TermSubstEntry::Type(i)),
-                    MatchOutput::Matched => MatchOutput::Matched,
-                    MatchOutput::FailedMatch => MatchOutput::FailedMatch,
-                }
+    fn match_with(&self, instance: &Self) -> MatchOutput<Self> {
+        match (self, instance) {
+            (TermSubstEntry::Type(pat_t), TermSubstEntry::Type(inst_t)) => {
+                pat_t.match_with(inst_t).into()
             },
-            TermSubstEntry::Term(tm) => {
-                tm.match_with(ctx)
-            }
+            (TermSubstEntry::Term(pat_tm), TermSubstEntry::Term(inst_tm)) => {
+                pat_tm.match_with(inst_tm)
+            },
+            _ => MatchOutput::FailedMatch,
         }
     }
 }
@@ -154,12 +150,11 @@ impl From<&Rc<MinlogTerm>> for TermSubstEntry {
 }
 
 pub type TermSubstitution = Substitution<TermSubstEntry>;
-pub type TermMatchContext = MatchContextImpl<TermSubstEntry>;
 
 impl TermSubstitution {
     pub fn admissible(&self, term: &Rc<MinlogTerm>) -> bool {
         for free_var in term.get_free_variables(&mut IndexSet::new()) {
-            let substituted = self.substitute(&TermSubstEntry::Term(free_var.clone()));
+            let substituted = self.substitute(&free_var.clone().into());
             if let TermSubstEntry::Term(t) = substituted {
                 if self.substitute(&free_var.minlog_type()) != t.minlog_type() {
                     return false;
@@ -170,67 +165,6 @@ impl TermSubstitution {
         }
         
         true
-    }
-}
-
-impl<T: MatchContext<TermSubstEntry>> MatchContext<Rc<MinlogType>> for T {
-    fn new(patterns: &mut Vec<Rc<MinlogType>>, instances: &mut Vec<Rc<MinlogType>>) -> Self {
-        let mut term_patterns = patterns.iter()
-            .map(|p| TermSubstEntry::Type(p.clone())).collect::<Vec<_>>();
-        let mut term_instances = instances.iter()
-            .map(|i| TermSubstEntry::Type(i.clone())).collect::<Vec<_>>();
-
-        <Self as MatchContext<TermSubstEntry>>::new(&mut term_patterns, &mut term_instances)
-    }
-
-    fn extend(&mut self, pattern: &Rc<MinlogType>, instance: &Rc<MinlogType>) {
-        <Self as MatchContext<TermSubstEntry>>::extend(self,
-            &TermSubstEntry::Type(pattern.clone()),
-            &TermSubstEntry::Type(instance.clone())
-        );
-    }
-    
-    fn next_pattern(&mut self) -> Option<Rc<MinlogType>> {
-        if let Some(entry) = <Self as MatchContext<TermSubstEntry>>::next_pattern(self) {
-            if let TermSubstEntry::Type(t) = entry {
-                return Some(t);
-            } else {
-                println!("Warning: Expected type pattern but found term pattern while matching.");
-            }
-        }
-        
-        None
-    }
-
-    fn next_instance(&mut self) -> Option<Rc<MinlogType>> {
-        if let Some(entry) = <Self as MatchContext<TermSubstEntry>>::next_instance(self) {
-            if let TermSubstEntry::Type(t) = entry {
-                return Some(t);
-            } else {
-                println!("Warning: Expected type instance but found term instance while matching.");
-            }
-        }
-        
-        None
-    }
-    
-    fn skip_current(&mut self) {
-        <Self as MatchContext<TermSubstEntry>>::skip_current(self);
-    }
-    
-    fn restrict(&mut self, element: &Rc<MinlogType>) {
-        <Self as MatchContext<TermSubstEntry>>::restrict(self, &TermSubstEntry::Type(element.clone()));
-    }
-
-    fn is_restricted(&self, element: &Rc<MinlogType>) -> bool {
-        <Self as MatchContext<TermSubstEntry>>::is_restricted(self, &TermSubstEntry::Type(element.clone()))
-    }
-
-    fn substitute(&mut self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) {
-        <Self as MatchContext<TermSubstEntry>>::substitute(self,
-            &TermSubstEntry::Type(from.clone()),
-            &TermSubstEntry::Type(to.clone())
-        );
     }
 }
 
@@ -247,6 +181,20 @@ impl<T: SubstitutableWith<Rc<MinlogType>>> SubstitutableWith<TermSubstEntry> for
                 self.substitute_with(from_t, to_t)
             },
             _ => self.clone(),
+        }
+    }
+}
+
+impl From<MatchOutput<Rc<MinlogType>>> for MatchOutput<TermSubstEntry> {
+    fn from(output: MatchOutput<Rc<MinlogType>>) -> Self {
+        match output {
+            MatchOutput::Substitution(from, to) => {
+                MatchOutput::Substitution(from.into(), to.into())
+            },
+            MatchOutput::Matched(conditions) => {
+                MatchOutput::Matched(conditions.into_iter().map(|(f, o)| (f.into(), o.into())).collect())
+            },
+            MatchOutput::FailedMatch => MatchOutput::FailedMatch,
         }
     }
 }

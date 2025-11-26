@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::rc::Rc;
 use crate::{core::structures::inductive_constant::IDPComputationalContent, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -369,34 +369,23 @@ impl PredicateBody for InductivePredicate {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if !p.is_inductive_predicate() || !i.is_inductive_predicate() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let ipred_pattern = p.to_inductive_predicate().unwrap();
-                let ipred_instance = i.to_inductive_predicate().unwrap();
-                
-                if ipred_pattern.definition != ipred_instance.definition {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (from, to) in ipred_pattern.params.pairs().iter() {
-                    let instance_to = ipred_instance.params.substitute::<PredSubstEntry>(&from.clone());
-                    if to != &instance_to {
-                        ctx.extend(from, &instance_to);
-                    }
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if !instance.is_inductive_predicate() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let ipred_instance = instance.to_inductive_predicate().unwrap();
+        
+        if self.definition != ipred_instance.definition {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let conditions = PredicateSubstitution::collect_match_conditions(
+            &self.params,
+            &ipred_instance.params,
+        );
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

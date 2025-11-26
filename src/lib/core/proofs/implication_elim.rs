@@ -1,12 +1,12 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::core::terms::application::Application;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -200,31 +200,24 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_implication_elim() || !i.is_implication_elim() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let imp_elim_pattern = p.to_implication_elim().unwrap();
-                let imp_elim_instance = i.to_implication_elim().unwrap();
-                
-                if imp_elim_pattern.implication != imp_elim_instance.implication {
-                    ctx.extend(&imp_elim_pattern.implication.clone().into(), &imp_elim_instance.implication.clone().into());
-                }
-                
-                if imp_elim_pattern.premise != imp_elim_instance.premise {
-                    ctx.extend(&imp_elim_pattern.premise.clone().into(), &imp_elim_instance.premise.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_implication_elim() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let imp_elim_instance = instance.to_implication_elim().unwrap();
+        
+        let mut conditions = IndexMap::new();
+        
+        if self.implication != imp_elim_instance.implication {
+            conditions.insert(self.implication.clone().into(), imp_elim_instance.implication.clone().into());
+        }
+        
+        if self.premise != imp_elim_instance.premise {
+            conditions.insert(self.premise.clone().into(), imp_elim_instance.premise.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

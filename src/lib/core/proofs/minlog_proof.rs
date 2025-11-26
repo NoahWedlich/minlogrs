@@ -4,7 +4,7 @@ use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -90,7 +90,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry>
+        pub fn match_with(&Self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]

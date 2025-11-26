@@ -1,8 +1,10 @@
 
 use std::rc::Rc;
+use indexmap::IndexMap;
+
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
 
@@ -91,20 +93,24 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match self {
-            TypeConstant::Wildcard => {
-                MatchOutput::Matched
+    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+        match (self, instance) {
+            (TypeConstant::Wildcard, _) => {
+                MatchOutput::Matched(IndexMap::new())
             },
-            _ if pattern == instance => {
-                MatchOutput::Matched
+            (TypeConstant::NullType, t) if t.is_null() => {
+                MatchOutput::Matched(IndexMap::new())
             },
-            _ => {
-                MatchOutput::FailedMatch
-            }
+            (TypeConstant::Atomic, t) if t.is_atomic() => {
+                MatchOutput::Matched(IndexMap::new())
+            },
+            (TypeConstant::Existential, t) if t.is_existential() => {
+                MatchOutput::Matched(IndexMap::new())
+            },
+            (TypeConstant::Proposition, t) if t.is_proposition() => {
+                MatchOutput::Matched(IndexMap::new())
+            },
+            _ => MatchOutput::FailedMatch,
         }
     }
 }

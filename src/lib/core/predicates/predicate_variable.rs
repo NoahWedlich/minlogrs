@@ -1,10 +1,10 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -130,21 +130,17 @@ impl PredicateBody for PredicateVariable {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if p.arity() != i.arity() {
-                    ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
-                    ctx.extend(&p.clone().into(), &i.clone().into());
-                    return MatchOutput::Matched;
-                }
-                
-                MatchOutput::Substitution(p.into(), i.into())
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if self.arity() != instance.arity() {
+            MatchOutput::Matched(IndexMap::from([
+                (Rc::new(MinlogPredicate::Variable(self.clone())).into(), instance.clone().into()),
+                (self.arity().into(), instance.arity().into()),
+            ]))
+        } else {
+            MatchOutput::Substitution(
+                Rc::new(MinlogPredicate::Variable(self.clone())).into(),
+                instance.clone().into(),
+            )
         }
     }
 }

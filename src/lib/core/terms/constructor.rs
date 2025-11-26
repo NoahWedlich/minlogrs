@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -135,30 +135,24 @@ impl TermBody for Constructor {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_constructor() || !i.is_constructor() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let constr_pattern = p.to_constructor().unwrap();
-                let constr_instance = i.to_constructor().unwrap();
-                
-                if constr_pattern.name != constr_instance.name {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if constr_pattern.minlog_type != constr_instance.minlog_type {
-                    ctx.extend(&TermSubstEntry::Type(constr_pattern.minlog_type.clone()), &TermSubstEntry::Type(constr_instance.minlog_type.clone()));
-                }
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_constructor() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let constr_instance = instance.to_constructor().unwrap();
+        
+        if self.name != constr_instance.name {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let conditions = if self.minlog_type != constr_instance.minlog_type {
+            IndexMap::from([(self.minlog_type.clone().into(), constr_instance.minlog_type.clone().into())])
+        } else {
+            IndexMap::new()
+        };
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

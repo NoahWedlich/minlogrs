@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -157,28 +157,20 @@ impl TermBody for Projection {
         self.term.first_conflict_with(&other_proj.term)
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_projection() || !i.is_projection() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let proj_pattern = p.to_projection().unwrap();
-                let proj_instance = i.to_projection().unwrap();
-                
-                if proj_pattern.index != proj_instance.index {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                ctx.extend(&TermSubstEntry::Term(proj_pattern.term.clone()), &TermSubstEntry::Term(proj_instance.term.clone()));
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_projection() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let proj_instance = instance.to_projection().unwrap();
+        
+        if self.index != proj_instance.index {
+            return MatchOutput::FailedMatch;
+        }
+        
+        MatchOutput::Matched(
+            IndexMap::from([(self.term.clone().into(), proj_instance.term.clone().into())])
+        )
     }
 }
 

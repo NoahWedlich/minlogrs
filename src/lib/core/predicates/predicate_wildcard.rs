@@ -1,10 +1,10 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::type_constant::TypeConstant;
@@ -72,20 +72,14 @@ impl PredicateBody for PredicateWildcard {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        let conditions = if self.arity() != instance.arity() {
+            IndexMap::from([(self.arity().into(), instance.arity().into())])
+        } else {
+            IndexMap::new()
+        };
         
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if p.arity() != i.arity() {
-                    ctx.extend(&p.arity().clone().into(), &i.arity().clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
-        }
+        MatchOutput::Matched(conditions)
     }
 }
 

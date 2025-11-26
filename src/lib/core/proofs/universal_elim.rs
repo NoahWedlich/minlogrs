@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -184,31 +184,24 @@ impl ProofBody for UniversalElim {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_universal_elim() || !i.is_universal_elim() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let ue_pattern = p.to_universal_elim().unwrap();
-                let ue_instance = i.to_universal_elim().unwrap();
-                
-                if ue_pattern.term != ue_instance.term {
-                    ctx.extend(&ue_pattern.term.clone().into(), &ue_instance.term.clone().into());
-                }
-                
-                if ue_pattern.proof != ue_instance.proof {
-                    ctx.extend(&ue_pattern.proof.clone().into(), &ue_instance.proof.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_universal_elim() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let ue_instance = instance.to_universal_elim().unwrap();
+        
+        let mut conditions = IndexMap::new();
+        
+        if self.term != ue_instance.term {
+            conditions.insert(self.term.clone().into(), ue_instance.term.clone().into());
+        }
+        
+        if self.proof != ue_instance.proof {
+            conditions.insert(self.proof.clone().into(), ue_instance.proof.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

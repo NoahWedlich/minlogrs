@@ -1,10 +1,10 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -83,20 +83,14 @@ impl TermBody for TermWildcard {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if p.minlog_type() != i.minlog_type() {
-                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
-                }
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        let conditions = if self.minlog_type() != instance.minlog_type() {
+            IndexMap::from([(self.minlog_type.clone().into(), instance.minlog_type().clone().into())])
+        } else {
+            IndexMap::new()
+        };
 
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
-        }
+        MatchOutput::Matched(conditions)
     }
 }
 

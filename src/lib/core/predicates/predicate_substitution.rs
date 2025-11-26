@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::rc::Rc;
 use crate::utils::pretty_printer::PrettyPrintable;
 
-use crate::core::substitution::{MatchContext, MatchContextImpl, MatchOutput,
+use crate::core::substitution::{MatchOutput,
     Substitutable, SubstitutableWith, Substitution};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -131,21 +131,13 @@ impl Substitutable for PredSubstEntry {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        match self {
-            PredSubstEntry::Predicate(p) => {
-                p.match_with(ctx)
-            },
-            _ if self.is_term_subst_entry() => {
-                match self.to_term_subst_entry().unwrap().match_with(ctx) {
-                    MatchOutput::Substitution(p, i) => {
-                        MatchOutput::Substitution(p.into(), i.into())
-                    },
-                    MatchOutput::Matched => MatchOutput::Matched,
-                    MatchOutput::FailedMatch => MatchOutput::FailedMatch,
-                }
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Self) -> MatchOutput<PredSubstEntry> {
+        if let Some(pat_tse) = self.to_term_subst_entry() && let Some(inst_tse) = instance.to_term_subst_entry() {
+            pat_tse.match_with(&inst_tse).into()
+        } else if let Some(pat_p) = self.to_predicate() && let Some(inst_p) = instance.to_predicate() {
+            pat_p.match_with(&inst_p)
+        } else {
+            MatchOutput::FailedMatch
         }
     }
 }
@@ -239,7 +231,6 @@ impl From<&TermSubstEntry> for PredSubstEntry {
 }
 
 pub type PredicateSubstitution = Substitution<PredSubstEntry>;
-pub type PredicateMatchContext = MatchContextImpl<PredSubstEntry>;
 
 impl PredicateSubstitution {
     pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
@@ -271,62 +262,6 @@ impl PredicateSubstitution {
     }
 }
 
-impl<T: MatchContext<PredSubstEntry>> MatchContext<TermSubstEntry> for T {
-    fn new(patterns: &mut Vec<TermSubstEntry>, instances: &mut Vec<TermSubstEntry>) -> Self {
-        let mut pred_patterns = patterns.iter()
-            .map(|p| p.into()).collect::<Vec<_>>();
-        let mut pred_instances = instances.iter()
-            .map(|i| i.into()).collect::<Vec<_>>();
-        T::new(&mut pred_patterns, &mut pred_instances)
-    }
-    
-    fn extend(&mut self, pattern: &TermSubstEntry, instance: &TermSubstEntry) {
-        self.extend(&pattern.into(), &instance.into());
-    }
-    
-    fn next_pattern(&mut self) -> Option<TermSubstEntry> {
-        if let Some(p) = self.next_pattern() {
-            if let Some(tse) = p.to_term_subst_entry() {
-                Some(tse)
-            } else {
-                println!("Warning: Expected term pattern but found predicate pattern while matching.");
-                None
-            }
-        } else {
-            None
-        }
-    }
-    
-    fn next_instance(&mut self) -> Option<TermSubstEntry> {
-        if let Some(i) = self.next_instance() {
-            if let Some(tse) = i.to_term_subst_entry() {
-                Some(tse)
-            } else {
-                println!("Warning: Expected term instance but found predicate instance while matching.");
-                None
-            }
-        } else {
-            None
-        }
-    }
-    
-    fn skip_current(&mut self) {
-        self.skip_current();
-    }
-    
-    fn restrict(&mut self, element: &TermSubstEntry) {
-        self.restrict(&element.into());
-    }
-    
-    fn is_restricted(&self, element: &TermSubstEntry) -> bool {
-        self.is_restricted(&element.into())
-    }
-    
-    fn substitute(&mut self, from: &TermSubstEntry, to: &TermSubstEntry) {
-        self.substitute(&from.into(), &to.into());
-    }
-}
-
 impl SubstitutableWith<PredSubstEntry> for Rc<MinlogPredicate> {
     fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
         self.substitute(from, to)
@@ -347,6 +282,20 @@ impl <T: SubstitutableWith<TermSubstEntry>> SubstitutableWith<PredSubstEntry> fo
             _ => {
                 self.clone()
             }            
+        }
+    }
+}
+
+impl From<MatchOutput<TermSubstEntry>> for MatchOutput<PredSubstEntry> {
+    fn from(output: MatchOutput<TermSubstEntry>) -> Self {
+        match output {
+            MatchOutput::Substitution(p, i) => {
+                MatchOutput::Substitution(p.into(), i.into())
+            },
+            MatchOutput::Matched(conditions) => {
+                MatchOutput::Matched(conditions.into_iter().map(|(f, o)| (f.into(), o.into())).collect())
+            }
+            MatchOutput::FailedMatch => MatchOutput::FailedMatch,
         }
     }
 }

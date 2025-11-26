@@ -1,6 +1,6 @@
 
 use std::rc::Rc;
-use crate::core::substitution::{Substitutable, Substitution, MatchContext, MatchContextImpl, MatchOutput};
+use crate::core::substitution::{Substitutable, Substitution, MatchOutput};
 use crate::core::types::minlog_type::MinlogType;
 
 impl Substitutable for Rc<MinlogType> {
@@ -16,10 +16,9 @@ impl Substitutable for Rc<MinlogType> {
         self.is_variable() && !to.contains_type_variable(self)
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<Self>) -> MatchOutput<Self> {
-        self.as_ref().match_with(ctx)
+    fn match_with(&self, instance: &Self) -> MatchOutput<Self> {
+        self.as_ref().match_with(instance)
     }
 }
 
 pub type TypeSubstitution = Substitution<Rc<MinlogType>>;
-pub type TypeMatchContext = MatchContextImpl<Rc<MinlogType>>;

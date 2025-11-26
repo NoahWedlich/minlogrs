@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::rc::Rc;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::{MatchContext, MatchOutput, Substitutable};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::{TypeBody, MinlogType};
@@ -52,12 +52,9 @@ impl TypeBody for TypeVariable {
         }
     }
 
-    fn match_with(&self, ctx: &mut impl MatchContext<Rc<MinlogType>>) -> MatchOutput<Rc<MinlogType>> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        if pattern.valid_substitution(&instance) {
-            MatchOutput::Substitution(pattern.clone(), instance.clone())
+    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+        if !instance.contains_type_variable(&Rc::new(MinlogType::Variable(self.clone()))) {
+            MatchOutput::Substitution(Rc::new(MinlogType::Variable(self.clone())), instance.clone())
         } else {
             MatchOutput::FailedMatch
         }

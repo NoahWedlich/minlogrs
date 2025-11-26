@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::rc::Rc;
 use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -218,29 +218,23 @@ impl TermBody for ProgramTerm {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_program_term() || !i.is_program_term() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let pterm_pattern = p.to_program_term().unwrap();
-                let pterm_instance = i.to_program_term().unwrap();
-                
-                if pterm_pattern.pconst != pterm_instance.pconst {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                pterm_pattern.parameters.add_subst_match(&pterm_instance.parameters, ctx);
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_program_term() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let pterm_instance = instance.to_program_term().unwrap();
+        
+        if self.pconst != pterm_instance.pconst {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let conditions = TermSubstitution::collect_match_conditions(
+            &self.parameters,
+            &pterm_instance.parameters,
+        );
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

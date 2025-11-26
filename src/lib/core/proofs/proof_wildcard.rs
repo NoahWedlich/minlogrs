@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{BreakType, PPElement, PrettyPrintable};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -134,21 +134,15 @@ impl ProofBody for ProofWildcard {
         None
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        let conditions = if self.proved_formula() != instance.proved_formula() {
+            IndexMap::from([(self.proved_formula().into(), instance.proved_formula().into())])
+        } else {
+            IndexMap::new()
+        };
         
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if p.proved_formula() != i.proved_formula() {
-                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
-                }
-                
-                // TODO: Match contexts
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
-        }
+        // TODO: Match contexts
+        MatchOutput::Matched(conditions)
     }
 }
 

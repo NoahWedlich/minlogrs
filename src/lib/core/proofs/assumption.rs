@@ -1,12 +1,12 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::core::terms::term_variable::TermVariable;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -142,24 +142,18 @@ impl ProofBody for Assumption {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_assumption() || !i.is_assumption() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.proved_formula() != i.proved_formula() {
-                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_assumption() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let conditions = if self.proved_formula() != instance.proved_formula() {
+            IndexMap::from([(self.proved_formula().into(), instance.proved_formula().into())])
+        } else {
+            IndexMap::new()
+        };
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

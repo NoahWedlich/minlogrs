@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -153,31 +153,24 @@ impl ProofBody for UniversalIntro {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_universal_intro() || !i.is_universal_intro() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let ui_pattern = p.to_universal_intro().unwrap();
-                let ui_instance = i.to_universal_intro().unwrap();
-                
-                if ui_pattern.variable != ui_instance.variable {
-                    ctx.extend(&ui_pattern.variable.clone().into(), &ui_instance.variable.clone().into());
-                }
-                
-                if ui_pattern.proof != ui_instance.proof {
-                    ctx.extend(&ui_pattern.proof.clone().into(), &ui_instance.proof.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_universal_intro() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let ui_instance = instance.to_universal_intro().unwrap();
+        
+        let mut conditions = IndexMap::new();
+        
+        if self.variable != ui_instance.variable {
+            conditions.insert(self.variable.clone().into(), ui_instance.variable.clone().into());
+        }
+        
+        if self.proof != ui_instance.proof {
+            conditions.insert(self.proof.clone().into(), ui_instance.proof.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

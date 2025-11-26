@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 use std::{rc::Rc, hash::Hash};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -72,7 +72,7 @@ crate::wrapper_enum! {
         
         pub fn first_conflict_with(&Self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
         
-        pub fn match_with(&Self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry>
+        pub fn match_with(&Self, ctx: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]

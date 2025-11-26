@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -150,31 +150,24 @@ impl ProofBody for Axiom {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_axiom() || !i.is_axiom() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.proved_formula() != i.proved_formula() {
-                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
-                }
-                
-                let axiom_pattern = p.to_axiom().unwrap();
-                let axiom_instance = i.to_axiom().unwrap();
-                
-                if axiom_pattern.name != axiom_instance.name {
-                    MatchOutput::FailedMatch
-                } else {
-                    MatchOutput::Matched
-                }
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if !instance.is_axiom() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let axiom_instance = instance.to_axiom().unwrap();
+        
+        if self.name() != axiom_instance.name() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let conditions = if self.formula != axiom_instance.formula {
+            IndexMap::from([(self.formula.clone().into(), axiom_instance.formula.clone().into())])
+        } else {
+            IndexMap::new()
+        };
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

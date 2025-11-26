@@ -1,9 +1,9 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 use crate::{utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::types::arrow_type::ArrowType;
@@ -289,39 +289,34 @@ impl TermBody for MatchTerm {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if !p.is_match_term() || !i.is_match_term() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let match_pattern = p.to_match_term().unwrap();
-                let match_instance = i.to_match_term().unwrap();
-                
-                if match_pattern.branches.len() != match_instance.branches.len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for ((p_pattern, i_pattern), (p_instance, i_instance))
-                    in match_pattern.branches.iter().zip(match_instance.branches.iter())
-                {
-                    if p_pattern != p_instance {
-                        ctx.extend(&p_pattern.clone().into(), &p_instance.clone().into());
-                    }
-                    
-                    if i_pattern != i_instance {
-                        ctx.extend(&i_pattern.clone().into(), &i_instance.clone().into());
-                    }
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if !instance.is_match_term() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let match_instance = instance.to_match_term().unwrap();
+        
+        if self.branches.len() != match_instance.branches.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let conditions = self.branches.iter().zip(match_instance.branches.iter())
+            .flat_map(|((p_pattern, i_pattern), (p_instance, i_instance))| {
+                let mut cond = vec![];
+                
+                if p_pattern != p_instance {
+                    cond.push((p_pattern.into(), p_instance.into()));
+                }
+                
+                if i_pattern != i_instance {
+                    cond.push((i_pattern.into(), i_instance.into()));
+                }
+                
+                cond
+            }
+        ).collect::<IndexMap<_, _>>();
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

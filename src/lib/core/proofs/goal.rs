@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
 
 use crate::utils::pretty_printer::{BreakType, PPElement, PrettyPrintable};
 use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
 
-use crate::core::substitution::{MatchContext, MatchOutput, SubstitutableWith};
+use crate::core::substitution::{MatchOutput, SubstitutableWith};
 
 use crate::core::types::minlog_type::MinlogType;
 use crate::core::terms::minlog_term::MinlogTerm;
@@ -169,25 +169,14 @@ impl ProofBody for Goal {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<ProofSubstEntry>) -> MatchOutput<ProofSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (ProofSubstEntry::Proof(p), ProofSubstEntry::Proof(i)) => {
-                if !p.is_goal() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                if p.proved_formula() != i.proved_formula() {
-                    ctx.extend(&p.proved_formula().into(), &i.proved_formula().into());
-                    ctx.extend(&p.clone().into(), &i.clone().into());
-                    return MatchOutput::Matched;
-                }
-                
-                MatchOutput::Substitution(p.into(), i.into())
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+        if self.proved_formula() != instance.proved_formula() {
+            MatchOutput::Matched(IndexMap::from([
+                (Rc::new(MinlogProof::Goal(self.clone())).into(), instance.clone().into()),
+                (self.proved_formula().into(), instance.proved_formula().into()),
+            ]))
+        } else {
+            MatchOutput::Substitution(Rc::new(MinlogProof::Goal(self.clone())).into(), instance.clone().into())
         }
     }
 }

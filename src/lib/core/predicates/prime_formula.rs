@@ -1,11 +1,11 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::{rc::Rc, cmp::min};
 
 use crate::core::predicates::comprehension_term::ComprehensionTerm;
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 use crate::core::polarity::{Polarity, Polarized};
 
 use crate::core::types::minlog_type::MinlogType;
@@ -253,37 +253,32 @@ impl PredicateBody for PrimeFormula {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<PredSubstEntry>) -> MatchOutput<PredSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (PredSubstEntry::Predicate(p), PredSubstEntry::Predicate(i)) => {
-                if !p.is_prime() || !i.is_prime() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                let prime_pattern = p.to_prime().unwrap();
-                let prime_instance = i.to_prime().unwrap();
-                
-                if prime_pattern.arguments.len() != prime_instance.arguments.len() {
-                    return MatchOutput::FailedMatch;
-                }
-                
-                for (arg_pattern, arg_instance) in prime_pattern.arguments.iter().zip(prime_instance.arguments.iter()) {
-                    if arg_pattern != arg_instance {
-                        ctx.extend(&arg_pattern.clone().into(), &arg_instance.clone().into());
-                    }
-                }
-                
-                if prime_pattern.body != prime_instance.body {
-                    ctx.extend(&prime_pattern.body.clone().into(), &prime_instance.body.clone().into());
-                }
-                
-                MatchOutput::Matched
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+        if !instance.is_prime() {
+            return MatchOutput::FailedMatch;
         }
+        
+        let prime_instance = instance.to_prime().unwrap();
+        
+        if self.arguments.len() != prime_instance.arguments.len() {
+            return MatchOutput::FailedMatch;
+        }
+        
+        let mut conditions = self.arguments.iter().zip(prime_instance.arguments.iter())
+            .filter_map(|(arg_pattern, arg_instance)| {
+                if arg_pattern != arg_instance {
+                    Some((arg_pattern.into(), arg_instance.into()))
+                } else {
+                    None
+                }
+            })
+            .collect::<IndexMap<_, _>>();
+        
+        if self.body != prime_instance.body {
+            conditions.insert(self.body.clone().into(), prime_instance.body.clone().into());
+        }
+        
+        MatchOutput::Matched(conditions)
     }
 }
 

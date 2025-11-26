@@ -1,10 +1,10 @@
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use std::rc::Rc;
 
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-use crate::core::substitution::{MatchContext, MatchOutput};
+use crate::core::substitution::MatchOutput;
 
 use crate::core::types::minlog_type::MinlogType;
 
@@ -135,21 +135,14 @@ impl TermBody for TermVariable {
         }
     }
     
-    fn match_with(&self, ctx: &mut impl MatchContext<TermSubstEntry>) -> MatchOutput<TermSubstEntry> {
-        let pattern = ctx.next_pattern().unwrap();
-        let instance = ctx.next_instance().unwrap();
-        
-        match (pattern, instance) {
-            (TermSubstEntry::Term(p), TermSubstEntry::Term(i)) => {
-                if p.minlog_type() != i.minlog_type() {
-                    ctx.extend(&TermSubstEntry::Type(p.minlog_type()), &TermSubstEntry::Type(i.minlog_type()));
-                    ctx.extend(&TermSubstEntry::Term(p.clone()), &TermSubstEntry::Term(i.clone()));
-                    return MatchOutput::Matched;
-                }
-
-                MatchOutput::Substitution(p.into(), i.into())
-            },
-            _ => MatchOutput::FailedMatch,
+    fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
+        if self.minlog_type() != instance.minlog_type() {
+            MatchOutput::Matched(IndexMap::from([
+                (Rc::new(MinlogTerm::Variable(self.clone())).into(), instance.clone().into()),
+                (self.minlog_type().into(), instance.minlog_type().into())
+            ]))
+        } else {
+            MatchOutput::Substitution(Rc::new(MinlogTerm::Variable(self.clone())).into(), instance.clone().into())
         }
     }
 }
