@@ -9,8 +9,6 @@ use crate::includes::{
 };
 
 crate::wrapper_enum! {
-    
-    @default { EmptyTermBody }
     pub trait TermBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
         pub fn minlog_type(&Self) -> Rc<MinlogType>
         
@@ -75,7 +73,6 @@ crate::wrapper_enum! {
         Variable(||variable|| TermVariable),
         Constructor(||constructor|| Constructor),
         ProgramTerm(||program_term|| ProgramTerm),
-        InternalConstant(||internal_constant||),
         Abstraction(||abstraction|| Abstraction),
         Application(||application|| Application),
         Tuple(||tuple|| Tuple),
@@ -117,50 +114,5 @@ impl MinlogTerm {
     
     pub fn contains_program_term(&self, prog: &Rc<MinlogTerm>) -> bool {
         prog.is_program_term() && self.get_program_terms(&mut IndexSet::new()).contains(prog)
-    }
-    
-    pub fn contains_internal_constant(&self, ic: &Rc<MinlogTerm>) -> bool {
-        ic.is_internal_constant() && self.get_internal_constants(&mut IndexSet::new()).contains(ic)
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Hash)]
-pub struct EmptyTermBody;
-
-impl PrettyPrintable for EmptyTermBody {
-    fn to_pp_element(&self, _detail: bool) -> PPElement {
-        PPElement::text("<?>".to_string())
-    }
-}
-
-impl TermBody for EmptyTermBody {
-    fn minlog_type(&self) -> Rc<MinlogType> {
-        unimplemented!()
-    }
-    
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
-        unimplemented!()
-    }
-    
-    fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
-        None
-    }
-    
-    fn alpha_equivalent(&self, _other: &Rc<MinlogTerm>,
-        _forward: &mut Vec<(TermVariable, TermVariable)>,
-        _backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
-            unimplemented!()
-    }
-    
-    fn substitute(&self, _from: &TermSubstEntry, _to: &TermSubstEntry) -> Rc<MinlogTerm> {
-        unimplemented!()
-    }
-
-    fn first_conflict_with(&self, _other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)> {
-        unimplemented!()
-    }
-    
-    fn match_with(&self, _instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry> {
-        unimplemented!()
     }
 }
