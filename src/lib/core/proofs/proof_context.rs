@@ -1,9 +1,12 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::proofs::minlog_proof::MinlogProof;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        terms::*,
+        proofs::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProofContext {

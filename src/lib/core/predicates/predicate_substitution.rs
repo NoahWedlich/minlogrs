@@ -1,16 +1,13 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::utils::pretty_printer::PrettyPrintable;
-
-use crate::core::substitution::{MatchOutput,
-    Substitutable, SubstitutableWith, Substitution};
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-
-use crate::core::terms::term_substitution::TermSubstEntry;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PredSubstEntry {

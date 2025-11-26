@@ -1,15 +1,12 @@
 
-use indexmap::IndexSet;
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
-use crate::{core::terms::{application::Application, term_variable::TermVariable}, utils::pretty_printer::*};
-
-use crate::core::substitution::SubstitutableWith;
-
-use crate::core::types::minlog_type::MinlogType;
-
-use crate::core::terms::minlog_term::{MinlogTerm, TermBody};
-
-use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RewriteRule {

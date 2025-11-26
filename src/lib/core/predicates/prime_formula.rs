@@ -1,22 +1,13 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::{rc::Rc, cmp::min};
-
-use crate::core::predicates::comprehension_term::ComprehensionTerm;
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
-
-use crate::core::substitution::MatchOutput;
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::types::tuple_type::TupleType;
-
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::terms::term_substitution::TermSubstitution;
-
-use crate::core::predicates::minlog_predicate::{MinlogPredicate, PredicateBody};
-
-use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+    }
+};
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {

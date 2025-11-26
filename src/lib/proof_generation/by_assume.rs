@@ -1,11 +1,9 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::utils::pretty_printer::*;
-use crate::core::proofs::{assumption::Assumption, bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro};
-use crate::core::proofs::goal::Goal;
-use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::proofs::proof_context::ProofContext;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::proofs::*,
+};
 
 use crate::core::{
     predicates::{

@@ -1,27 +1,14 @@
 
-use indexmap::IndexSet;
-use std::{rc::Rc, hash::Hash};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-
-use crate::core::proofs::proof_substitution::ProofSubstEntry;
-
-use crate::core::proofs::proof_wildcard::ProofWildcard;
-use crate::core::proofs::goal::Goal;
-use crate::core::proofs::assumption::Assumption;
-use crate::core::proofs::axiom::Axiom;
-use crate::core::proofs::theorem::Theorem;
-use crate::core::proofs::implication_intro::ImplicationIntro;
-use crate::core::proofs::implication_elim::ImplicationElim;
-use crate::core::proofs::universal_intro::UniversalIntro;
-use crate::core::proofs::universal_elim::UniversalElim;
-use crate::core::proofs::bundled_proof::BundledProof;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+        proofs::*,
+    }
+};
 
 crate::wrapper_enum! {
     

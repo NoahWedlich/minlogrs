@@ -1,7 +1,10 @@
 
-use std::rc::Rc;
-use crate::core::substitution::{Substitutable, Substitution, MatchOutput};
-use crate::core::types::minlog_type::MinlogType;
+use crate::includes::{
+    essential::*,
+    core::{
+        types::*,
+    }
+};
 
 impl Substitutable for Rc<MinlogType> {
     fn substitute(&self, from: &Self, to: &Self) -> Self {

@@ -1,26 +1,13 @@
 
-use indexmap::IndexSet;
-use std::{rc::Rc, hash::Hash};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-
-use crate::core::substitution::MatchOutput;
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::minlog_type::MinlogType;
-
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::terms::term_variable::TermVariable;
-use crate::core::terms::term_substitution::TermSubstitution;
-
-use crate::core::predicates::predicate_wildcard::PredicateWildcard;
-use crate::core::predicates::predicate_variable::PredicateVariable;
-use crate::core::predicates::comprehension_term::ComprehensionTerm;
-use crate::core::predicates::inductive_predicate::InductivePredicate;
-use crate::core::predicates::prime_formula::PrimeFormula;
-use crate::core::predicates::implication::Implication;
-use crate::core::predicates::all_quantifier::AllQuantifier;
-
-use crate::core::predicates::predicate_substitution::PredSubstEntry;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+    }
+};
 
 crate::wrapper_enum! {
     pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {

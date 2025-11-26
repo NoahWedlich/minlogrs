@@ -1,20 +1,14 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
-
-use crate::utils::pretty_printer::{BreakType, PPElement, PrettyPrintable};
-use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
-
-use crate::core::substitution::{MatchOutput, SubstitutableWith};
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-
-use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
-use crate::core::proofs::proof_context::ProofContext;
-
-use crate::core::proofs::proof_substitution::ProofSubstEntry;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+        proofs::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProofWildcard {

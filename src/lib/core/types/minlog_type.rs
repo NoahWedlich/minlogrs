@@ -1,17 +1,11 @@
 
-use indexmap::IndexSet;
-use std::{rc::Rc, hash::Hash};
-
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-
-use crate::core::substitution::MatchOutput;
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::type_constant::TypeConstant;
-use crate::core::types::type_variable::TypeVariable;
-use crate::core::types::algebra_type::AlgebraType;
-use crate::core::types::arrow_type::ArrowType;
-use crate::core::types::tuple_type::TupleType;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+    }
+};
 
 crate::wrapper_enum! {
     

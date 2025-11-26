@@ -1,12 +1,11 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-
-use crate::core::substitution::MatchOutput;
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TypeVariable {

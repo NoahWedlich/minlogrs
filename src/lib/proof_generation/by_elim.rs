@@ -1,14 +1,10 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::rc::Rc;
-use crate::{builtin::elimination::extract_elimination_axiom, core::proofs::{assumption::Assumption,
-    bundled_proof::BundledProof, implication_intro::ImplicationIntro, universal_intro::UniversalIntro},
-    proof_generation::by_assume::generate_proof_by_assume_with_name};
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::proofs::implication_elim::ImplicationElim;
-use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::proofs::universal_elim::UniversalElim;
-use crate::core::proofs::proof_context::ProofContext;
+use crate::includes::{
+    essential::*,
+    core::proofs::*,
+    builtin::*,
+    proof_generation::*,
+};
 
 pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogProof> {
     let elim_axiom = extract_elimination_axiom(inductive_predicate, &mut IndexMap::new());

@@ -1,22 +1,14 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::{core::structures::inductive_constant::IDPComputationalContent, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
-
-use crate::core::substitution::MatchOutput;
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::types::type_constant::TypeConstant;
-
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::predicates::minlog_predicate::{PredicateBody, MinlogPredicate};
-
-use crate::core::types::type_substitution::TypeSubstitution;
-use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
-use crate::core::predicates::predicate_substitution::{PredSubstEntry, PredicateSubstitution};
-
-use crate::core::structures::inductive_constant::InductiveConstant;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        structures::*,
+        types::*,
+        terms::*,
+        predicates::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct InductivePredicate {

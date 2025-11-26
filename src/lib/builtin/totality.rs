@@ -1,21 +1,11 @@
 
-use indexmap::IndexMap;
-use std::rc::Rc;
-
-use crate::core::{
-    predicates::{
-        inductive_predicate::InductivePredicate,
-        minlog_predicate::MinlogPredicate,
-        predicate_substitution::PredicateSubstitution,
-        prime_formula::PrimeFormula,
-        implication::Implication,
-        all_quantifier::AllQuantifier
-    }, structures::{
-        inductive_constant::InductiveConstant
-    }, terms::{
-        application::Application, minlog_term::MinlogTerm, projection::Projection, term_variable::TermVariable
-    }, types::{
-        minlog_type::MinlogType
+pub use crate::includes::{
+    essential::*,
+    core::{
+        structures::*,
+        types::*,
+        terms::*,
+        predicates::*,
     }
 };
 

@@ -1,24 +1,12 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::rc::Rc;
-use crate::core::proofs::axiom::Axiom;
-use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::structures::program_constant::{ProgramConstant, RewriteRule};
-use crate::utils::pretty_printer::*;
-
-use crate::core::{
-    predicates::{
-        minlog_predicate::MinlogPredicate,
-        predicate_variable::PredicateVariable,
-        prime_formula::PrimeFormula,
-        implication::Implication,
-        all_quantifier::AllQuantifier
-    }, terms::{
-        minlog_term::MinlogTerm,
-        term_variable::TermVariable,
-        application::Application,
-        program_term::ProgramTerm,
-        term_substitution::TermSubstitution
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        structures::*,
+        terms::*,
+        predicates::*,
+        proofs::*
     }
 };
 

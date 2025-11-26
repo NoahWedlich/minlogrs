@@ -1,12 +1,11 @@
 
-use std::rc::Rc;
-use indexmap::IndexMap;
-
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::{TypeBody, MinlogType};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TypeConstant {

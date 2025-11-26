@@ -1,13 +1,14 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::utils::pretty_printer::*;
-use crate::core::polarity::Polarity;
-use crate::proof_generation::by_use::generate_proof_by_use;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::proofs::axiom::Axiom;
-use crate::core::proofs::proof_context::ProofContext;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        predicates::*,
+        proofs::*,
+    },
+    proof_generation::*,
+};
 
 pub fn generate_proof_by_intro(target: &Rc<MinlogPredicate>, clause: &String, context: &ProofContext) -> Rc<MinlogProof> {
     let idps = target.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new())

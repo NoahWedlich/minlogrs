@@ -1,12 +1,11 @@
 
-use std::rc::Rc;
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::proofs::goal::Goal;
-use crate::core::proofs::minlog_proof::MinlogProof;
-use crate::core::proofs::implication_elim::ImplicationElim;
-use crate::core::proofs::universal_elim::UniversalElim;
-use crate::core::proofs::proof_substitution::{ProofSubstEntry, ProofSubstitution};
-use crate::core::proofs::proof_context::ProofContext;
+use crate::includes::{
+    essential::*,
+    core::{
+        predicates::*,
+        proofs::*,
+    }
+};
 
 pub fn generate_proof_by_use(target: &Rc<MinlogPredicate>, to_use: &Rc<MinlogProof>, context: &ProofContext) -> Rc<MinlogProof> {
     let mut proof = to_use.clone();

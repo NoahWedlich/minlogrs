@@ -1,18 +1,13 @@
 
-use indexmap::IndexSet;
-use std::rc::Rc;
-use crate::{core::substitution::Substitutable, utils::pretty_printer::{BreakType, PPElement, PrettyPrintable}};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::MinlogType;
-
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
-use crate::core::terms::term_variable::TermVariable;
-
-use crate::core::terms::term_substitution::{TermSubstitution, TermSubstEntry};
-
-use crate::core::structures::program_constant::{ProgramConstant, RewriteRule};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        structures::*,
+        types::*,
+        terms::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ProgramTerm {

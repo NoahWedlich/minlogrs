@@ -1,5 +1,5 @@
 
-use std::{rc::Rc, cmp::{max, min}};
+use crate::includes::essential::*;
 
 pub trait ProofTreeDisplayable {
     fn to_proof_tree_node(&self) -> ProofTreeNode;

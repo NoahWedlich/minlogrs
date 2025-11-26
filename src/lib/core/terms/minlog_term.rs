@@ -1,23 +1,12 @@
 
-use indexmap::IndexSet;
-use std::{rc::Rc, hash::Hash};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::MinlogType;
-
-use crate::core::terms::term_wildcard::TermWildcard;
-use crate::core::terms::term_variable::TermVariable;
-use crate::core::terms::constructor::Constructor;
-use crate::core::terms::program_term::ProgramTerm;
-use crate::core::terms::abstraction::Abstraction;
-use crate::core::terms::application::Application;
-use crate::core::terms::tuple::Tuple;
-use crate::core::terms::projection::Projection;
-use crate::core::terms::match_term::MatchTerm;
-
-use crate::core::terms::term_substitution::TermSubstEntry;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+    }
+};
 
 crate::wrapper_enum! {
     

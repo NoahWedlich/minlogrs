@@ -1,18 +1,12 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::{cmp::{max, min}, rc::Rc};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::types::arrow_type::ArrowType;
-
-use crate::core::terms::minlog_term::{TermBody, MinlogTerm};
-use crate::core::terms::term_variable::TermVariable;
-use crate::core::terms::abstraction::Abstraction;
-
-use crate::core::terms::term_substitution::{TermSubstEntry, TermSubstitution};
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Application {

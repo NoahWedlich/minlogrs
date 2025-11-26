@@ -1,22 +1,14 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::rc::Rc;
-
-use crate::core::terms::abstraction::Abstraction;
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
-use crate::utils::proof_tree_display::{ProofTreeDisplayable, ProofTreeNode};
-
-use crate::core::substitution::MatchOutput;
-
-use crate::core::types::minlog_type::MinlogType;
-use crate::core::terms::minlog_term::MinlogTerm;
-
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
-use crate::core::predicates::implication::Implication;
-
-use crate::core::proofs::minlog_proof::{MinlogProof, ProofBody};
-
-use crate::core::proofs::proof_substitution::ProofSubstEntry;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+        proofs::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImplicationIntro {

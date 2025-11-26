@@ -1,17 +1,13 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::{rc::Rc, cell::RefCell, hash::{Hash, Hasher}};
-
-use crate::utils::pretty_printer::*;
-
-use crate::core::polarity::{Polarity, Polarized};
-
-use crate::core::types::minlog_type::MinlogType;
-
-use crate::core::terms::minlog_term::MinlogTerm;
-use crate::core::terms::constructor::Constructor;
-
-use crate::core::predicates::minlog_predicate::MinlogPredicate;
+use crate::includes::{
+    essential::*,
+    utils::*,
+    core::{
+        types::*,
+        terms::*,
+        predicates::*,
+    }
+};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct InductiveConstant {
