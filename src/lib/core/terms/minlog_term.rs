@@ -8,86 +8,86 @@ use crate::includes::{
     }
 };
 
-crate::wrapper_enum! {
-    pub trait TermBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn minlog_type(&Self) -> Rc<MinlogType>
+wrapper_enum::wrapper_enum! {
+    pub fwd bnd trait TermBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
+        pub fwd fn minlog_type(&self) -> Rc<MinlogType>
         
-        pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogTerm>
+        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogTerm>
         
-        pub fn remove_nulls(&Self) -> Option<Rc<MinlogTerm>>
+        pub fwd fn remove_nulls(&self) -> Option<Rc<MinlogTerm>>
         
-        pub fn length(&Self) -> usize {
+        pub fwd fn length(&self) -> usize {
             0
         }
         
-        pub fn depth(&Self) -> usize {
+        pub fwd fn depth(&self) -> usize {
             0
         }
         
-        pub fn constructor_pattern(&Self) -> bool {
+        pub fwd fn constructor_pattern(&self) -> bool {
             false
         }
         
-        pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
 
-        pub fn get_algebra_types(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_constructors(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_constructors(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_program_terms(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_program_terms(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_internal_constants(&Self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_internal_constants(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn alpha_equivalent(&Self, other: &Rc<MinlogTerm>,
+        pub fwd fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
         
-        pub fn substitute(&Self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
+        pub fwd fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
         
-        pub fn first_conflict_with(&Self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
+        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
         
-        pub fn match_with(&Self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry>
+        pub fwd fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogTerm {
-        Wildcard(|wildcard| TermWildcard),
-        Variable(||variable|| TermVariable),
-        Constructor(||constructor|| Constructor),
-        ProgramTerm(||program_term|| ProgramTerm),
-        Abstraction(||abstraction|| Abstraction),
-        Application(||application|| Application),
-        Tuple(||tuple|| Tuple),
-        Projection(||projection|| Projection),
-        MatchTerm(||match_term|| MatchTerm),
+        Wildcard(wildcard: TermWildcard),
+        Variable(variable: TermVariable),
+        Constructor(constructor: Constructor),
+        ProgramTerm(program_term: ProgramTerm),
+        Abstraction(abstraction: Abstraction),
+        Application(application: Application),
+        Tuple(tuple: Tuple),
+        Projection(projection: Projection),
+        MatchTerm(match_term: MatchTerm),
     }
     
-    impl PrettyPrintable {
-        fn to_pp_element(&Self, detail: bool) -> PPElement;
+    ext bnd trait PrettyPrintable {
+        fwd fn to_pp_element(&self, detail: bool) -> PPElement
 
-        fn requires_parens(&Self, detail: bool) -> bool;
+        fwd fn requires_parens(&self, detail: bool) -> bool
 
-        fn open_paren(&Self) -> String;
+        fwd fn open_paren(&self) -> String
 
-        fn close_paren(&Self) -> String;
+        fwd fn close_paren(&self) -> String
     }
 }
 

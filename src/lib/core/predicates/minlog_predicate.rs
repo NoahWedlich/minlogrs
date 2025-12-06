@@ -9,78 +9,78 @@ use crate::includes::{
     }
 };
 
-crate::wrapper_enum! {
-    pub trait PredicateBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn arity(&Self) -> Rc<MinlogType>
+wrapper_enum::wrapper_enum! {
+    pub fwd bnd trait PredicateBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
+        pub fwd fn arity(&self) -> Rc<MinlogType>
         
-        pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogPredicate>
+        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate>
         
-        pub fn depth(&Self) -> usize {
+        pub fwd fn depth(&self) -> usize {
             0
         }
         
-        pub fn extracted_type_pattern(&Self) -> Rc<MinlogType>
-        pub fn extracted_type(&Self) -> Rc<MinlogType>
-        pub fn et_pattern_to_et(&Self) -> TermSubstitution
+        pub fwd fn extracted_type_pattern(&self) -> Rc<MinlogType>
+        pub fwd fn extracted_type(&self) -> Rc<MinlogType>
+        pub fwd fn et_pattern_to_et(&self) -> TermSubstitution
         
-        pub fn get_type_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
         
-        pub fn get_algebra_types(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_polarized_pred_vars(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_pred_vars(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fn get_polarized_comp_terms(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_comp_terms(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fn get_polarized_inductive_preds(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_inductive_preds(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fn get_polarized_prime_formulas(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_prime_formulas(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fn substitute(&Self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
+        pub fwd fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
         
-        pub fn first_conflict_with(&Self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
+        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
         
-        pub fn match_with(&Self, ctx: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
+        pub fwd fn match_with(&self, ctx: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogPredicate {
-        Wildcard(|wildcard| PredicateWildcard),
-        Variable(||variable|| PredicateVariable),
-        Comprehension(||comprehension_term|| ComprehensionTerm),
-        InductivePredicate(||inductive_predicate|| InductivePredicate),
-        Prime(||prime|| PrimeFormula),
-        Implication(||implication|| Implication),
-        AllQuantifier(||all_quantifier|| AllQuantifier),
+        Wildcard(wildcard: PredicateWildcard),
+        Variable(variable: PredicateVariable),
+        Comprehension(comprehension_term: ComprehensionTerm),
+        InductivePredicate(inductive_predicate: InductivePredicate),
+        Prime(prime: PrimeFormula),
+        Implication(implication: Implication),
+        AllQuantifier(all_quantifier: AllQuantifier),
     }
     
-    impl PrettyPrintable {
-        fn to_pp_element(&Self, detail: bool) -> PPElement;
+    ext bnd trait PrettyPrintable {
+        fwd fn to_pp_element(&self, detail: bool) -> PPElement
 
-        fn requires_parens(&Self, detail: bool) -> bool;
+        fwd fn requires_parens(&self, detail: bool) -> bool
 
-        fn open_paren(&Self) -> String;
+        fwd fn open_paren(&self) -> String
 
-        fn close_paren(&Self) -> String;
+        fwd fn close_paren(&self) -> String
     }
 }
 

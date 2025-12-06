@@ -9,6 +9,7 @@ license = "MIT"
 [dependencies]
 paste = "1.0"
 indexmap = "2.12.0"
+wrapper_enum = { path = "src/macros/wrapper_enum" }
 
 [lib]
 name = "lib"

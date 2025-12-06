@@ -60,20 +60,19 @@ impl<T: PrettyPrintable> PrettyPrintable for Rc<T> {
     }
 }
 
-crate::wrapper_enum! {
-    
-    pub trait PPElementBody: Clone {
-        pub fn max_size(&Self) -> usize
-        pub fn layout(&mut Self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize)
+wrapper_enum::wrapper_enum! {
+    pub fwd bnd trait PPElementBody: Clone {
+        pub fwd fn max_size(&self) -> usize
+        pub fwd fn layout(&mut self, max_width: usize, width_left: usize, indent: usize) -> (usize, usize)
         
-        pub fn to_string(&Self) -> String
+        pub fwd fn to_string(&self) -> String
     }
 
     #[derive(Debug, Clone)]
     pub enum PPElement {
-        Text(|text| TextElement),
-        Break(|break| BreakElement),
-        Group(|group| GroupElement),
+        Text(text: TextElement),
+        Break(break_el: BreakElement),
+        Group(group: GroupElement),
     }
 }
 

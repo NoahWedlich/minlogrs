@@ -7,60 +7,57 @@ use crate::includes::{
     }
 };
 
-crate::wrapper_enum! {
-    
-    @default { TypeConstant }
-    pub trait TypeBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn remove_nulls(&Self) -> Option<Rc<MinlogType>>
+wrapper_enum::wrapper_enum! {
+    pub fwd bnd trait TypeBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
+        pub fwd fn remove_nulls(&self) -> Option<Rc<MinlogType>>
         
-        pub fn is_object_type(&Self) -> bool {
+        pub fwd fn is_object_type(&self) -> bool {
             false
         }
         
-        pub fn arity(&Self) -> usize {
+        pub fwd fn arity(&self) -> usize {
             0
         }
         
-        pub fn level(&Self) -> usize {
+        pub fwd fn level(&self) -> usize {
             0
         }
         
-        pub fn get_polarized_tvars(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+        pub fwd fn get_polarized_tvars(&self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
             IndexSet::new()
         }
 
-        pub fn get_polarized_algebras(&Self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+        pub fwd fn get_polarized_algebras(&self, _current: Polarity, _visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
             IndexSet::new()
         }
         
-        pub fn substitute(&Self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType>
+        pub fwd fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType>
         
-        pub fn first_conflict_with(&Self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)>
+        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)>
         
-        pub fn match_with(&Self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>>
+        pub fwd fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>>
     }
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogType {
-        NullType(|null|),
-        Atomic(|atomic|),
-        Existential(|existential|),
-        Proposition(|proposition|),
-        Wildcard(|wildcard|),
-        Variable(||variable|| TypeVariable),
-        Algebra(||algebra|| AlgebraType),
-        Arrow(||arrow|| ArrowType),
-        Tuple(||tuple|| TupleType),
+        NullType(null: TypeConstant),
+        Atomic(atomic: TypeConstant),
+        Existential(existential: TypeConstant),
+        Proposition(proposition: TypeConstant),
+        Wildcard(wildcard: TypeConstant),
+        Variable(variable: TypeVariable),
+        Algebra(algebra: AlgebraType),
+        Arrow(arrow: ArrowType),
+        Tuple(tuple: TupleType),
     }
     
-    impl PrettyPrintable {
-        fn to_pp_element(&Self, detail: bool) -> PPElement;
+    ext bnd trait PrettyPrintable {
+        fwd fn to_pp_element(&self, detail: bool) -> PPElement
 
-        fn requires_parens(&Self, detail: bool) -> bool;
+        fwd fn requires_parens(&self, detail: bool) -> bool
 
-        fn open_paren(&Self) -> String;
-
-        fn close_paren(&Self) -> String;
+        fwd fn open_paren(&self) -> String
+        fwd fn close_paren(&self) -> String
     }
     
 }

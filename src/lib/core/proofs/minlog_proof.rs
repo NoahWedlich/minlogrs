@@ -10,102 +10,102 @@ use crate::includes::{
     }
 };
 
-crate::wrapper_enum! {
+wrapper_enum::wrapper_enum! {
     
-    pub trait ProofBody: PrettyPrintable, Clone, PartialEq, Eq, Hash {
-        pub fn proved_formula(&Self) -> Rc<MinlogPredicate>
+    pub fwd bnd trait ProofBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
+        pub fwd fn proved_formula(&self) -> Rc<MinlogPredicate>
         
-        pub fn length(&Self) -> usize {
+        pub fwd fn length(&self) -> usize {
             1
         }
         
-        pub fn normalize(&Self, eta: bool, pi: bool) -> Rc<MinlogProof>
+        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof>
         
-        pub fn unfold(&Self) -> Rc<MinlogProof>
+        pub fwd fn unfold(&self) -> Rc<MinlogProof>
         
-        pub fn extracted_term(&Self) -> Option<Rc<MinlogTerm>>
+        pub fwd fn extracted_term(&self) -> Option<Rc<MinlogTerm>>
         
-        pub fn get_type_variables(&Self) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
         
-        pub fn get_algebra_types(&Self) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
         }
 
-        pub fn get_free_variables(&Self) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_bound_variables(&Self) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
             IndexSet::new()
         }
         
-        pub fn get_predicate_variables(&Self) -> IndexSet<Rc<MinlogPredicate>> {
+        pub fwd fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
             IndexSet::new()
         }
         
-        pub fn get_comprehension_terms(&Self) -> IndexSet<Rc<MinlogPredicate>> {
+        pub fwd fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
             IndexSet::new()
         }
         
-        pub fn get_inductive_predicates(&Self) -> IndexSet<Rc<MinlogPredicate>> {
+        pub fwd fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
             IndexSet::new()
         }
         
-        pub fn get_prime_formulas(&Self) -> IndexSet<Rc<MinlogPredicate>> {
+        pub fwd fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
             IndexSet::new()
         }
         
-        pub fn get_goals(&Self) -> IndexSet<Rc<MinlogProof>> {
+        pub fwd fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
             IndexSet::new()
         }
         
-        pub fn get_assumptions(&Self) -> IndexSet<Rc<MinlogProof>> {
+        pub fwd fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
             IndexSet::new()
         }
         
-        pub fn get_axioms(&Self) -> IndexSet<Rc<MinlogProof>> {
+        pub fwd fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
             IndexSet::new()
         }
         
-        pub fn get_theorems(&Self) -> IndexSet<Rc<MinlogProof>> {
+        pub fwd fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
             IndexSet::new()
         }
         
-        pub fn substitute(&Self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof>
+        pub fwd fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof>
         
-        pub fn first_conflict_with(&Self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)>
+        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)>
         
-        pub fn match_with(&Self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry>
+        pub fwd fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogProof {
-        Wildcard(|wildcard| ProofWildcard),
-        Goal(||goal|| Goal),
-        Assumption(||assumption|| Assumption),
-        Axiom(||axiom|| Axiom),
-        Theorem(||theorem|| Theorem),
-        ImplicationIntro(||implication_intro|| ImplicationIntro),
-        ImplicationElim(||implication_elim|| ImplicationElim),
-        UniversalIntro(||universal_intro|| UniversalIntro),
-        UniversalElim(||universal_elim|| UniversalElim),
-        BundledProof(||bundled_proof|| BundledProof),
+        Wildcard(wildcard: ProofWildcard),
+        Goal(goal: Goal),
+        Assumption(assumption: Assumption),
+        Axiom(axiom: Axiom),
+        Theorem(theorem: Theorem),
+        ImplicationIntro(implication_intro: ImplicationIntro),
+        ImplicationElim(implication_elim: ImplicationElim),
+        UniversalIntro(universal_intro: UniversalIntro),
+        UniversalElim(universal_elim: UniversalElim),
+        BundledProof(bundled_proof: BundledProof),
     }
     
-    impl PrettyPrintable {
-        fn to_pp_element(&Self, detail: bool) -> PPElement;
+    ext bnd trait PrettyPrintable {
+        fwd fn to_pp_element(&self, detail: bool) -> PPElement
 
-        fn requires_parens(&Self, detail: bool) -> bool;
+        fwd fn requires_parens(&self, detail: bool) -> bool
 
-        fn open_paren(&Self) -> String;
+        fwd fn open_paren(&self) -> String
 
-        fn close_paren(&Self) -> String;
+        fwd fn close_paren(&self) -> String
     }
     
-    impl ProofTreeDisplayable {
-        fn to_proof_tree_node(&Self) -> ProofTreeNode;
+    ext bnd trait ProofTreeDisplayable {
+        fwd fn to_proof_tree_node(&self) -> ProofTreeNode
     }
 }
 
