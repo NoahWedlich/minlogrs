@@ -84,7 +84,11 @@ impl RewriteRule {
     }
     
     pub fn arity(&self) -> usize {
-        self.pattern.minlog_type().arity()
+        if let Some(app) = self.pattern.to_application() {
+            app.operands().len()
+        } else {
+            0
+        }
     }
     
     pub fn is_left_linear(term: &Rc<MinlogTerm>, bound: &mut Vec<Rc<MinlogTerm>>) -> bool {

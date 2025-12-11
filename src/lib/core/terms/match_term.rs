@@ -46,16 +46,6 @@ impl MatchTerm {
     pub fn branches(&self) -> &Vec<(Rc<MinlogTerm>, Rc<MinlogTerm>)> {
         &self.branches
     }
-    
-    pub fn compute(&self, term: &Rc<MinlogTerm>) -> (Rc<MinlogTerm>, bool) {
-        for (pattern, result) in self.branches.iter() {
-            if let Some(subst) = TermSubstitution::match_with(&pattern.clone().into(), &term.clone().into()) {
-                return (subst.substitute::<TermSubstEntry>(&result.clone().into()).to_term().unwrap(), true);
-            }
-        }
-        
-        (term.clone(), false)
-    }
 }
 
 impl TermBody for MatchTerm {
@@ -72,6 +62,28 @@ impl TermBody for MatchTerm {
         }).collect::<Vec<_>>();
         
         MatchTerm::create(self.minlog_type.clone(), normalized_branches)
+    }
+    
+    fn apply_args(&self, args: &Vec<Rc<MinlogTerm> >) -> Option<Rc<MinlogTerm>> {
+        if let Some(to_match) = args.first() {
+            for (pattern, instance) in self.branches.iter() {
+                if let Some(subst) = TermSubstitution::match_with(&pattern.clone().into(), &to_match.clone().into()) {
+                    let substituted_instance = subst.substitute::<TermSubstEntry>(&instance.clone().into()).to_term().unwrap();
+                    
+                    let remaining_args = args[1..].to_vec();
+                    
+                    if remaining_args.is_empty() {
+                        return Some(substituted_instance.clone());
+                    } else {
+                        return Some(Application::create(substituted_instance.clone(), remaining_args.clone()));
+                    }
+                }
+            }
+            
+            None
+        } else {
+            None
+        }
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {

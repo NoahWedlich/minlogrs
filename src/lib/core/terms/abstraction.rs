@@ -115,6 +115,41 @@ impl TermBody for Abstraction {
         }
     }
     
+    fn apply_args(&self, args: &Vec<Rc<MinlogTerm> >) -> Option<Rc<MinlogTerm>> {
+        let applicable_args = min(args.len(), self.vars.len());
+        let mut subst = TermSubstitution::make_empty();
+        
+        for (var, arg) in self.vars[..applicable_args].iter().zip(args[..applicable_args].iter()) {
+            if var.minlog_type() != arg.minlog_type() {
+                panic!("Tried to apply argument of incompatible type to abstraction");
+            }
+            
+            if arg.contains_free_variable(var) {
+                panic!("Tried to apply argument that contains the bound variable");
+            }
+            
+            subst.extend((var.clone().into(), arg.clone().into()));
+        }
+        
+        let applied_kernel = subst.substitute(&self.kernel);
+        
+        let remaining_vars = self.vars[applicable_args..].to_vec();
+        
+        let remaining_abs = if remaining_vars.is_empty() {
+            applied_kernel
+        } else {
+            Abstraction::create(remaining_vars, applied_kernel)
+        };
+        
+        let remaining_args = args[applicable_args..].to_vec();
+        
+        if remaining_args.is_empty() {
+            Some(remaining_abs)
+        } else {
+            Some(Application::create(remaining_abs, remaining_args))
+        }
+    }
+    
     fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {
         let new_vars = self.vars.iter()
             .filter_map(|v| v.remove_nulls())

@@ -46,22 +46,6 @@ impl ProgramTerm {
             .collect()
     }
     
-    pub fn compute(&self, term: &Rc<MinlogTerm>) -> (Rc<MinlogTerm>, bool) {
-        for rule in self.computation_rules().iter() {
-            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
-            }
-        }
-        
-        for rule in self.rewrite_rules().iter() {
-            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &term.into()) {
-                return (subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap(), true);
-            }
-        }
-        
-        (term.clone(), false)
-    }
-    
     pub fn parameters(&self) -> &TermSubstitution {
         &self.parameters
     }
@@ -75,6 +59,26 @@ impl TermBody for ProgramTerm {
     
     fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogTerm> {
         ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
+    }
+    
+    fn apply_args(&self, args: &Vec<Rc<MinlogTerm> >) -> Option<Rc<MinlogTerm>> {
+        for rule in self.computation_rules().iter().chain(self.rewrite_rules().iter()) {
+            let applicable_args = min(args.len(), rule.arity());
+            let (args_to_apply, remaining_args) = args.split_at(applicable_args);
+            let to_match = Application::create(Rc::new(MinlogTerm::ProgramTerm(self.clone())), args_to_apply.to_vec());
+            
+            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &to_match.into()) {
+                let result = subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap();
+                
+                if remaining_args.is_empty() {
+                    return Some(result);
+                } else {
+                    return Some(Application::create(result, remaining_args.to_vec()));
+                }
+            }
+        }
+        
+        None
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {

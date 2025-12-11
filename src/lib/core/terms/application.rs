@@ -109,64 +109,15 @@ impl TermBody for Application {
             }
         }
         
-        if self.operator.is_abstraction() {
-            let abs = self.operator.to_abstraction().unwrap();
+        if let Some(computed) = self.operator.apply_args(&self.operands) {
+            computed.normalize(eta, pi)
+        } else {
+            let normalized_operator = self.operator.normalize(eta, pi);
+            let normalized_operands: Vec<Rc<MinlogTerm>> = self.operands.iter()
+                .map(|op| op.normalize(eta, pi)).collect();
             
-            let applicable = min(self.operand_count(), abs.arity());
-            
-            let mut subst = TermSubstitution::make_empty();
-            
-            for i in 0..applicable {
-                let var = abs.var(i).unwrap();
-                let op = self.operand(i).clone();
-                
-                if !var.minlog_type().eq(&op.minlog_type()) {
-                    panic!("Tried to apply an abstraction to an operand of the wrong type");
-                }
-                
-                if op.contains_free_variable(&var.clone()) {
-                    panic!("Tried to apply an abstraction to an operand that contains the bound variable");
-                }
-                
-                subst.extend((TermSubstEntry::Term(var.clone()), TermSubstEntry::Term(op.normalize(eta, pi))));
-            }
-            
-            let kernel = subst.substitute(&TermSubstEntry::Term(abs.kernel().clone())).to_term().unwrap().clone();
-            
-            let remaining_vars = abs.vars()[applicable..].to_vec();
-            let inner_term = if remaining_vars.is_empty() {
-                kernel
-            } else {
-                Abstraction::create(remaining_vars, kernel)
-            };
-            
-            let remaining_operands = self.operands[applicable..].iter()
-                .map(|op| op.normalize(eta, pi)).collect::<Vec<_>>();
-            
-            if remaining_operands.is_empty() {
-                return inner_term.normalize(eta, pi);
-            } else {
-                return Application::create(inner_term, remaining_operands).normalize(eta, pi);
-            }
-        } else if self.operator.is_program_term() {
-            let (computed, success) = self.operator.to_program_term().unwrap().compute(
-                &Application::create(self.operator.clone(), self.operands.clone())
-            );
-            
-            if success {
-                return computed.normalize(eta, pi);
-            }
-        } else if self.operator.is_match_term() {
-            let (computed, success) = self.operator.to_match_term().unwrap().compute(&self.operands()[0]);
-            
-            if success {
-                return computed.normalize(eta, pi);
-            }
+            Application::create(normalized_operator, normalized_operands)
         }
-        
-        let operator = self.operator.normalize(eta, pi);
-        let operands: Vec<Rc<MinlogTerm>> = self.operands.iter().map(|op| op.normalize(eta, pi)).collect();
-        Application::create(operator, operands)
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogTerm>> {

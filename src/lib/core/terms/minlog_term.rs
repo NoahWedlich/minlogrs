@@ -14,6 +14,10 @@ wrapper_enum::wrapper_enum! {
         
         pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogTerm>
         
+        pub fwd fn apply_args(&self, _args: &Vec<Rc<MinlogTerm>>) -> Option<Rc<MinlogTerm>> {
+            None
+        }
+        
         pub fwd fn remove_nulls(&self) -> Option<Rc<MinlogTerm>>
         
         pub fwd fn length(&self) -> usize {
