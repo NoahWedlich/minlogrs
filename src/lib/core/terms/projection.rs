@@ -109,10 +109,6 @@ impl TermBody for Projection {
         self.term.get_program_terms(visited)
     }
     
-    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        self.term.get_internal_constants(visited)
-    }
-    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {

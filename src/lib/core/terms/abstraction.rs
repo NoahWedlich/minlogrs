@@ -194,10 +194,6 @@ impl TermBody for Abstraction {
         self.kernel.get_program_terms(visited)
     }
     
-    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        self.kernel.get_internal_constants(visited)
-    }
-    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {

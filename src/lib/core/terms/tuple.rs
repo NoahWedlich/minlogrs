@@ -113,15 +113,6 @@ impl TermBody for Tuple {
             self.elements.iter().flat_map(|e| e.get_program_terms(visited)).collect()
         }
     }
-
-    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::Tuple(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::Tuple(self.clone()));
-            self.elements.iter().flat_map(|e| e.get_internal_constants(visited)).collect()
-        }
-    }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,

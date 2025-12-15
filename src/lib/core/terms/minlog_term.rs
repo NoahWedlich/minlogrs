@@ -56,10 +56,6 @@ wrapper_enum::wrapper_enum! {
             IndexSet::new()
         }
         
-        pub fwd fn get_internal_constants(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-            IndexSet::new()
-        }
-        
         pub fwd fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool

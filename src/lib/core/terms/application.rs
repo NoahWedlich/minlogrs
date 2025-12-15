@@ -176,12 +176,6 @@ impl TermBody for Application {
             .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect::<IndexSet<_>>())
             .cloned().collect()
     }
-
-    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        self.operator.get_internal_constants(visited)
-            .union(&self.operands.iter().flat_map(|op| op.get_internal_constants(visited)).collect::<IndexSet<_>>())
-            .cloned().collect()
-    }
     
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,

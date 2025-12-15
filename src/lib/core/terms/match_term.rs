@@ -208,22 +208,6 @@ impl TermBody for MatchTerm {
         }
     }
     
-    fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        if visited.contains(&MinlogTerm::MatchTerm(self.clone())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::MatchTerm(self.clone()));
-            
-            self.branches.iter()
-                .flat_map(|(p, i)| {
-                    p.get_internal_constants(visited)
-                        .union(&i.get_internal_constants(visited))
-                        .cloned().collect::<IndexSet<_>>()
-                })
-                .collect()
-        }
-    }
-    
     fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
         forward: &mut Vec<(TermVariable, TermVariable)>,
         backward: &mut Vec<(TermVariable, TermVariable)>) -> bool

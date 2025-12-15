@@ -163,10 +163,6 @@ impl RewriteRule {
     pub fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
         self.pattern.get_program_terms(visited).union(&self.result.get_program_terms(visited)).cloned().collect()
     }
-    
-    pub fn get_internal_constants(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
-        self.pattern.get_internal_constants(visited).union(&self.result.get_internal_constants(visited)).cloned().collect()
-    }
 }
 
 impl SubstitutableWith<TermSubstEntry> for Rc<RewriteRule> {
