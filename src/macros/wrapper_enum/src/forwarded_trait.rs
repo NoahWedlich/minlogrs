@@ -1,5 +1,4 @@
 
-use quote::ToTokens;
 use syn::*;
 use syn::parse::*;
 use syn::punctuated::*;
@@ -162,7 +161,7 @@ impl ForwardedTrait {
         }
     }
     
-    pub fn generate_guards(&self, wrapper_enum: &crate::WrapperEnumDecl) -> proc_macro2::TokenStream {
+    pub fn generate_guards(&self, wrapper_enum: &crate::WrapperEnumDecl) -> Option<proc_macro2::TokenStream> {
         if let Some(_) = &self.bound {
             let guards = wrapper_enum.w_enum.variants.iter().map(|variant| {
                 let name = &self.name;
@@ -174,11 +173,11 @@ impl ForwardedTrait {
                 }
             });
             
-            quote! {
+            Some(quote! {
                 #(#guards),*
-            }
+            })
         } else {
-            return quote! {};
+            None
         }
     }
 }
@@ -267,6 +266,8 @@ impl ForwardedMethod {
     pub fn generate_forwards(&self, wrapper_enum: &crate::WrapperEnumDecl, add_vis: bool) -> proc_macro2::TokenStream {
         let enum_name = &wrapper_enum.w_enum.name;
         
+        let attrs = &self.attrs;
+        
         let vis = if add_vis {
             let svis = &self.vis;
             quote! { #svis }
@@ -296,7 +297,12 @@ impl ForwardedMethod {
             let inner_name = &variant.field.name;
             let call_args = sig.inputs.iter().filter_map(|arg| {
                 if let FnArg::Typed(pat_type) = arg {
-                    Some(pat_type.pat.to_token_stream())
+                    if let Pat::Ident(pat_ident) = &*pat_type.pat {
+                        let ident = &pat_ident.ident;
+                        Some(quote! { #ident })
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -308,6 +314,7 @@ impl ForwardedMethod {
         });
         
         quote! {
+            #(#attrs)*
             #vis #sig {
                 match self {
                     #(#forward_arms)*

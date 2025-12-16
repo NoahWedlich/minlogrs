@@ -55,10 +55,6 @@ impl Parse for WrapperEnumDecl {
             return Err(input.error("a wrapper_enum must be provided."));
         }
         
-        if f_traits.is_empty() {
-            return Err(input.error("at least one forwarded_trait must be provided."));
-        }
-        
         Ok(WrapperEnumDecl {
             w_enum: w_enum.unwrap(),
             f_traits,

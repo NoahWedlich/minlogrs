@@ -63,7 +63,7 @@ impl WrapperEnum {
         let variant_tests = self.generate_variant_tests();
         let variant_accessors = self.generate_variant_accessors();
         
-        let guards = wrapper_enum.f_traits.iter().map(|f_trait| {
+        let guards = wrapper_enum.f_traits.iter().filter_map(|f_trait| {
             f_trait.generate_guards(wrapper_enum)
         });
         
