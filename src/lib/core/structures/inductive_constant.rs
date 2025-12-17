@@ -96,7 +96,7 @@ impl InductiveConstant {
                 } else {
                     let constructor = algebra.constructors().iter()
                         .find(|c| c.minlog_type() == et_type).unwrap().clone();
-                    clause_mapping.insert(name.clone(), constructor.to_constructor().unwrap().name().clone());
+                    clause_mapping.insert(name.clone(), constructor.to_constructor().unwrap().name().to_string());
                 }
 
             } else {
@@ -124,11 +124,11 @@ impl InductiveConstant {
             .chain(self.arity.get_type_variables(&mut IndexSet::new())).collect()
     }
     
-    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_free_variables(visited)).collect()
     }
     
-    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.clauses.borrow().iter().flat_map(|(_, body)| body.get_bound_variables(visited)).collect()
     }
     

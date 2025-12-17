@@ -13,7 +13,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ProofSubstEntry {
     Type(Rc<MinlogType>),
-    Term(Rc<MinlogTerm>),
+    Term(MinlogTerm),
     Predicate(Rc<MinlogPredicate>),
     Proof(Rc<MinlogProof>),
 }
@@ -50,7 +50,7 @@ impl ProofSubstEntry {
         }
     }
 
-    pub fn to_term(&self) -> Option<Rc<MinlogTerm>> {
+    pub fn to_term(&self) -> Option<MinlogTerm> {
         match self {
             ProofSubstEntry::Term(t) => Some(t.clone()),
             _ => None,
@@ -210,14 +210,14 @@ impl From<&Rc<MinlogType>> for ProofSubstEntry {
     }
 }
 
-impl From<Rc<MinlogTerm>> for ProofSubstEntry {
-    fn from(tm: Rc<MinlogTerm>) -> Self {
+impl From<MinlogTerm> for ProofSubstEntry {
+    fn from(tm: MinlogTerm) -> Self {
         ProofSubstEntry::Term(tm)
     }
 }
 
-impl From<&Rc<MinlogTerm>> for ProofSubstEntry {
-    fn from(tm: &Rc<MinlogTerm>) -> Self {
+impl From<&MinlogTerm> for ProofSubstEntry {
+    fn from(tm: &MinlogTerm) -> Self {
         ProofSubstEntry::Term(tm.clone())
     }
 }
@@ -287,7 +287,7 @@ impl From<&PredSubstEntry> for ProofSubstEntry {
 pub type ProofSubstitution = Substitution<ProofSubstEntry>;
 
 impl ProofSubstitution {
-    pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
+    pub fn admissible_term(&self, term: &MinlogTerm) -> bool {
         for free_var in term.get_free_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&ProofSubstEntry::Term(free_var.clone()));
             if let ProofSubstEntry::Term(t) = substituted {

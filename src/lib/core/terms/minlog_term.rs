@@ -9,16 +9,16 @@ use crate::includes::{
 };
 
 wrapper_enum::wrapper_enum! {
-    pub fwd bnd trait TermBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
+    pub fwd bnd trait TermBody: PrettyPrintable {
         pub fwd fn minlog_type(&self) -> Rc<MinlogType>
         
-        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogTerm>
+        pub fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
         
-        pub fwd fn apply_args(&self, _args: &Vec<Rc<MinlogTerm>>) -> Option<Rc<MinlogTerm>> {
+        pub fwd fn apply_args(&self, _args: &Vec<MinlogTerm>) -> Option<MinlogTerm> {
             None
         }
         
-        pub fwd fn remove_nulls(&self) -> Option<Rc<MinlogTerm>>
+        pub fwd fn remove_nulls(&self) -> Option<MinlogTerm>
         
         pub fwd fn length(&self) -> usize {
             0
@@ -40,34 +40,34 @@ wrapper_enum::wrapper_enum! {
             IndexSet::new()
         }
 
-        pub fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
-        pub fwd fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_bound_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
-        pub fwd fn get_constructors(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_constructors(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
-        pub fwd fn get_program_terms(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_program_terms(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
-        pub fwd fn alpha_equivalent(&self, other: &Rc<MinlogTerm>,
+        pub fwd fn alpha_equivalent(&self, other: &MinlogTerm,
             forward: &mut Vec<(TermVariable, TermVariable)>,
             backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
         
-        pub fwd fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Rc<MinlogTerm>
+        pub fwd fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm
         
-        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogTerm>) -> Option<(TermSubstEntry, TermSubstEntry)>
+        pub fwd fn first_conflict_with(&self, other: &MinlogTerm) -> Option<(TermSubstEntry, TermSubstEntry)>
         
-        pub fwd fn match_with(&self, instance: &Rc<MinlogTerm>) -> MatchOutput<TermSubstEntry>
+        pub fwd fn match_with(&self, instance: &MinlogTerm) -> MatchOutput<TermSubstEntry>
     }
     
-    #[derive(PartialEq, Eq, Hash)]
+    #[derive(Clone, PartialEq, Eq, Hash)]
     pub enum MinlogTerm {
         Wildcard(wildcard: TermWildcard),
         Variable(variable: TermVariable),
@@ -100,19 +100,37 @@ impl MinlogTerm {
         self.minlog_type().contains_algebra_type(var)
     }
 
-    pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_free_variable(&self, var: &MinlogTerm) -> bool {
         var.is_variable() && self.get_free_variables(&mut IndexSet::new()).contains(var)
     }
     
-    pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_bound_variable(&self, var: &MinlogTerm) -> bool {
         var.is_variable() && self.get_bound_variables(&mut IndexSet::new()).contains(var)
     }
     
-    pub fn contains_constructor(&self, con: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_constructor(&self, con: &MinlogTerm) -> bool {
         con.is_constructor() && self.get_constructors(&mut IndexSet::new()).contains(con)
     }
     
-    pub fn contains_program_term(&self, prog: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_program_term(&self, prog: &MinlogTerm) -> bool {
         prog.is_program_term() && self.get_program_terms(&mut IndexSet::new()).contains(prog)
     }
 }
+
+pub trait NativeTermBody: TermBody + Any {
+    fn minlog_to_native(term: &MinlogTerm) -> Option<Rc<Self>> where Self: Sized;
+    
+    fn native_to_minlog(&self) -> MinlogTerm;
+    
+    fn eq(&self, other: &dyn NativeTermBody) -> bool {
+        self.native_to_minlog() == other.native_to_minlog()
+    }
+}
+
+impl PartialEq for dyn NativeTermBody {
+    fn eq(&self, other: &Self) -> bool {
+        self.eq(other)
+    }
+}
+
+impl Eq for dyn NativeTermBody {}

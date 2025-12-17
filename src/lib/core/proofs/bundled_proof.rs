@@ -57,7 +57,7 @@ impl ProofBody for BundledProof {
         self.proof.unfold()
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.proof.extracted_term()
     }
     
@@ -69,11 +69,11 @@ impl ProofBody for BundledProof {
         self.proof.get_algebra_types()
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.proof.get_free_variables()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.proof.get_bound_variables()
     }
     

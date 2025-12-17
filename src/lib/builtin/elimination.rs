@@ -222,7 +222,7 @@ fn create_computational_content_for_elimination_axioms(
         let mut curr_instances = IndexMap::new();
         
         for pat in pats.iter() {
-            match pat.as_ref() {
+            match pat {
                 MinlogTerm::Application(app) => {
                     let mut new_args = vec![];
                     for arg in app.operands().iter() {
@@ -237,7 +237,7 @@ fn create_computational_content_for_elimination_axioms(
                             let mut pterm_args = vec![];
                             pterm_args.push(arg.clone());
                             for pv in proof_variables.values() {
-                                pterm_args.push(pv.clone() as Rc<MinlogTerm>);
+                                pterm_args.push(pv.clone() as MinlogTerm);
                             }
                             
                             new_args.push(

@@ -15,7 +15,7 @@ use crate::core::{
 
 enum AssumptionOrVariable {
     Assumption(Rc<MinlogProof>),
-    Variable(Rc<MinlogTerm>),
+    Variable(MinlogTerm),
 }
 
 pub fn generate_proof_by_assume(target: &Rc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext) -> Rc<MinlogProof> {

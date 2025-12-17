@@ -13,12 +13,12 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct UniversalIntro {
     proof: Rc<MinlogProof>,
-    variable: Rc<MinlogTerm>,
+    variable: MinlogTerm,
     formula: Rc<MinlogPredicate>,
 }
 
 impl UniversalIntro {
-    pub fn create(proof: Rc<MinlogProof>, variable: Rc<MinlogTerm>) -> Rc<MinlogProof> {
+    pub fn create(proof: Rc<MinlogProof>, variable: MinlogTerm) -> Rc<MinlogProof> {
         if proof.get_assumptions().iter().any(|assump| assump.contains_free_variable(&variable)) {
             panic!("UniversalIntro::create called with a proof that has assumptions depending on the variable");
         }
@@ -37,7 +37,7 @@ impl UniversalIntro {
         self.proof.clone()
     }
     
-    pub fn variable(&self) -> Rc<MinlogTerm> {
+    pub fn variable(&self) -> MinlogTerm {
         self.variable.clone()
     }
 }
@@ -63,7 +63,7 @@ impl ProofBody for UniversalIntro {
         }))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.proof.extracted_term()
     }
     
@@ -75,13 +75,13 @@ impl ProofBody for UniversalIntro {
         self.proof.get_algebra_types()
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.proof.get_free_variables()
             .difference(&IndexSet::from([self.variable.clone()]))
             .cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.proof.get_bound_variables()
             .union(&IndexSet::from([self.variable.clone()]))
             .cloned().collect()

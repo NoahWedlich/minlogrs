@@ -223,7 +223,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -238,7 +238,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {

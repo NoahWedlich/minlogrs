@@ -12,7 +12,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PredSubstEntry {
     Type(Rc<MinlogType>),
-    Term(Rc<MinlogTerm>),
+    Term(MinlogTerm),
     Predicate(Rc<MinlogPredicate>),
 }
 
@@ -41,7 +41,7 @@ impl PredSubstEntry {
         }
     }
     
-    pub fn to_term(&self) -> Option<Rc<MinlogTerm>> {
+    pub fn to_term(&self) -> Option<MinlogTerm> {
         if let PredSubstEntry::Term(tm) = self {
             Some(tm.clone())
         } else {
@@ -185,15 +185,15 @@ impl From<&Rc<MinlogType>> for PredSubstEntry {
     }
 }
 
-impl From<Rc<MinlogTerm>> for PredSubstEntry {
-    fn from(tm: Rc<MinlogTerm>) -> Self {
+impl From<MinlogTerm> for PredSubstEntry {
+    fn from(tm: MinlogTerm) -> Self {
         PredSubstEntry::Term(tm)
     }
 }
 
-impl From<&Rc<MinlogTerm>> for PredSubstEntry {
-    fn from(tm: &Rc<MinlogTerm>) -> Self {
-        PredSubstEntry::Term(Rc::clone(tm))
+impl From<&MinlogTerm> for PredSubstEntry {
+    fn from(tm: &MinlogTerm) -> Self {
+        PredSubstEntry::Term(tm.clone())
     }
 }
 
@@ -221,8 +221,8 @@ impl From<TermSubstEntry> for PredSubstEntry {
 impl From<&TermSubstEntry> for PredSubstEntry {
     fn from(tse: &TermSubstEntry) -> Self {
         match tse {
-            TermSubstEntry::Type(t) => PredSubstEntry::Type(Rc::clone(t)),
-            TermSubstEntry::Term(tm) => PredSubstEntry::Term(Rc::clone(tm)),
+            TermSubstEntry::Type(t) => PredSubstEntry::Type(t.clone()),
+            TermSubstEntry::Term(tm) => PredSubstEntry::Term(tm.clone()),
         }
     }
 }
@@ -230,7 +230,7 @@ impl From<&TermSubstEntry> for PredSubstEntry {
 pub type PredicateSubstitution = Substitution<PredSubstEntry>;
 
 impl PredicateSubstitution {
-    pub fn admissible_term(&self, term: &Rc<MinlogTerm>) -> bool {
+    pub fn admissible_term(&self, term: &MinlogTerm) -> bool {
         for free_var in term.get_free_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&PredSubstEntry::Term(free_var.clone()));
             if let PredSubstEntry::Term(t) = substituted {

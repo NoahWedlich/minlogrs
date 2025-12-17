@@ -15,7 +15,7 @@ use crate::includes::{
 pub struct Axiom {
     name: String,
     formula: Rc<MinlogPredicate>,
-    content: RefCell<Option<Rc<MinlogTerm>>>,
+    content: RefCell<Option<MinlogTerm>>,
 }
 
 impl Axiom {
@@ -35,11 +35,11 @@ impl Axiom {
         self.content.borrow().is_some()
     }
     
-    pub fn content(&self) -> Option<Rc<MinlogTerm>> {
+    pub fn content(&self) -> Option<MinlogTerm> {
         self.content.borrow().clone()
     }
     
-    pub fn set_content(&self, content: Rc<MinlogTerm>) {
+    pub fn set_content(&self, content: MinlogTerm) {
         if content.minlog_type() != self.formula.extracted_type_pattern() {
             panic!("Tried to set axiom content with mismatching type, expected {}, got {}",
                 self.formula.extracted_type_pattern().debug_string(),
@@ -68,7 +68,7 @@ impl ProofBody for Axiom {
         Rc::new(MinlogProof::Axiom(self.clone()))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.formula.extracted_type().remove_nulls().map(|t| {
             if let Some(content) = self.content.borrow().clone() {
                 let et_subst = self.formula.et_pattern_to_et();
@@ -88,11 +88,11 @@ impl ProofBody for Axiom {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_free_variables(&mut IndexSet::new())
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     

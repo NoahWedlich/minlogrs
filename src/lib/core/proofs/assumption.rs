@@ -64,7 +64,7 @@ impl ProofBody for Assumption {
         Rc::new(MinlogProof::Assumption(self.clone()))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.formula.extracted_type().remove_nulls().map(|t|
             TermVariable::create(
                 if self.index > 0 {
@@ -85,11 +85,11 @@ impl ProofBody for Assumption {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_free_variables(&mut IndexSet::new())
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     

@@ -12,15 +12,15 @@ use crate::includes::{
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
     body: Rc<MinlogPredicate>,
-    arguments: Vec<Rc<MinlogTerm>>,
+    arguments: Vec<MinlogTerm>,
     arity: Rc<MinlogType>,
 }
 
 impl PrimeFormula {
-    pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<Rc<MinlogTerm>>) -> Rc<MinlogPredicate> {
+    pub fn create(body: Rc<MinlogPredicate>, arguments: Vec<MinlogTerm>) -> Rc<MinlogPredicate> {
         let arguments = arguments.into_iter()
             .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
-            .collect::<Vec<Rc<MinlogTerm>>>();
+            .collect::<Vec<MinlogTerm>>();
         
         if arguments.is_empty() {
             return body;
@@ -72,11 +72,11 @@ impl PrimeFormula {
         self.arguments.len()
     }
     
-    pub fn arguments(&self) -> &Vec<Rc<MinlogTerm>> {
+    pub fn arguments(&self) -> &Vec<MinlogTerm> {
         &self.arguments
     }
     
-    pub fn argument(&self, index: usize) -> Option<&Rc<MinlogTerm>> {
+    pub fn argument(&self, index: usize) -> Option<&MinlogTerm> {
         self.arguments.get(index)
     }
 }
@@ -179,14 +179,14 @@ impl PredicateBody for PrimeFormula {
             .collect()
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_free_variables(&mut IndexSet::new()))
             .chain(self.body.get_free_variables(visited))
             .collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.arguments.iter()
             .flat_map(|arg| arg.get_bound_variables(&mut IndexSet::new()))
             .chain(self.body.get_bound_variables(visited))

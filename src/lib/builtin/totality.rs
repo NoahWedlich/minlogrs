@@ -42,7 +42,7 @@ pub fn extract_totality(algebra: &Rc<MinlogType>, totalities: &mut IndexMap<Rc<M
 }
 
 fn constructor_to_totality_clause(
-    constructor: &Rc<MinlogTerm>,
+    constructor: &MinlogTerm,
     totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>
 ) -> Rc<MinlogPredicate> {
     if !constructor.is_constructor() {
@@ -69,7 +69,7 @@ fn constructor_to_totality_clause(
 
             let value = Application::create(
                 constructor.clone(),
-                vars.iter().map(|v| v.clone() as Rc<MinlogTerm>).collect()
+                vars.iter().map(|v| v.clone() as MinlogTerm).collect()
             );
             
             if let Some(totality_pred) = totalities.get(&value.minlog_type()) {
@@ -93,7 +93,7 @@ fn constructor_to_totality_clause(
 }
 
 fn term_to_totality_condition(
-    term: Rc<MinlogTerm>,
+    term: MinlogTerm,
     totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>,
     var_index: &mut usize
 ) -> Option<Rc<MinlogPredicate>> {
@@ -122,7 +122,7 @@ fn term_to_totality_condition(
             
             let value = Application::create(
                 term.clone(),
-                argument_vars.iter().map(|v| v.clone() as Rc<MinlogTerm>).collect()
+                argument_vars.iter().map(|v| v.clone() as MinlogTerm).collect()
             );
             
             if let Some(totality) = totalities.get(&value.minlog_type()) {

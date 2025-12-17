@@ -11,15 +11,15 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AllQuantifier {
-    vars: Vec<Rc<MinlogTerm>>,
+    vars: Vec<MinlogTerm>,
     body: Rc<MinlogPredicate>,
 }
 
 impl AllQuantifier {
-    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let vars = vars.into_iter()
             .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
-            .collect::<Vec<Rc<MinlogTerm>>>();
+            .collect::<Vec<MinlogTerm>>();
         
         if vars.is_empty() {
             return body;
@@ -58,7 +58,7 @@ impl AllQuantifier {
     }
     
     pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let free_vars: Vec<Rc<MinlogTerm>> = minlog_formula.get_free_variables(&mut IndexSet::new()).into_iter().collect();
+        let free_vars: Vec<MinlogTerm> = minlog_formula.get_free_variables(&mut IndexSet::new()).into_iter().collect();
         if free_vars.is_empty() {
             minlog_formula.clone()
         } else {
@@ -66,11 +66,11 @@ impl AllQuantifier {
         }
     }
     
-    pub fn vars(&self) -> &Vec<Rc<MinlogTerm>> {
+    pub fn vars(&self) -> &Vec<MinlogTerm> {
         &self.vars
     }
     
-    pub fn var(&self, index: usize) -> Option<&Rc<MinlogTerm>> {
+    pub fn var(&self, index: usize) -> Option<&MinlogTerm> {
         self.vars.get(index)
     }
     
@@ -119,13 +119,13 @@ impl PredicateBody for AllQuantifier {
             .collect()
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.body.get_free_variables(visited).into_iter()
             .filter(|v| !self.vars.contains(v))
             .collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.vars.iter().cloned()
             .chain(self.body.get_bound_variables(visited))
             .collect()

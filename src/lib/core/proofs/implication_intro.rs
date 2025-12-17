@@ -64,7 +64,7 @@ impl ProofBody for ImplicationIntro {
         }))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.conclusion.extracted_term().map(|term| {
             if let Some(assump_term) = self.assumption.extracted_term() {
                 Abstraction::create(
@@ -89,13 +89,13 @@ impl ProofBody for ImplicationIntro {
             .cloned().collect()
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.assumption.get_free_variables()
             .union(&self.conclusion.get_free_variables())
             .cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.assumption.get_bound_variables()
             .union(&self.conclusion.get_bound_variables())
             .cloned().collect()

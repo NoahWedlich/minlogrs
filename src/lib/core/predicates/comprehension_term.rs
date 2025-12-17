@@ -11,16 +11,16 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ComprehensionTerm {
-    vars: Vec<Rc<MinlogTerm>>,
+    vars: Vec<MinlogTerm>,
     body: Rc<MinlogPredicate>,
     arity: Rc<MinlogType>,
 }
 
 impl ComprehensionTerm {
-    pub fn create(vars: Vec<Rc<MinlogTerm>>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let vars = vars.into_iter()
             .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
-            .collect::<Vec<Rc<MinlogTerm>>>();
+            .collect::<Vec<MinlogTerm>>();
         
         if vars.is_empty() {
             return body;
@@ -70,11 +70,11 @@ impl ComprehensionTerm {
         ComprehensionTerm::create(vars, minlog_formula.clone())
     }
     
-    pub fn vars(&self) -> &Vec<Rc<MinlogTerm>> {
+    pub fn vars(&self) -> &Vec<MinlogTerm> {
         &self.vars
     }
     
-    pub fn var(&self, index: usize) -> Option<&Rc<MinlogTerm>> {
+    pub fn var(&self, index: usize) -> Option<&MinlogTerm> {
         self.vars.get(index)
     }
     
@@ -134,11 +134,11 @@ impl PredicateBody for ComprehensionTerm {
         ).collect()
     }
 
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.body.get_free_variables(visited).difference(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.body.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
     }
     

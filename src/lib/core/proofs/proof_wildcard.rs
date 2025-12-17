@@ -59,7 +59,7 @@ impl ProofBody for ProofWildcard {
         Rc::new(MinlogProof::Wildcard(self.clone()))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         None
     }
     
@@ -71,12 +71,12 @@ impl ProofBody for ProofWildcard {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_free_variables(&mut IndexSet::new())
             .union(&self.context.borrow().variables).cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     

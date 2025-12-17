@@ -57,7 +57,7 @@ impl ProofBody for Theorem {
         }))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.proof.extracted_term()
     }
     
@@ -69,11 +69,11 @@ impl ProofBody for Theorem {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_free_variables(&mut IndexSet::new())
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     

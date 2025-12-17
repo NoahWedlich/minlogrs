@@ -11,7 +11,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq)]
 pub struct Algebra {
     name: String,
-    constructors: RefCell<Vec<Rc<MinlogTerm>>>,
+    constructors: RefCell<Vec<MinlogTerm>>,
     reductions: RefCell<IndexMap<Vec<Rc<MinlogType>>, AlgebraReduction>>
 }
 
@@ -24,15 +24,15 @@ impl Algebra {
         &self.name
     }
     
-    pub fn constructors(&self) -> Vec<Rc<MinlogTerm>> {
+    pub fn constructors(&self) -> Vec<MinlogTerm> {
         self.constructors.borrow().iter().cloned().collect()
     }
     
-    pub fn constructor(&self, name: &String) -> Option<Rc<MinlogTerm>> {
+    pub fn constructor(&self, name: &str) -> Option<MinlogTerm> {
         self.constructors.borrow().iter().find(|c| c.to_constructor().unwrap().name() == name).cloned()
     }
     
-    pub fn add_constructor(&self, constructor: Rc<MinlogTerm>) {
+    pub fn add_constructor(&self, constructor: MinlogTerm) {
         if !constructor.is_constructor() {
             panic!("Only constructor terms can be added to an algebra");
         }
@@ -95,7 +95,7 @@ impl Algebra {
             
             let possible_constructors = remaining_constructors.iter().filter_map(|c| {
                 if c.minlog_type() == reduced_type {
-                    Some(c.to_constructor().unwrap().name().clone())
+                    Some(c.to_constructor().unwrap().name().to_string())
                 } else {
                     None
                 }
@@ -108,8 +108,8 @@ impl Algebra {
                 panic!("Multiple matching constructors found in reduced algebra '{}' for constructor '{}' of algebra '{}' with reduced type '{}': [{}]",
                     reduced_algebra.name, constructor.debug_string(), self.name, reduced_type.debug_string(), possible_constructors.join(", "));
             } else {
-                constructor_mapping.insert(constructor.to_constructor().unwrap().name().clone(), possible_constructors[0].clone());
-                remaining_constructors.retain(|c| c.to_constructor().unwrap().name() != &possible_constructors[0]);
+                constructor_mapping.insert(constructor.to_constructor().unwrap().name().to_string(), possible_constructors[0].to_string());
+                remaining_constructors.retain(|c| c.to_constructor().unwrap().name() != possible_constructors[0]);
             }
         }
         
@@ -196,7 +196,7 @@ impl Algebra {
             reduced_type = reduced_type.remove_nulls().unwrap();
             
             let reduced_constructor = Constructor::create(
-                constructor.to_constructor().unwrap().name().clone(),
+                constructor.to_constructor().unwrap().name().to_string(),
                 reduced_type
             );
             
@@ -206,7 +206,7 @@ impl Algebra {
         reduced_algebra_type.to_algebra().unwrap().ensure_well_founded();
         
         let constructor_mapping = self.constructors.borrow().iter().map(|c| {
-            (c.to_constructor().unwrap().name().clone(), c.to_constructor().unwrap().name().clone())
+            (c.to_constructor().unwrap().name().to_string(), c.to_constructor().unwrap().name().to_string())
         }).collect::<IndexMap<_, _>>();
         
         self.reductions.borrow_mut().insert(relevant_null_types, AlgebraReduction {

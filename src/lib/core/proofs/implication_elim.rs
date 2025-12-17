@@ -79,7 +79,7 @@ impl ProofBody for ImplicationElim {
         }))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.implication.extracted_term().map(|imp_term| {
             if let Some(prem_term) = self.premise.extracted_term() {
                 Application::create(
@@ -104,13 +104,13 @@ impl ProofBody for ImplicationElim {
             .cloned().collect()
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
         self.premise.get_free_variables()
             .union(&self.implication.get_free_variables())
             .cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.premise.get_bound_variables()
             .union(&self.implication.get_bound_variables())
             .cloned().collect()

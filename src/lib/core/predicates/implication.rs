@@ -128,7 +128,7 @@ impl PredicateBody for Implication {
         ).cloned().collect()
     }
     
-    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.conclusion.get_free_variables(visited).union(
             &self.premises.iter()
                 .flat_map(|p| p.get_free_variables(visited))
@@ -136,7 +136,7 @@ impl PredicateBody for Implication {
         ).cloned().collect()
     }
     
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.conclusion.get_bound_variables(visited).union(
             &self.premises.iter()
                 .flat_map(|p| p.get_bound_variables(visited))

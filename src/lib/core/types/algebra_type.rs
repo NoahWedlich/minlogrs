@@ -32,7 +32,7 @@ impl AlgebraType {
         self.algebra.name()
     }
     
-    pub fn constructors(&self) -> Vec<Rc<MinlogTerm>> {
+    pub fn constructors(&self) -> Vec<MinlogTerm> {
         self.algebra.constructors().iter()
             .map(|c| {
                 let mut constr = c.clone();
@@ -46,7 +46,7 @@ impl AlgebraType {
             .collect()
     }
     
-    pub fn constructor(&self, name: &String) -> Option<Rc<MinlogTerm>> {
+    pub fn constructor(&self, name: &str) -> Option<MinlogTerm> {
         self.algebra.constructor(name).map(|c| {
             let mut constr = c.clone();
             

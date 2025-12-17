@@ -23,7 +23,7 @@ wrapper_enum::wrapper_enum! {
         
         pub fwd fn unfold(&self) -> Rc<MinlogProof>
         
-        pub fwd fn extracted_term(&self) -> Option<Rc<MinlogTerm>>
+        pub fwd fn extracted_term(&self) -> Option<MinlogTerm>
         
         pub fwd fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
             IndexSet::new()
@@ -33,11 +33,11 @@ wrapper_enum::wrapper_enum! {
             IndexSet::new()
         }
 
-        pub fwd fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
-        pub fwd fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+        pub fwd fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
             IndexSet::new()
         }
         
@@ -122,11 +122,11 @@ impl MinlogProof {
         alg.is_algebra() && self.get_algebra_types().contains(alg)
     }
     
-    pub fn contains_free_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_free_variable(&self, var: &MinlogTerm) -> bool {
         var.is_variable() && self.get_free_variables().contains(var)
     }
     
-    pub fn contains_bound_variable(&self, var: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_bound_variable(&self, var: &MinlogTerm) -> bool {
         var.is_variable() && self.get_bound_variables().contains(var)
     }
     

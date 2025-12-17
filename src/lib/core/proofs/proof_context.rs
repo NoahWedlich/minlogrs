@@ -11,7 +11,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProofContext {
     pub assumptions: IndexSet<Rc<MinlogProof>>,
-    pub variables: IndexSet<Rc<MinlogTerm>>,
+    pub variables: IndexSet<MinlogTerm>,
 }
 
 impl ProofContext {
@@ -34,7 +34,7 @@ impl ProofContext {
         self.assumptions.insert(assumption);
     }
     
-    pub fn add_variable(&mut self, variable: Rc<MinlogTerm>) {
+    pub fn add_variable(&mut self, variable: MinlogTerm) {
         if !variable.is_variable() {
             panic!("Tried to add non-variable term to proof context.");
         }
@@ -46,7 +46,7 @@ impl ProofContext {
         &self.assumptions
     }
     
-    pub fn get_variables(&self) -> &IndexSet<Rc<MinlogTerm>> {
+    pub fn get_variables(&self) -> &IndexSet<MinlogTerm> {
         &self.variables
     }
     
@@ -54,7 +54,7 @@ impl ProofContext {
         self.assumptions.contains(assumption)
     }
     
-    pub fn contains_variable(&self, variable: &Rc<MinlogTerm>) -> bool {
+    pub fn contains_variable(&self, variable: &MinlogTerm) -> bool {
         self.variables.contains(variable)
     }
     
@@ -62,7 +62,7 @@ impl ProofContext {
         self.assumptions.shift_remove(assumption);
     }
     
-    pub fn remove_variable(&mut self, variable: &Rc<MinlogTerm>) {
+    pub fn remove_variable(&mut self, variable: &MinlogTerm) {
         self.variables.shift_remove(variable);
     }
     

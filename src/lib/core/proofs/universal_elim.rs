@@ -13,13 +13,13 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct UniversalElim {
     proof: Rc<MinlogProof>,
-    term: Rc<MinlogTerm>,
-    replaced_variable: Rc<MinlogTerm>,
+    term: MinlogTerm,
+    replaced_variable: MinlogTerm,
     formula: Rc<MinlogPredicate>,
 }
 
 impl UniversalElim {
-    pub fn create(proof: Rc<MinlogProof>, term: Rc<MinlogTerm>) -> Rc<MinlogProof> {
+    pub fn create(proof: Rc<MinlogProof>, term: MinlogTerm) -> Rc<MinlogProof> {
         let universal_formula = proof.proved_formula();
         
         if !universal_formula.is_all_quantifier() {
@@ -55,7 +55,7 @@ impl UniversalElim {
         self.proof.clone()
     }
     
-    pub fn term(&self) -> Rc<MinlogTerm> {
+    pub fn term(&self) -> MinlogTerm {
         self.term.clone()
     }
 }
@@ -83,7 +83,7 @@ impl ProofBody for UniversalElim {
         }))
     }
     
-    fn extracted_term(&self) -> Option<Rc<MinlogTerm>> {
+    fn extracted_term(&self) -> Option<MinlogTerm> {
         self.proof.extracted_term()
     }
     
@@ -99,13 +99,13 @@ impl ProofBody for UniversalElim {
             .cloned().collect()
     }
     
-    fn get_free_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_free_variables(&self) -> IndexSet<MinlogTerm> {
             self.proof.get_free_variables()
             .union(&self.term.get_free_variables(&mut IndexSet::new()))
             .cloned().collect()
     }
     
-    fn get_bound_variables(&self) -> IndexSet<Rc<MinlogTerm>> {
+    fn get_bound_variables(&self) -> IndexSet<MinlogTerm> {
         self.proof.get_bound_variables()
             .union(&self.term.get_bound_variables(&mut IndexSet::new()))
             .cloned().collect::<IndexSet<_>>()

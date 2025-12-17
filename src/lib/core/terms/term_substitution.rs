@@ -11,7 +11,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TermSubstEntry {
     Type(Rc<MinlogType>),
-    Term(Rc<MinlogTerm>),
+    Term(MinlogTerm),
 }
 
 impl TermSubstEntry {
@@ -31,7 +31,7 @@ impl TermSubstEntry {
         }
     }
     
-    pub fn to_term(&self) -> Option<Rc<MinlogTerm>> {
+    pub fn to_term(&self) -> Option<MinlogTerm> {
         if let TermSubstEntry::Term(tm) = self {
             Some(tm.clone())
         } else {
@@ -138,14 +138,14 @@ impl From<&Rc<MinlogType>> for TermSubstEntry {
     }
 }
 
-impl From<Rc<MinlogTerm>> for TermSubstEntry {
-    fn from(tm: Rc<MinlogTerm>) -> Self {
+impl From<MinlogTerm> for TermSubstEntry {
+    fn from(tm: MinlogTerm) -> Self {
         TermSubstEntry::Term(tm)
     }
 }
 
-impl From<&Rc<MinlogTerm>> for TermSubstEntry {
-    fn from(tm: &Rc<MinlogTerm>) -> Self {
+impl From<&MinlogTerm> for TermSubstEntry {
+    fn from(tm: &MinlogTerm) -> Self {
         TermSubstEntry::Term(tm.clone())
     }
 }
@@ -153,7 +153,7 @@ impl From<&Rc<MinlogTerm>> for TermSubstEntry {
 pub type TermSubstitution = Substitution<TermSubstEntry>;
 
 impl TermSubstitution {
-    pub fn admissible(&self, term: &Rc<MinlogTerm>) -> bool {
+    pub fn admissible(&self, term: &MinlogTerm) -> bool {
         for free_var in term.get_free_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&free_var.clone().into());
             if let TermSubstEntry::Term(t) = substituted {
@@ -169,7 +169,7 @@ impl TermSubstitution {
     }
 }
 
-impl SubstitutableWith<TermSubstEntry> for Rc<MinlogTerm> {
+impl SubstitutableWith<TermSubstEntry> for MinlogTerm {
     fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
         self.substitute(from, to)
     }

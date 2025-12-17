@@ -10,12 +10,12 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct RewriteRule {
-    pattern: Rc<MinlogTerm>,
-    result: Rc<MinlogTerm>,
+    pattern: MinlogTerm,
+    result: MinlogTerm,
 }
 
 impl RewriteRule {
-    pub fn create(pattern: Rc<MinlogTerm>, result: Rc<MinlogTerm>) -> Rc<RewriteRule> {
+    pub fn create(pattern: MinlogTerm, result: MinlogTerm) -> Rc<RewriteRule> {
         if let Some(pc) = pattern.to_program_term() {
             if pc.minlog_type().arity() != 0 {
                 panic!("Rewrite rule pattern must be a full application of a program constant");
@@ -65,11 +65,11 @@ impl RewriteRule {
         }
     }
     
-    pub fn pattern(&self) -> Rc<MinlogTerm> {
+    pub fn pattern(&self) -> MinlogTerm {
         self.pattern.clone()
     }
     
-    pub fn result(&self) -> Rc<MinlogTerm> {
+    pub fn result(&self) -> MinlogTerm {
         self.result.clone()
     }
     
@@ -91,7 +91,7 @@ impl RewriteRule {
         }
     }
     
-    pub fn is_left_linear(term: &Rc<MinlogTerm>, bound: &mut Vec<Rc<MinlogTerm>>) -> bool {
+    pub fn is_left_linear(term: &MinlogTerm, bound: &mut Vec<MinlogTerm>) -> bool {
         if !term.constructor_pattern() {
             return true;
         }
@@ -146,21 +146,21 @@ impl RewriteRule {
         self.result.get_algebra_types(visited).union(&self.pattern.get_algebra_types(visited)).cloned().collect()
     }
 
-    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.result.get_free_variables(visited).difference(&self.pattern.get_free_variables(visited)).cloned().collect()
     }
 
-    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.pattern.get_bound_variables(visited)
             .union(&self.result.get_bound_variables(visited)).cloned().collect::<IndexSet<_>>()
             .union(&self.pattern.get_free_variables(visited)).cloned().collect()
     }
     
-    pub fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.pattern.get_constructors(visited).union(&self.result.get_constructors(visited)).cloned().collect()
     }
     
-    pub fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.pattern.get_program_terms(visited).union(&self.result.get_program_terms(visited)).cloned().collect()
     }
 }
@@ -263,13 +263,13 @@ impl ProgramConstant {
             .collect()
     }
     
-    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
             .flat_map(|r| r.get_free_variables(visited))
             .collect()
     }
     
-    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogTerm>> {
+    pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
             .flat_map(|r| r.get_bound_variables(visited))
             .collect()
