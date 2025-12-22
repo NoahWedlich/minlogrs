@@ -9,7 +9,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelProgramTerm {
     pconst: Rc<ProgramConstant>,
     parameters: TermSubstitution,
@@ -450,6 +450,15 @@ impl PartialEq for ProgramTerm {
 }
 
 impl Eq for ProgramTerm {}
+
+impl Debug for ProgramTerm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProgramTerm::Kernel(k) => write!(f, "{:?}", k),
+            ProgramTerm::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelProgramTerm>> for ProgramTerm {
     fn from(kp: Rc<KernelProgramTerm>) -> Self {

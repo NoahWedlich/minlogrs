@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelConstructor {
     name: String,
     minlog_type: Rc<MinlogType>,
@@ -284,6 +284,15 @@ impl PartialEq for Constructor {
 }
 
 impl Eq for Constructor {}
+
+impl Debug for Constructor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Constructor::Kernel(k) => write!(f, "{:?}", k),
+            Constructor::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelConstructor>> for Constructor {
     fn from(k: Rc<KernelConstructor>) -> Self {

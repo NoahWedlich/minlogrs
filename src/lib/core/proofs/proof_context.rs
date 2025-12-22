@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProofContext {
     pub assumptions: IndexSet<Rc<MinlogProof>>,
     pub variables: IndexSet<MinlogTerm>,

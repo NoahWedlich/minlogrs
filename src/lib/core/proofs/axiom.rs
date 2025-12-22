@@ -11,7 +11,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Axiom {
     name: String,
     formula: Rc<MinlogPredicate>,

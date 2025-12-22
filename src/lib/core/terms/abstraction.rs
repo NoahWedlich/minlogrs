@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelAbstraction {
     vars: Vec<MinlogTerm>,
     kernel: MinlogTerm,
@@ -466,6 +466,15 @@ impl PartialEq for Abstraction {
 }
 
 impl Eq for Abstraction {}
+
+impl Debug for Abstraction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Abstraction::Kernel(k) => write!(f, "{:?}", k),
+            Abstraction::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelAbstraction>> for Abstraction {
     fn from(k: Rc<KernelAbstraction>) -> Self {

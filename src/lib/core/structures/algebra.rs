@@ -310,6 +310,12 @@ impl Hash for Algebra {
     }
 }
 
+impl Debug for Algebra {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_pp_element(false).to_string())
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct AlgebraReduction {
     pub reduced_algebra: Rc<Algebra>,
@@ -347,5 +353,14 @@ impl PrettyPrintable for AlgebraReduction {
             PPElement::break_elem(1, 0, true),
             PPElement::text("}".to_string())
         ], BreakType::Consistent, 0)
+    }
+}
+
+impl Debug for AlgebraReduction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AlgebraReduction {{ reduced_algebra: {:?}, constructor_mapping: {:?} }}",
+            self.reduced_algebra.name(),
+            self.constructor_mapping
+        )
     }
 }

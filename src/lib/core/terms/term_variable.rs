@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelTermVariable {
     name: String,
     minlog_type: Rc<MinlogType>,
@@ -291,6 +291,15 @@ impl PartialEq for TermVariable {
 }
 
 impl Eq for TermVariable {}
+
+impl Debug for TermVariable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TermVariable::Kernel(k) => write!(f, "{:?}", k),
+            TermVariable::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelTermVariable>> for TermVariable {
     fn from(kv: Rc<KernelTermVariable>) -> Self {

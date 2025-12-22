@@ -1,9 +1,10 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::{hash::{Hash, Hasher}};
-use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
+use crate::includes::{
+    essential::*,
+    utils::*,
+};
 
-pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
+pub trait Substitutable: Debug + Hash + Eq + Clone + PrettyPrintable {
     fn substitute(&self, from: &Self, to: &Self) -> Self;
     
     fn first_conflict_with(&self, other: &Self) -> Option<(Self, Self)>;
@@ -329,6 +330,12 @@ impl<T: Substitutable> PartialEq for Substitution<T> {
 }
 
 impl<T: Substitutable> Eq for Substitution<T> {}
+
+impl<T: Substitutable> Debug for Substitution<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_pp_element(true).to_string())
+    }
+}
 
 struct MatchContext<T: Substitutable> {
     mapping: IndexMap<T, T>,

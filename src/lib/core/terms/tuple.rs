@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelTuple {
     elements: Vec<MinlogTerm>,
     minlog_type: Rc<MinlogType>,
@@ -309,6 +309,15 @@ impl PartialEq for Tuple {
 }
 
 impl Eq for Tuple {}
+
+impl Debug for Tuple {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Tuple::Kernel(k) => write!(f, "{:?}", k),
+            Tuple::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelTuple>> for Tuple {
     fn from(k: Rc<KernelTuple>) -> Self {

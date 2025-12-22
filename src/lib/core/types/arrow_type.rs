@@ -7,7 +7,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ArrowType {
     arguments: Vec<Rc<MinlogType>>,
     value: Rc<MinlogType>,

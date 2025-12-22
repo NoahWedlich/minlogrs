@@ -8,5 +8,6 @@ pub mod utils;
 pub mod core;
 pub mod builtin;
 pub mod proof_generation;
+pub mod frontend;
 
 pub mod includes;

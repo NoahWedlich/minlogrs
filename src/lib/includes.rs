@@ -4,6 +4,7 @@ pub mod essential {
         rc::Rc,
         cmp::{min, max},
         hash::{Hash, Hasher},
+        fmt::Debug,
         cell::RefCell,
         any::Any,
     };
@@ -126,6 +127,37 @@ pub mod builtin {
         elimination::*,
         totality::*,
     };
+}
+
+pub mod frontend {
+    pub mod source_management {
+        pub use crate::frontend::source_management::{
+            source_provider::*,
+            file_source::*,
+        };
+    }
+    
+    pub mod lexing {
+        pub use crate::frontend::lexing::{
+            token::*,
+            source_span::*,
+            lexer::*,
+        };
+    }
+    
+    pub mod parsing {
+        pub use crate::frontend::parsing::{
+            token_term::*,
+            command::*,
+            parser::*,
+        };
+    }
+    
+    pub mod all {
+        pub use super::source_management::*;
+        pub use super::lexing::*;
+        pub use super::parsing::*;
+    }
 }
 
 pub mod all {

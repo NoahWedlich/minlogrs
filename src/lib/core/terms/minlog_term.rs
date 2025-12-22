@@ -67,7 +67,7 @@ wrapper_enum::wrapper_enum! {
         pub fwd fn match_with(&self, instance: &MinlogTerm) -> MatchOutput<TermSubstEntry>
     }
     
-    #[derive(Clone, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub enum MinlogTerm {
         Wildcard(wildcard: TermWildcard),
         Variable(variable: TermVariable),

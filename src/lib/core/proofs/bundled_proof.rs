@@ -10,7 +10,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BundledProof {
     proof: Rc<MinlogProof>,
     dependencies: IndexSet<Rc<MinlogProof>>,

@@ -9,7 +9,7 @@ use crate::includes::{
     }
 };
 
-#[derive(PartialEq, Eq, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
     body: Rc<MinlogPredicate>,
     arguments: Vec<MinlogTerm>,

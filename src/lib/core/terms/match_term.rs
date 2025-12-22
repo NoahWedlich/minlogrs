@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelMatchTerm {
     minlog_type: Rc<MinlogType>,
     branches: Vec<(MinlogTerm, MinlogTerm)>,
@@ -461,6 +461,15 @@ impl PartialEq for MatchTerm {
 }
 
 impl Eq for MatchTerm {}
+
+impl Debug for MatchTerm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MatchTerm::Kernel(k) => write!(f, "{:?}", k),
+            MatchTerm::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelMatchTerm>> for MatchTerm {
     fn from(k: Rc<KernelMatchTerm>) -> Self {

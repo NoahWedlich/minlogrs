@@ -241,6 +241,12 @@ impl Hash for InductiveConstant {
     }
 }
 
+impl Debug for InductiveConstant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_pp_element(false).to_string())
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct IDPComputationalContent {
     pub algebra: Rc<MinlogType>,

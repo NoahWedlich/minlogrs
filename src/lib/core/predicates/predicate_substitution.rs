@@ -9,7 +9,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PredSubstEntry {
     Type(Rc<MinlogType>),
     Term(MinlogTerm),

@@ -391,3 +391,9 @@ impl Hash for ProgramConstant {
         self.minlog_type.hash(state);
     }
 }
+
+impl Debug for ProgramConstant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_pp_element(false).to_string())
+    }
+}

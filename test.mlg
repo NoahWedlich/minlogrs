@@ -1,0 +1,136 @@
+/*
+Lexing test corpus for the current lexer (identifier+lexeme merged).
+
+Token kinds that should appear:
+- Keyword
+- Lexeme
+- Comment (// and /* ... */)
+- EndOfFile
+
+Current lexer rules (as implemented now):
+- Whitespace is skipped.
+- Comments are returned as tokens.
+- Keywords are checked BEFORE lexemes.
+- Keyword boundary: after the keyword must be:
+  - whitespace, OR
+  - EOF, OR
+  - a comment opener (// or /* ... */), OR
+  - any char that is not alphanumeric and not '_'.
+- Lexeme: maximal run of NON-whitespace characters, stopping before comment openers (// or /* ... */).
+  This means "identifier-shaped" strings like foo, 123, _x, λx are Lexemes too.
+
+Note: Token::is_identifier() / to_identifier() treat a Lexeme as an identifier iff all chars are
+alphanumeric or '_'.
+*/
+
+
+// ---------------------------
+// 1) Keywords (all of them)
+// ---------------------------
+
+type algebra term program_constant pred idp theorem axiom proof
+
+// Keyword boundaries (whitespace)
+type
+algebra	term
+program_constant  pred
+
+// Keyword boundaries (comment openers)
+type/*between*/algebra
+proof//line comment after keyword text
+
+// NOT keywords (followed by non-whitespace, non-comment): these should become identifiers.
+typeX type_ type123
+algebraic algebra2
+termX term_term
+program_constantX program_constantpred
+predication pred_ pred1
+idpX idppred
+theoremproof theorem_axiom
+axiomproof axiomX
+proofTerm proof_ proof1
+
+// Punctuation is not a keyword boundary: should become Identifier("type") Lexeme(",") etc.
+type, proof; axiom)
+
+
+// ---------------------------
+// 2) Lexemes that ARE identifiers
+// ---------------------------
+
+foo
+Foo
+foo123
+123 007 42
+_ __ ___ _x x_ x__y
+
+// Unicode identifiers (is_alphanumeric is Unicode-aware)
+λx π_2 αβγ
+
+// Keyword-like but not keywords (boundary fails): these are Lexemes and should satisfy is_identifier().
+typeX theoremproof algebra2 program_constantpred
+
+
+// ---------------------------
+// 3) Lexemes that are NOT identifiers (contain punctuation)
+// ---------------------------
+
+// These should each be a single Lexeme token (runs extend across letters and punctuation)
+abc-def
+snake_case.with.dots
+call(x,y)
+list[0]{1}<2>
+eq=neq!=lt<=gt>=
+1.23 007.0
+
+// Operator runs
+-> => <= >= != == :: := ..
+===>>>>::=..<=
+
+// URLs/paths: '//' starts a line comment, so the Lexeme stops right before it.
+http://example.com
+C:/Windows/System32
+
+// If you WANT splitting, you need whitespace.
+a / b
+a - b
+x -> y
+
+
+// ---------------------------
+// 4) Comments
+// ---------------------------
+
+//
+// empty line comment above
+// comment with lexemes: ()[]{} -> => <= >= != == :: := ..
+// comment with keywords: type algebra theorem proof
+
+/**/
+/* block comment text */
+/* block comment with // inside (should NOT start a line comment here) */
+
+/* nested block comment (lexer supports nesting):
+   outer /* inner */ outer2
+*/
+
+// Comments between tokens without whitespace
+foo/*between*/bar
+before_line_comment//after
+before_block_comment/*inside*/after
+
+// "http://" demonstrates that '//' starts a line comment immediately
+http://example.com
+
+
+// ---------------------------
+// 5) Whitespace (skipped)
+// ---------------------------
+
+    leading_spaces
+	leading_tab
+
+mixed	 	spaces	and	tabs
+
+// End of file should yield EndOfFile.
+proof

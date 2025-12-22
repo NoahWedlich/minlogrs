@@ -62,7 +62,7 @@ wrapper_enum::wrapper_enum! {
         pub fwd fn match_with(&self, ctx: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
     }
     
-    #[derive(PartialEq, Eq, Hash)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum MinlogPredicate {
         Wildcard(wildcard: PredicateWildcard),
         Variable(variable: PredicateVariable),

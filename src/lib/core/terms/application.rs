@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelApplication {
     operands: Vec<MinlogTerm>,
     operator: MinlogTerm,
@@ -417,6 +417,15 @@ impl PartialEq for Application {
 }
 
 impl Eq for Application {}
+
+impl Debug for Application {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Application::Kernel(k) => write!(f, "{:?}", k),
+            Application::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelApplication>> for Application {
     fn from(k: Rc<KernelApplication>) -> Self {

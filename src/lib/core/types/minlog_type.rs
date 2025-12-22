@@ -38,7 +38,7 @@ wrapper_enum::wrapper_enum! {
         pub fwd fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>>
     }
     
-    #[derive(PartialEq, Eq, Hash)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum MinlogType {
         NullType(null: TypeConstant),
         Atomic(atomic: TypeConstant),

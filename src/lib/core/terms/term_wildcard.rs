@@ -8,7 +8,7 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KernelTermWildcard {
     minlog_type: Rc<MinlogType>,
 }
@@ -208,6 +208,15 @@ impl PartialEq for TermWildcard {
 }
 
 impl Eq for TermWildcard {}
+
+impl std::fmt::Debug for TermWildcard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TermWildcard::Kernel(k) => write!(f, "{:?}", k),
+            TermWildcard::Native(n) => write!(f, "Native({:?})", n.native_to_minlog()),
+        }
+    }
+}
 
 impl From<Rc<KernelTermWildcard>> for TermWildcard {
     fn from(kw: Rc<KernelTermWildcard>) -> Self {

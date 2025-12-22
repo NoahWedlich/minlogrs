@@ -80,7 +80,7 @@ wrapper_enum::wrapper_enum! {
         pub fwd fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry>
     }
     
-    #[derive(PartialEq, Eq, Hash)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum MinlogProof {
         Wildcard(wildcard: ProofWildcard),
         Goal(goal: Goal),
