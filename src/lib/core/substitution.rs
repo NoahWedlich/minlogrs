@@ -1,15 +1,31 @@
-
+//! Substitution, general traits and types
 use indexmap::{IndexMap, IndexSet};
 use std::{hash::{Hash, Hasher}};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
+/// This trait should be implemented by types that support substitution.
 pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
+
+    /// `x.substitute(from, to)` should replace all occurrences of `from`
+    /// in `x` by `to`. Usually `from` should represent a variable that
+    /// may or may not occur freely in the expression represented by `x`,
+    /// though there are situations where one wishes to substitute more
+    /// complex subexpressions.
     fn substitute(&self, from: &Self, to: &Self) -> Self;
     
+    /// `x.first_conflict_with(y)` finds first position in the syntax tree
+    /// where `x` and `y` differ and returns it. If no such position exists,
+    /// it returns `None`.
     fn first_conflict_with(&self, other: &Self) -> Option<(Self, Self)>;
     
+    /// `x.valid_substitution(y)` checks whether the substitution $x\mapsto y$
+    /// makes sense for the implementing type. For example, it may check whether
+    /// `x` represents a variable or whether `x` occurs freely in `y`.
     fn valid_substitution(&self, to: &Self) -> bool;
 
+    /// `x.match_with(y)` does pattern matching on `y` against `x`,
+    /// i.e. with `y` representing the value to be matched and `x` the
+    /// pattern to be matched against.
     fn match_with(&self, instance: &Self) -> MatchOutput<Self>;
 }
 
