@@ -3,7 +3,8 @@ use indexmap::{IndexMap, IndexSet};
 use std::{hash::{Hash, Hasher}};
 use crate::utils::pretty_printer::{PrettyPrintable, PPElement, BreakType};
 
-/// This trait should be implemented by types that support substitution.
+/// This trait should be implemented by types that support
+/// (homogeneous) substitution.
 pub trait Substitutable: Hash + Eq + Clone + PrettyPrintable {
 
     /// `x.substitute(from, to)` should replace all occurrences of `from`
@@ -35,6 +36,9 @@ impl<T: Substitutable> SubstitutableWith<T> for T {
     }
 }
 
+/// More general version of `Substitutable`, implemented by types
+/// whose subexpression may be represented by a different type than
+/// itself, i.e. heterogeneous substitution.
 pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
     fn substitute_with(&self, from: &T, to: &T) -> Self;
 }
