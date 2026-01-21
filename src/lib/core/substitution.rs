@@ -43,18 +43,22 @@ pub trait SubstitutableWith<T>: Eq + Clone + PrettyPrintable {
     fn substitute_with(&self, from: &T, to: &T) -> Self;
 }
 
+/// This type represents a general substitution, valid or invalid.
 #[derive(Clone)]
 pub struct Substitution<T: Substitutable> {
     map: IndexMap<T, T>,
 }
 
 impl<T: Substitutable> Substitution<T> {
+
+    /// An empty substitution, i.e. one that does nothing.
     pub fn make_empty() -> Self {
         Self {
             map: IndexMap::new(),
         }
     }
 
+    /// A substitution from a list of pairs, given as a `Vec`.
     pub fn from_pairs(pairs: Vec<(T, T)>) -> Self {
         let mut subst = Self::make_empty();
         
@@ -65,27 +69,37 @@ impl<T: Substitutable> Substitution<T> {
         subst
     }
     
+    /// Checks whether the substitution is empty.
     pub fn empty(&self) -> bool {
         self.map.is_empty()
     }
     
+    /// Size of the substitution, i.e. the number of replacements.
     pub fn size(&self) -> usize {
         self.map.len()
     }
     
+    /// Returns the substitution as a vector of pairs.
     pub fn pairs(&self) -> Vec<(T, T)> {
         self.map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
     
+    /// Alters the original substitution to retain only
+    /// replacements satisfying a certain predicate.
     pub fn restrict<F>(&mut self, filter: F)
     where F: Fn(&T) -> bool {
         self.map.retain(|k, _| filter(k));
     }
     
+    /// Checks whether the substitution substitutes a
+    /// certain subexpression.
     pub fn contains(&self, key: &T) -> bool {
         self.map.contains_key(key)
     }
     
+    /// Tries to apply a substitution to an expression,
+    /// *not* its subexpressions. If not applicable, simply
+    /// returns the original expression.
     pub fn apply(&self, value: &T) -> T {
         self.map.get(value).cloned().unwrap_or_else(|| value.clone())
     }
