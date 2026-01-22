@@ -97,13 +97,14 @@ impl<T: Substitutable> Substitution<T> {
         self.map.contains_key(key)
     }
     
-    /// Tries to apply a substitution to an expression,
+    /// Tries to apply a substitution to an expression as a whole,
     /// *not* its subexpressions. If not applicable, simply
     /// returns the original expression.
     pub fn apply(&self, value: &T) -> T {
         self.map.get(value).cloned().unwrap_or_else(|| value.clone())
     }
     
+    /// Performs a substitution on a value implementing `SubstitutableWith<T>`.
     pub fn substitute<U: SubstitutableWith<T>>(&self, element: &U) -> U {
         let mut result = element.clone();
         
@@ -114,14 +115,18 @@ impl<T: Substitutable> Substitution<T> {
         result
     }
 
+    /// Performs a substitution in bulk on a slice of values.
     pub fn substitute_all<U: SubstitutableWith<T>>(&self, elements: &[U]) -> Vec<U> {
         elements.iter().map(|e| self.substitute::<U>(e)).collect()
     }
     
+    /// Removes all trivial replacements from `self`, i.e. all replacements
+    /// whose source and target are identical.
     pub fn collapse(&mut self) {
         self.map.retain(|k, v| k != v);
     }
 
+    /// Extends `self` with another replacement scheme, given as a pair.
     pub fn extend(&mut self, pair: (T, T)) {
         if pair.0 != pair.1 {
             if !pair.0.valid_substitution(&pair.1) {
@@ -140,6 +145,7 @@ impl<T: Substitutable> Substitution<T> {
         }
     }
 
+    /// Checks whether `self` is a subset of another substitution.
     pub fn agrees(&self, _other: &Self) -> bool {
         for (k, v) in self.map.iter() {
             match _other.map.get(k) {
@@ -151,6 +157,7 @@ impl<T: Substitutable> Substitution<T> {
         true
     }
 
+    /// Like `extend`, but with another substitution instead.
     pub fn compose(&mut self, _other: &Self) {
         for (_, v) in self.map.iter_mut() {
             if let Some(v2) = _other.map.get(v) {
@@ -167,6 +174,8 @@ impl<T: Substitutable> Substitution<T> {
         self.collapse();
     }
     
+    /// Performs unification between `first` and `second`. If successful,
+    /// returns a substitution that would make `first` and `second` identical.
     pub fn unify(first: &T, second: &T) -> Option<Self> {
         let mut result = Self::make_empty();
         
@@ -196,7 +205,7 @@ impl<T: Substitutable> Substitution<T> {
         Some(result)
     }
     
-    pub fn unify_all(elements: &mut [T]) -> Option<Self> {
+    pub fn unify_all(elements: &[T]) -> Option<Self> {
         let mut result = Self::make_empty();
         
         for i in 0..elements.len() {
@@ -216,10 +225,10 @@ impl<T: Substitutable> Substitution<T> {
     }
     
     pub fn match_with(pattern: &T, instance: &T) -> Option<Self> {
-        Self::match_all(&mut [pattern.clone()], &mut [instance.clone()])
+        Self::match_all(&[pattern.clone()], &[instance.clone()])
     }
     
-    pub fn match_all(patterns: &mut [T], instances: &mut [T]) -> Option<Self> {
+    pub fn match_all(patterns: &[T], instances: &[T]) -> Option<Self> {
         if patterns.len() != instances.len() {
             return None;
         }
