@@ -99,11 +99,14 @@ impl MinlogPredicate {
     
     pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
         let arity = pred.unpacked_arity();
+        
         let vars = arity.iter().enumerate().map(|(i, t)| {
             TermVariable::create(format!("T{}", i), t.clone())
         }).collect::<Vec<_>>();
-        let prime_formula = PrimeFormula::create(pred.clone(), vars.clone());
-        ComprehensionTerm::create(vars, prime_formula)
+        
+        let prime_formula = PrimeFormula::create_nested(pred.clone(), vars.clone());
+        
+        ComprehensionTerm::create_nested(vars, prime_formula)
     }
     
     pub fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {

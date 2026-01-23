@@ -25,7 +25,7 @@ impl ImplicationIntro {
         
         let premise_formula = assumption.proved_formula();
         let conclusion_formula = proof.proved_formula();
-        let implication_formula = Implication::create(vec![premise_formula], conclusion_formula);
+        let implication_formula = Implication::create(premise_formula, conclusion_formula);
         
         Rc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
             assumption,
@@ -68,7 +68,7 @@ impl ProofBody for ImplicationIntro {
         self.conclusion.extracted_term().map(|term| {
             if let Some(assump_term) = self.assumption.extracted_term() {
                 Abstraction::create(
-                    vec![assump_term],
+                    assump_term,
                     term,
                 )
             } else {

@@ -9,62 +9,79 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ArrowType {
-    arguments: Vec<Rc<MinlogType>>,
+    argument: Rc<MinlogType>,
     value: Rc<MinlogType>,
 }
 
 impl ArrowType {
-    pub fn create(arguments: Vec<Rc<MinlogType>>, value: Rc<MinlogType>) -> Rc<MinlogType> {
-        ArrowType::collapse(&Rc::new(MinlogType::Arrow(ArrowType { arguments, value })))
+    pub fn create(argument: Rc<MinlogType>, value: Rc<MinlogType>) -> Rc<MinlogType> {
+        Rc::new(MinlogType::Arrow(ArrowType { argument, value }))
     }
     
-    pub fn collapse(minlog_type: &Rc<MinlogType>) -> Rc<MinlogType> {
-        if !minlog_type.is_arrow() || !minlog_type.to_arrow().unwrap().value().is_arrow() {
-            minlog_type.clone()
-        } else {
-            let mut arrow = minlog_type.to_arrow().unwrap();
-            let mut arguments = arrow.arguments().clone();
-            
-            while arrow.value().is_arrow() {
-                let next_arrow = arrow.value().to_arrow().unwrap();
-                arguments.extend(next_arrow.arguments().clone());
-                arrow = next_arrow;
-            }
-            
-            ArrowType::create(arguments, arrow.value().clone())
+    pub fn create_nested(arguments: Vec<Rc<MinlogType>>, value: Rc<MinlogType>) -> Rc<MinlogType> {
+        let mut current_value = value;
+        
+        for arg in arguments.into_iter().rev() {
+            current_value = ArrowType::create(arg, current_value);
         }
+        
+        current_value
     }
     
-    pub fn arguments(&self) -> &Vec<Rc<MinlogType>> {
-        &self.arguments
+    pub fn argument(&self) -> &Rc<MinlogType> {
+        &self.argument
     }
     
-    pub fn argument(&self, index: usize) -> Option<&Rc<MinlogType>> {
-        self.arguments.get(index)
+    pub fn all_arguments(&self) -> Vec<Rc<MinlogType>> {
+        let mut current = self;
+        let mut args = vec![current.argument.clone()];
+        
+        while let Some(next_arrow) = current.value.to_arrow() {
+            args.push(next_arrow.argument.clone());
+            current = next_arrow;
+        }
+        
+        args
+    }
+    
+    pub fn argument_at(&self, index: usize) -> Option<&Rc<MinlogType>> {
+        if index == 0 {
+            Some(&self.argument)
+        } else if self.value.is_arrow() {
+            self.value.to_arrow().unwrap().argument_at(index - 1)
+        } else {
+            None
+        }
     }
     
     pub fn value(&self) -> &Rc<MinlogType> {
         &self.value
     }
+    
+    pub fn final_value(&self) -> &Rc<MinlogType> {
+        if let Some(next_arrow) = self.value.to_arrow() {
+            next_arrow.final_value()
+        } else {
+            &self.value
+        }
+    }
 }
 
 impl TypeBody for ArrowType {
     fn is_object_type(&self) -> bool {
-        self.arguments.iter().all(|arg| arg.is_object_type()) && self.value.is_object_type()
+        self.argument.is_object_type() && self.value.is_object_type()
     }
     
     fn arity(&self) -> usize {
-        self.arguments.len() + self.value.arity()
+        1 + self.value.arity()
     }
     
     fn level(&self) -> usize {
-        max(self.arguments.iter().map(|arg| arg.level()).max().unwrap_or(0), self.value.level())
+        max(self.argument.level(), self.value.level())
     }
     
     fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        let mut result = self.arguments.iter()
-            .flat_map(|arg| arg.get_polarized_tvars(current.invert(), visited))
-            .collect::<IndexSet<_>>();
+        let mut result = self.argument.get_polarized_tvars(current.invert(), visited);
         
         result.extend(self.value.get_polarized_tvars(current, visited));
         
@@ -72,29 +89,19 @@ impl TypeBody for ArrowType {
     }
 
     fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
-        let mut result = self.arguments.iter()
-            .flat_map(|arg| arg.get_polarized_algebras(current.invert(), visited))
-            .collect::<IndexSet<_>>();
-
+        let mut result = self.argument.get_polarized_algebras(current.invert(), visited);
+        
         result.extend(self.value.get_polarized_algebras(current, visited));
 
         result
     }
     
     fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
-        let mut new_arguments = vec![];
-        
-        for arg in &self.arguments {
-            if let Some(new_arg) = arg.remove_nulls() {
-                new_arguments.push(new_arg);
-            }
-        }
-        
         if let Some(new_value) = self.value.remove_nulls() {
-            if new_arguments.is_empty() {
-                Some(new_value)
+            if let Some(new_argument) = self.argument.remove_nulls() {
+                Some(ArrowType::create(new_argument, new_value))
             } else {
-                Some(ArrowType::create(new_arguments, new_value))
+                Some(new_value)
             }
         } else {
             None
@@ -105,12 +112,10 @@ impl TypeBody for ArrowType {
         if from.is_arrow() && self == from.to_arrow().unwrap() {
             to.clone()
         } else {
-            let new_arguments = self.arguments.iter()
-                .map(|arg| arg.substitute(from, to))
-                .collect();
+            let new_argument = self.argument.substitute(from, to);
             let new_value = self.value.substitute(from, to);
             
-            ArrowType::create(new_arguments, new_value)
+            ArrowType::create(new_argument, new_value)
         }
     }
     
@@ -121,14 +126,8 @@ impl TypeBody for ArrowType {
         
         let other_arrow = other.to_arrow().unwrap();
         
-        if self.arguments.len() != other_arrow.arguments.len() {
-            return Some((Rc::new(MinlogType::Arrow(self.clone())), other.clone()));
-        }
-        
-        for (arg1, arg2) in self.arguments.iter().zip(other_arrow.arguments.iter()) {
-            if let Some(conflict) = arg1.first_conflict_with(arg2) {
-                return Some(conflict);
-            }
+        if let Some(conflict) = self.argument.first_conflict_with(&other_arrow.argument) {
+            return Some(conflict);
         }
         
         self.value.first_conflict_with(&other_arrow.value)
@@ -140,16 +139,11 @@ impl TypeBody for ArrowType {
         }
 
         let instance_arrow = instance.to_arrow().unwrap();
-
-        if self.arguments.len() != instance_arrow.arguments.len() {
-            return MatchOutput::FailedMatch;
-        }
         
-        let mut conditions = self.arguments.iter().cloned()
-            .zip(instance_arrow.arguments.iter().cloned())
-            .filter(|(t1, t2)| t1 != t2)
-            .collect::<IndexMap<_, _>>();
-        conditions.insert(self.value.clone(), instance_arrow.value.clone());
+        let conditions = IndexMap::from([
+            (self.argument.clone(), instance_arrow.argument.clone()),
+            (self.value.clone(), instance_arrow.value.clone()),
+        ]);
         
         MatchOutput::Matched(conditions)
     }
@@ -157,13 +151,11 @@ impl TypeBody for ArrowType {
 
 impl PrettyPrintable for ArrowType {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.arguments.is_empty() {
-            return self.value.to_pp_element(detail);
-        }
-        
         PPElement::list(
-            self.arguments.iter().map(|arg| arg.to_enclosed_pp_element(detail))
-                .chain(std::iter::once(self.value.to_enclosed_pp_element(detail))).collect(),
+            vec![
+                self.argument.to_enclosed_pp_element(detail),
+                self.value.to_enclosed_pp_element(detail)
+            ],
             PPElement::break_elem(1, 4, false),
             PPElement::text("->".to_string()),
             PPElement::break_elem(1, 4, false),

@@ -10,80 +10,69 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelAbstraction {
-    vars: Vec<MinlogTerm>,
+    var: MinlogTerm,
     kernel: MinlogTerm,
     minlog_type: Rc<MinlogType>,
 }
 
 impl KernelAbstraction {
-    pub fn create(vars: Vec<MinlogTerm>, kernel: MinlogTerm) -> MinlogTerm {
-        if vars.is_empty() {
-            return kernel;
-        }
-        
-        if vars.iter().any(|v| !v.is_variable()) {
+    pub fn create(var: MinlogTerm, kernel: MinlogTerm) -> MinlogTerm {
+        if !var.is_variable() {
             panic!("Tried to create an Abstraction with a non-variable term");
         }
         
-        for (i, var) in vars.iter().enumerate() {
-            for other in &vars[(i+1)..] {
-                if var == other {
-                    panic!("Tried to create an Abstraction with duplicate variables");
-                }
-            }
+        if kernel.get_bound_variables(&mut IndexSet::new()).contains(&var) {
+            panic!("Tried to create an Abstraction where the variable is bound in the kernel");
         }
         
-        let var_types: Vec<Rc<MinlogType>> = vars.iter().map(|v| v.minlog_type()).collect();
-        KernelAbstraction::collapse(&MinlogTerm::Abstraction(Rc::new(KernelAbstraction {
-            minlog_type: ArrowType::create(var_types, kernel.minlog_type()),
-            vars,
-            kernel,
-        }).into()))
-    }
-    
-    pub fn collapse(minlog_term: &MinlogTerm) -> MinlogTerm {
-        if !minlog_term.is_abstraction() || !minlog_term.to_abstraction().unwrap().kernel().is_abstraction() {
-            minlog_term.clone()
-        } else {
-            let mut abstraction = minlog_term.to_abstraction().unwrap();
-            let mut vars = abstraction.vars().clone();
-            
-            while abstraction.kernel().is_abstraction() {
-                let next_abstraction = abstraction.kernel().to_abstraction().unwrap();
-                vars.extend(next_abstraction.vars().clone());
-                abstraction = next_abstraction;
-            }
-            
-            Abstraction::create(vars, abstraction.kernel().clone())
-        }
+        let minlog_type = ArrowType::create(var.minlog_type(), kernel.minlog_type());
+        
+        MinlogTerm::Abstraction(Rc::new(KernelAbstraction { var, kernel, minlog_type, }).into())
     }
     
     pub fn closure(minlog_term: &MinlogTerm) -> MinlogTerm {
-        let mut vars = vec![];
+        let vars = minlog_term.get_free_variables(&mut IndexSet::new())
+            .into_iter().collect();
         
-        for var in minlog_term.get_free_variables(&mut IndexSet::new()) {
-            if var.is_variable() && !vars.contains(&var) {
-                vars.push(var);
-            }
+        Abstraction::create_nested(vars, minlog_term.clone())
+    }
+    
+    pub fn var(&self) -> &MinlogTerm {
+        &self.var
+    }
+    
+    pub fn all_vars(&self) -> Vec<MinlogTerm> {
+        let mut current = &Abstraction::Kernel(Rc::new(self.clone()));
+        let mut vars = vec![current.var().clone()];
+        
+        while let Some(next_abstraction) = current.kernel().to_abstraction() {
+            vars.push(next_abstraction.var().clone());
+            current = next_abstraction;
         }
         
-        Abstraction::create(vars, minlog_term.clone())
+        vars
     }
     
-    pub fn arity(&self) -> usize {
-        self.vars.len()
-    }
-    
-    pub fn vars(&self) -> &Vec<MinlogTerm> {
-        &self.vars
-    }
-    
-    pub fn var(&self, index: usize) -> Option<&MinlogTerm> {
-        self.vars.get(index)
+    pub fn var_at(&self, index: usize) -> Option<&MinlogTerm> {
+        if index == 0 {
+            Some(&self.var)
+        } else if self.kernel.is_abstraction() {
+            self.kernel.to_abstraction().unwrap().var_at(index - 1)
+        } else {
+            None
+        }
     }
     
     pub fn kernel(&self) -> &MinlogTerm {
         &self.kernel
+    }
+    
+    pub fn final_kernel(&self) -> &MinlogTerm {
+        if let Some(next_abstraction) = self.kernel.to_abstraction() {
+            next_abstraction.final_kernel()
+        } else {
+            &self.kernel
+        }
     }
 }
 
@@ -95,69 +84,39 @@ impl TermBody for KernelAbstraction {
     fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm {
         let kernel = self.kernel.normalize(eta, pi);
         
-        let mut vars = vec![];
-        
-        if eta {
-            let free_vars = kernel.get_free_variables(&mut IndexSet::new());
-            for var in &self.vars {
-                if free_vars.contains(var) {
-                    vars.push(var.clone());
-                }
-            }
+        if eta && !kernel.contains_free_variable(&self.var) {
+            kernel
         } else {
-            vars = self.vars.clone();
-        }
-
-        if vars.is_empty() {
-            kernel.normalize(eta, pi)
-        } else {
-            Abstraction::create(vars, kernel.normalize(eta, pi))
+            Abstraction::create(self.var.clone(), kernel)
         }
     }
     
-    fn apply_args(&self, args: &Vec<MinlogTerm >) -> Option<MinlogTerm> {
-        let applicable_args = min(args.len(), self.vars.len());
-        let mut subst = TermSubstitution::make_empty();
-        
-        for (var, arg) in self.vars[..applicable_args].iter().zip(args[..applicable_args].iter()) {
-            if var.minlog_type() != arg.minlog_type() {
-                panic!("Tried to apply argument of incompatible type to abstraction");
-            }
-            
-            if arg.contains_free_variable(var) {
-                panic!("Tried to apply argument that contains the bound variable");
-            }
-            
-            subst.extend((var.clone().into(), arg.clone().into()));
+    fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm> {
+        if self.var.minlog_type() != arg.minlog_type() {
+            panic!("Tried to apply argument of incompatible type to abstraction");
         }
         
-        let applied_kernel = subst.substitute(&self.kernel);
-        
-        let remaining_vars = self.vars[applicable_args..].to_vec();
-        
-        let remaining_abs = if remaining_vars.is_empty() {
-            applied_kernel
-        } else {
-            Abstraction::create(remaining_vars, applied_kernel)
-        };
-        
-        let remaining_args = args[applicable_args..].to_vec();
-        
-        if remaining_args.is_empty() {
-            Some(remaining_abs)
-        } else {
-            Some(KernelApplication::create(remaining_abs, remaining_args))
+        if arg.contains_free_variable(&self.var) {
+            panic!("Tried to apply argument that contains the bound variable");
         }
+        
+        let subst = TermSubstitution::from_pairs(vec![
+            (self.var.clone().into(), arg.into())
+        ]);
+        
+        Some(subst.substitute(&self.kernel))
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
-        let new_vars = self.vars.iter()
-            .filter_map(|v| v.remove_nulls())
-            .collect::<Vec<_>>();
-        
-        self.kernel.remove_nulls().map(|k|
-            Abstraction::create(new_vars, k)
-        )
+        if let Some(new_kernel) = self.kernel.remove_nulls() {
+            if let Some(new_var) = self.var.remove_nulls() {
+                Some(Abstraction::create(new_var, new_kernel))
+            } else {
+                Some(new_kernel)
+            }
+        } else {
+            None
+        }
     }
     
     fn length(&self) -> usize {
@@ -178,12 +137,13 @@ impl TermBody for KernelAbstraction {
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.kernel.get_free_variables(visited).into_iter()
-            .filter(|v| !self.vars.contains(v))
+            .filter(|v| v != &self.var)
             .collect()
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        self.kernel.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
+        self.kernel.get_bound_variables(visited)
+            .union(&vec![self.var.clone()].into_iter().collect::<IndexSet<_>>()).cloned().collect()
     }
     
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
@@ -196,26 +156,20 @@ impl TermBody for KernelAbstraction {
     
     fn alpha_equivalent(&self, other: &MinlogTerm,
         forward: &mut Vec<(TermVariable, TermVariable)>,
-        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
-        
+        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
+    {
         if !other.is_abstraction() {
             return false;
         }
         
         let other = other.to_abstraction().unwrap();
         
-        if self.vars.len() != other.vars().len() {
+        if self.var.minlog_type() != other.var().minlog_type() {
             return false;
         }
         
-        for (v1, v2) in self.vars.iter().zip(other.vars().iter()) {
-            if v1.minlog_type() != v2.minlog_type() {
-                return false;
-            }
-            
-            forward.push((v1.to_variable().unwrap().clone(), v2.to_variable().unwrap().clone()));
-            backward.push((v2.to_variable().unwrap().clone(), v1.to_variable().unwrap().clone()));
-        }
+        forward.push((self.var.to_variable().unwrap().clone(), other.var().to_variable().unwrap().clone()));
+        backward.push((other.var().to_variable().unwrap().clone(), self.var.to_variable().unwrap().clone()));
         
         self.kernel.alpha_equivalent(other.kernel(), forward, backward)
     }
@@ -224,19 +178,17 @@ impl TermBody for KernelAbstraction {
         if let Some(from_tm) = from.to_term() {
             if from_tm.is_abstraction() && Abstraction::Kernel(Rc::new(self.clone())) == *from_tm.to_abstraction().unwrap() {
                 to.to_term().unwrap()
-            } else if from_tm.is_variable() && self.vars.contains(&from_tm) {
+            } else if from_tm.is_variable() && from_tm == self.var {
                 MinlogTerm::Abstraction(Rc::new(self.clone()).into())
             } else {
                 let new_kernel = self.kernel.substitute(from, to);
-                Abstraction::create(self.vars.clone(), new_kernel)
+                Abstraction::create(self.var.clone(), new_kernel)
             }
         } else {
-            let new_vars = self.vars.iter()
-                .map(|v| v.substitute(from, to)).collect::<Vec<_>>();
-            
+            let new_var = self.var.substitute(from, to);
             let new_kernel = self.kernel.substitute(from, to);
             
-            Abstraction::create(new_vars, new_kernel)
+            Abstraction::create(new_var, new_kernel)
         }
     }
     
@@ -250,30 +202,21 @@ impl TermBody for KernelAbstraction {
         }
         
         let other_abs = other.to_abstraction().unwrap();
-
-        if self.vars.len() != other_abs.vars().len() {
-            return Some((MinlogTerm::Abstraction(Rc::new(self.clone()).into()).into(), other.clone().into()));
+        
+        if self.var.minlog_type() != other_abs.var().minlog_type() {
+            return Some((self.var.minlog_type().clone().into(), other_abs.var().minlog_type().clone().into()));
         }
         
-        let mut subst = TermSubstitution::make_empty();
-        
-        for (v1, v2) in self.vars.iter().zip(other_abs.vars().iter()) {
-            if v1 == v2 {
-                continue;
-            } else if v1.minlog_type() == v2.minlog_type() {
-                subst.extend((TermSubstEntry::Term(v2.clone()), TermSubstEntry::Term(v1.clone())));
-            } else {
-                return Some((v1.clone().into(), v2.clone().into()));
-            }
-        }
-        
-        let new_other = subst.substitute(&TermSubstEntry::Term(other.clone()));
-        
-        if let TermSubstEntry::Term(t) = new_other {
-            self.kernel.first_conflict_with(t.to_abstraction().unwrap().kernel())
+        let other_kernel = if self.var == *other_abs.var() {
+            other_abs.kernel()
         } else {
-            panic!("Substitution of abstraction resulted in type.");
-        }
+            &other_abs.kernel().substitute(
+                &other_abs.var().clone().into(),
+                &self.var.clone().into()
+            )
+        };
+        
+        self.kernel.first_conflict_with(other_kernel)
     }
 
     fn match_with(&self, instance: &MinlogTerm) -> MatchOutput<TermSubstEntry> {
@@ -283,46 +226,22 @@ impl TermBody for KernelAbstraction {
         
         let abs_instance = instance.to_abstraction().unwrap();
         
-        if self.arity() != abs_instance.arity() {
-            return MatchOutput::FailedMatch;
-        }
-        
-        let mut conditions = self.vars.iter().zip(abs_instance.vars().iter())
-            .filter_map(|(v1, v2)| {
-                if v1 != v2 {
-                    Some((v1.into(), v2.into()))
-                } else {
-                    None
-                }
-            }).collect::<IndexMap<_, _>>();
-            
-        if self.kernel != *abs_instance.kernel() {
-            conditions.insert(self.kernel.clone().into(), abs_instance.kernel().clone().into());
-        }
+        let conditions = IndexMap::from([
+            (self.var.clone().into(), abs_instance.var().clone().into()),
+            (self.kernel.clone().into(), abs_instance.kernel().clone().into()),
+        ]);
         
         MatchOutput::Matched(conditions)
     }
 }
 
 impl PrettyPrintable for KernelAbstraction {
-    fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.vars.is_empty() {
-            return self.kernel.to_pp_element(detail);
-        }
-        
-        let variables = PPElement::list(
-            self.vars.iter().map(|v| v.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 4, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 4, false),
-            BreakType::Flexible
-        );
-        
+    fn to_pp_element(&self, detail: bool) -> PPElement {        
         let elements = vec![
             PPElement::group(vec![
                 PPElement::text("[".to_string()),
                 PPElement::break_elem(1, 4, false),
-                variables,
+                self.var.to_pp_element(detail),
                 PPElement::break_elem(1, 0, false),
                 PPElement::text("]".to_string())
             ], BreakType::Consistent, 0),
@@ -349,17 +268,19 @@ impl PrettyPrintable for KernelAbstraction {
 }
 
 pub trait NativeAbstraction: NativeTermBody {
-    fn arity(&self) -> usize;
+    fn var(&self) -> &MinlogTerm;
     
-    fn vars(&self) -> &Vec<MinlogTerm>;
+    fn all_vars(&self) -> Vec<MinlogTerm>;
     
-    fn var(&self, index: usize) -> Option<&MinlogTerm>;
+    fn var_at(&self, index: usize) -> Option<&MinlogTerm>;
     
     fn kernel(&self) -> &MinlogTerm;
     
+    fn final_kernel(&self) -> &MinlogTerm;
+    
     fn to_kernel(&self) -> KernelAbstraction {
         KernelAbstraction {
-            vars: self.vars().clone(),
+            var: self.var().clone(),
             kernel: self.kernel().clone(),
             minlog_type: self.minlog_type(),
         }
@@ -378,7 +299,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     
@@ -412,13 +333,15 @@ wrapper_enum::wrapper_enum! {
     }
     
     fwd trait AbstractionForwards {
-        pub fwd fn arity(&self) -> usize
+        pub fwd fn var(&self) -> &MinlogTerm
         
-        pub fwd fn vars(&self) -> &Vec<MinlogTerm>
+        pub fwd fn all_vars(&self) -> Vec<MinlogTerm>
         
-        pub fwd fn var(&self, index: usize) -> Option<&MinlogTerm>
+        pub fwd fn var_at(&self, index: usize) -> Option<&MinlogTerm>
         
         pub fwd fn kernel(&self) -> &MinlogTerm
+        
+        pub fwd fn final_kernel(&self) -> &MinlogTerm
     }
     
     ext trait PrettyPrintable {
@@ -433,8 +356,18 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl Abstraction {
-    pub fn create(vars: Vec<MinlogTerm>, kernel: MinlogTerm) -> MinlogTerm {
-        KernelAbstraction::create(vars, kernel)
+    pub fn create(var: MinlogTerm, kernel: MinlogTerm) -> MinlogTerm {
+        KernelAbstraction::create(var, kernel)
+    }
+    
+    pub fn create_nested(vars: Vec<MinlogTerm>, kernel: MinlogTerm) -> MinlogTerm {
+        let mut result = kernel;
+        
+        for var in vars.into_iter().rev() {
+            result = Abstraction::create(var, result);
+        }
+        
+        result
     }
     
     pub fn into_kernel_abstraction(self) -> Rc<KernelAbstraction> {

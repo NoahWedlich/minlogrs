@@ -39,8 +39,8 @@ fn main() {
     println!("{}", eq_pred.debug_string());
     
     let eq_intro = AllQuantifier::create(
-        vec![tmvar.clone()],
-        PrimeFormula::create(
+        tmvar.clone(),
+        PrimeFormula::create_nested(
             eq_pred.clone(),
             vec![tmvar.clone(), tmvar.clone()]
         )
@@ -92,17 +92,15 @@ fn main() {
     
     let bool_var = TermVariable::create("b".to_string(), bool_type.clone());
     let atom_intro = AllQuantifier::create(
-        vec![bool_var.clone()],
+        bool_var.clone(),
         Implication::create(
-            vec![
-                PrimeFormula::create(
-                    eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
-                    vec![bool_var.clone(), true_const.clone()]
-                )
-            ],
+            PrimeFormula::create_nested(
+                eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
+                vec![bool_var.clone(), true_const.clone()]
+            ),
             PrimeFormula::create(
                 atom_pred.clone(),
-                vec![bool_var.clone()]
+                bool_var.clone()
             )
         )
     );
@@ -137,7 +135,7 @@ fn main() {
     let zero = Constructor::create("Zero".to_string(), nat_type.clone());
     nat.add_constructor(zero.clone());
     
-    let succ_type = ArrowType::create(vec![nat_type.clone()], nat_type.clone());
+    let succ_type = ArrowType::create(nat_type.clone(), nat_type.clone());
     let succ = Constructor::create("Succ".to_string(), succ_type.clone());
     nat.add_constructor(succ.clone());
     
@@ -166,7 +164,7 @@ fn main() {
     let nil_constr = Constructor::create("Nil".to_string(), list_type.clone());
     list_alg.add_constructor(nil_constr.clone());
     
-    let cons_type = ArrowType::create(vec![tvar.clone(), list_type.clone()], list_type.clone());
+    let cons_type = ArrowType::create_nested(vec![tvar.clone(), list_type.clone()], list_type.clone());
     let cons_constr = Constructor::create("Cons".to_string(), cons_type.clone());
     list_alg.add_constructor(cons_constr.clone());
     
@@ -196,10 +194,10 @@ fn main() {
     let tree_alg = Algebra::create("Tree".to_string());
     let tree_type = AlgebraType::create(tree_alg.clone(), TypeSubstitution::make_empty());
     
-    let leaf_constr = Constructor::create("Leaf".to_string(), ArrowType::create(vec![tvar.clone()], tree_type.clone()));
+    let leaf_constr = Constructor::create("Leaf".to_string(), ArrowType::create(tvar.clone(), tree_type.clone()));
     tree_alg.add_constructor(leaf_constr.clone());
     
-    let node_type = ArrowType::create(vec![tvar.clone(), tree_type.clone(), tree_type.clone()], tree_type.clone());
+    let node_type = ArrowType::create_nested(vec![tvar.clone(), tree_type.clone(), tree_type.clone()], tree_type.clone());
     let node_constr = Constructor::create("Node".to_string(), node_type.clone());
     tree_alg.add_constructor(node_constr.clone());
     
@@ -233,7 +231,7 @@ fn main() {
     let odd_const = InductiveConstant::create("Odd".to_string(), TupleType::create(vec![nat_type.clone()]));
     let odd_pred = InductivePredicate::create(odd_const.clone(), PredicateSubstitution::make_empty());
     
-    let zero_even = PrimeFormula::create(even_pred.clone(), vec![zero.clone()]);
+    let zero_even = PrimeFormula::create(even_pred.clone(), zero.clone());
     even_const.add_clause("ZeroEven".to_string(), zero_even);
     
     let nat_var_1 = TermVariable::create("n".to_string(), nat_type.clone());
@@ -242,34 +240,30 @@ fn main() {
     let nat_var_4 = TermVariable::create("m0".to_string(), nat_type.clone());
     
     let succ_even_odd = AllQuantifier::create(
-        vec![nat_var_1.clone()],
+        nat_var_1.clone(),
         Implication::create(
-            vec![
-                PrimeFormula::create(
-                    odd_pred.clone(),
-                    vec![nat_var_1.clone()]
-                )
-            ],
+            PrimeFormula::create(
+                odd_pred.clone(),
+                nat_var_1.clone()
+            ),
             PrimeFormula::create(
                 even_pred.clone(),
-                vec![Application::create(succ.clone(), vec![nat_var_1.clone()])]
+                Application::create(succ.clone(), nat_var_1.clone())
             )
         )
     );
     even_const.add_clause("SuccEvenOdd".to_string(), succ_even_odd);
     
     let succ_odd_even = AllQuantifier::create(
-    vec![nat_var_2.clone()],
+    nat_var_2.clone(),
     Implication::create(
-        vec![
             PrimeFormula::create(
                 even_pred.clone(),
-                vec![nat_var_2.clone()]
-            )
-            ],
+                nat_var_2.clone()
+            ),
             PrimeFormula::create(
                 odd_pred.clone(),
-                vec![Application::create(succ.clone(), vec![nat_var_2.clone()])]
+                Application::create(succ.clone(), nat_var_2.clone())
             )
         )
     );
@@ -312,7 +306,7 @@ fn main() {
     
     let nat_eq = ProgramConstant::create(
         "NatEq".to_string(),
-        ArrowType::create(
+        ArrowType::create_nested(
             vec![nat_type.clone(), nat_type.clone()],
             bool_type.clone()
         ),
@@ -323,7 +317,7 @@ fn main() {
     println!("{}", nat_eq_term.debug_string());
     
     let zero_eq_zero = RewriteRule::create(
-        Application::create(
+        Application::create_nested(
             nat_eq_term.clone(),
             vec![zero.clone(), zero.clone()]
         ),
@@ -332,23 +326,23 @@ fn main() {
     nat_eq.add_computation_rule(zero_eq_zero);
     
     let zero_neq_succ = RewriteRule::create(
-        Application::create(
+        Application::create_nested(
             nat_eq_term.clone(),
-            vec![zero.clone(), Application::create(succ.clone(), vec![nat_var_1.clone()])]
+            vec![zero.clone(), Application::create(succ.clone(), nat_var_1.clone())]
         ),
         false_const.clone()
     );
     nat_eq.add_computation_rule(zero_neq_succ);
     
     let succ_eq_succ = RewriteRule::create(
-        Application::create(
+        Application::create_nested(
             nat_eq_term.clone(),
             vec![
-                Application::create(succ.clone(), vec![nat_var_1.clone()]),
-                Application::create(succ.clone(), vec![nat_var_2.clone()])
+                Application::create(succ.clone(), nat_var_1.clone()),
+                Application::create(succ.clone(), nat_var_2.clone())
             ]
         ),
-        Application::create(
+        Application::create_nested(
             nat_eq_term.clone(),
             vec![nat_var_1.clone(), nat_var_2.clone()]
         )
@@ -362,10 +356,10 @@ fn main() {
     let algebra_type = AlgebraType::create(algebra.clone(), TypeSubstitution::make_empty());
     
     let test_const_type_0 = ArrowType::create(
-        vec![tvar.clone()],
+        tvar.clone(),
         algebra_type.clone()
     );
-    let test_const_type_1 = ArrowType::create(
+    let test_const_type_1 = ArrowType::create_nested(
         vec![tvar.clone(), algebra_type.clone()],
         algebra_type.clone()
     );
@@ -390,29 +384,29 @@ fn main() {
     println!("Reduced Algebra Type:");
     println!("{}", reduced_algebra_type.debug_string());
     
-    let target = AllQuantifier::create(
+    let target = AllQuantifier::create_nested(
         vec![nat_var_1.clone(), nat_var_2.clone()],
-        Implication::create(
+        Implication::create_nested(
             vec![
                 PrimeFormula::create(
                     nat_total.clone(),
-                    vec![nat_var_1.clone()]
+                    nat_var_1.clone()
                 ),
                 PrimeFormula::create(
                     nat_total.clone(),
-                    vec![nat_var_2.clone()]
+                    nat_var_2.clone()
                 ),
-                PrimeFormula::create(
-                eq_pred.substitute(&tvar.clone().into(), &nat_type.clone().into()),
-                vec![nat_var_1.clone(), nat_var_2.clone()]
-            )
+                PrimeFormula::create_nested(
+                    eq_pred.substitute(&tvar.clone().into(), &nat_type.clone().into()),
+                    vec![nat_var_1.clone(), nat_var_2.clone()]
+                )
             ],
             PrimeFormula::create(
                 atom_pred.clone(),
-                vec![Application::create(
+                Application::create_nested(
                     nat_eq_term.clone(),
                     vec![nat_var_1.clone(), nat_var_2.clone()]
-                )]
+                )
             )
         )
     );
@@ -449,24 +443,24 @@ fn main() {
     println!("Next Goal to Prove:");
     println!("{}", goal1.render_proof_tree());
     
-    let formula_to_prove0 = PrimeFormula::create(
-        ComprehensionTerm::create(
+    let formula_to_prove0 = PrimeFormula::create_nested(
+        ComprehensionTerm::create_nested(
             vec![nat_var_3.clone(), nat_var_4.clone()],
-            Implication::create(
+            Implication::create_nested(
                 vec![
                     PrimeFormula::create(
                         nat_total.clone(),
-                        vec![nat_var_3.clone()]
+                        nat_var_3.clone()
                     ),
                     PrimeFormula::create(
                         nat_total.clone(),
-                        vec![nat_var_4.clone()]
+                        nat_var_4.clone()
                     ),
                 ],
-                PrimeFormula::create(
+                PrimeFormula::create_nested(
                     eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
                     vec![
-                        Application::create(nat_eq_term.clone(), vec![nat_var_3.clone(), nat_var_4.clone()]),
+                        Application::create_nested(nat_eq_term.clone(), vec![nat_var_3.clone(), nat_var_4.clone()]),
                         true_const.clone()
                     ]
                 )
@@ -514,19 +508,17 @@ fn main() {
     println!("{}", goal3.render_proof_tree());
     
     let formula_to_prove1 = Implication::create(
-        vec![
-            PrimeFormula::create(
-                nat_total.clone(),
-                vec![nat_var_1.clone()]
-            ),
-        ],
+        PrimeFormula::create(
+            nat_total.clone(),
+            nat_var_1.clone()
+        ),
         PrimeFormula::create(
             ComprehensionTerm::create(
-                vec![nat_var_3.clone()],
-                PrimeFormula::create(
+                nat_var_3.clone(),
+                PrimeFormula::create_nested(
                     eq_pred.substitute(&tvar.clone().into(), &bool_type.clone().into()),
                     vec![
-                        Application::create(
+                        Application::create_nested(
                             nat_eq_term.clone(),
                             vec![nat_var_3.clone(), nat_var_3.clone()]
                         ),
@@ -534,7 +526,7 @@ fn main() {
                     ]
                 )
             ),
-            vec![nat_var_1.clone()]
+            nat_var_1.clone()
         )
     );
     println!("Next Goal Formula:");
@@ -616,7 +608,7 @@ fn main() {
     println!("Extracted Term of Complete Proof:");
     println!("{}", et_term.clone().map(|t| t.debug_string()).unwrap_or("None".to_string()));
     
-    let zero_eq_zero = PrimeFormula::create(
+    let zero_eq_zero = PrimeFormula::create_nested(
         eq_pred.substitute(&tvar.clone().into(), &nat_type.clone().into()),
         vec![zero.clone(), zero.clone()]
     );
@@ -633,19 +625,15 @@ fn main() {
     
     let three = Application::create(
         succ.clone(),
-        vec![
+        Application::create(
+            succ.clone(),
             Application::create(
                 succ.clone(),
-                vec![
-                    Application::create(
-                        succ.clone(),
-                        vec![zero.clone()]
-                    )
-                ]
+                zero.clone()
             )
-        ]
+        )
     );
-    let three_eq_three = PrimeFormula::create(
+    let three_eq_three = PrimeFormula::create_nested(
         eq_pred.substitute(&tvar.clone().into(), &nat_type.clone().into()),
         vec![three.clone(), three.clone()]
     );
@@ -660,7 +648,7 @@ fn main() {
     println!("Three Equals Three Proof by Introduction:");
     println!("{}", three_eq_intro.render_proof_tree());
     
-    let three_comp_eq_three = Application::create(
+    let three_comp_eq_three = Application::create_nested(
         et_term.unwrap(),
         vec![three.clone(), three.clone(), three_eq_intro.extracted_term().unwrap()]
     );

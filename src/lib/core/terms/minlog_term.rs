@@ -14,7 +14,7 @@ wrapper_enum::wrapper_enum! {
         
         pub fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
         
-        pub fwd fn apply_args(&self, _args: &Vec<MinlogTerm>) -> Option<MinlogTerm> {
+        pub fwd fn apply_arg(&self, _arg: MinlogTerm) -> Option<MinlogTerm> {
             None
         }
         

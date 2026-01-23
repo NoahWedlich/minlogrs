@@ -45,9 +45,9 @@ pub fn extract_elimination_axiom(idp: &Rc<MinlogPredicate>, elim_axioms: &mut In
         let arguments = (0..ridp.unpacked_arity().len()).map(|i| {
             TermVariable::create(format!("x{}", i), ridp.unpacked_arity()[i].clone())
         }).collect::<Vec<_>>();
-        let predicate_clause = PrimeFormula::create(ridp.clone(), arguments.clone());
+        let predicate_clause = PrimeFormula::create_nested(ridp.clone(), arguments.clone());
         
-        let conclusion = PrimeFormula::create(
+        let conclusion = PrimeFormula::create_nested(
             pvars.get(ridp).unwrap().clone(),
             arguments.clone()
         );
@@ -58,9 +58,9 @@ pub fn extract_elimination_axiom(idp: &Rc<MinlogPredicate>, elim_axioms: &mut In
         
         let elim_axiom = Axiom::create(
             format!("{}Elim", ridp.to_inductive_predicate().unwrap().name()),
-            AllQuantifier::create(
+            AllQuantifier::create_nested(
                 arguments,
-                Implication::create(all_clauses, conclusion)
+                Implication::create_nested(all_clauses, conclusion)
             )
         );
         
@@ -82,25 +82,25 @@ fn outer_clause_to_elimination_clause(
 ) -> Rc<MinlogPredicate> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {
-            if let Some(pvar) = pvars.get(prime.body()) {
-                PrimeFormula::create(pvar.clone(), prime.arguments().clone())
+            if let Some(pvar) = pvars.get(prime.final_body()) {
+                PrimeFormula::create_nested(pvar.clone(), prime.all_arguments().clone())
             } else {
                 panic!("Expected prime formula body to be a relevant idp, found: {}", prime.body().debug_string());
             }
         },
         MinlogPredicate::Implication(imp) => {
-            let premises = imp.premises().iter().flat_map(|premise| {
+            let premises = imp.all_premises().iter().flat_map(|premise| {
                 inner_clause_to_elimination_clause(premise, pvars)
             }).collect::<Vec<_>>();
             
-            let conclusion = outer_clause_to_elimination_clause(imp.conclusion(), pvars);
+            let conclusion = outer_clause_to_elimination_clause(imp.final_conclusion(), pvars);
             
-            Implication::create(premises, conclusion)
+            Implication::create_nested(premises, conclusion)
         },
         MinlogPredicate::AllQuantifier(all) => {
-            AllQuantifier::create(
-                all.vars().clone(),
-                outer_clause_to_elimination_clause(all.body(), pvars)
+            AllQuantifier::create_nested(
+                all.all_vars().clone(),
+                outer_clause_to_elimination_clause(all.final_body(), pvars)
             )
         },
         _ => {
@@ -115,30 +115,30 @@ fn inner_clause_to_elimination_clause(
 ) -> Vec<Rc<MinlogPredicate>> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {
-            if let Some(pvar) = pvars.get(prime.body()) {
+            if let Some(pvar) = pvars.get(prime.final_body()) {
                 vec![
                     clause.clone(),
-                    PrimeFormula::create(pvar.clone(), prime.arguments().clone())
+                    PrimeFormula::create_nested(pvar.clone(), prime.all_arguments().clone())
                 ]
             } else {
                 vec![clause.clone()]
             }
         },
         MinlogPredicate::Implication(imp) => {
-            let premises = imp.premises().iter().flat_map(|premise| {
+            let premises = imp.all_premises().iter().flat_map(|premise| {
                 inner_clause_to_elimination_clause(premise, pvars)
             }).collect::<Vec<_>>();
             
-            let conclusions = inner_clause_to_elimination_clause(imp.conclusion(), pvars);
+            let conclusions = inner_clause_to_elimination_clause(imp.final_conclusion(), pvars);
             
             conclusions.into_iter().map(|conclusion| {
-                Implication::create(premises.clone(), conclusion)
+                Implication::create_nested(premises.clone(), conclusion)
             }).collect::<Vec<_>>()
         },
         MinlogPredicate::AllQuantifier(all) => {
-            inner_clause_to_elimination_clause(all.body(), pvars).into_iter().map(|body| {
-                AllQuantifier::create(
-                    all.vars().clone(),
+            inner_clause_to_elimination_clause(all.final_body(), pvars).into_iter().map(|body| {
+                AllQuantifier::create_nested(
+                    all.all_vars().clone(),
                     body
                 )
             }).collect::<Vec<_>>()
@@ -154,6 +154,7 @@ fn create_computational_content_for_elimination_axioms(
     elimination_clauses: &IndexMap<Rc<MinlogPredicate>, IndexMap<String, Rc<MinlogPredicate>>>,
     elim_axioms: &mut IndexMap<Rc<MinlogPredicate>, Rc<MinlogProof>>
 ) {
+    // TODO: Rewrite this to make it clearer and more efficient
     if rel_idps.iter().any(|ridp| ridp.extracted_type().is_null()) {
         return;
     }
@@ -196,7 +197,7 @@ fn create_computational_content_for_elimination_axioms(
         let mut var_index = 0usize;
         for constr in rel_contents.get(ridp).unwrap().algebra.to_algebra().unwrap().constructors() {
             let arg_vars = if let Some(arrow_type) = constr.minlog_type().to_arrow() {
-                arrow_type.arguments().iter().map(|arg_type| {
+                arrow_type.all_arguments().iter().map(|arg_type| {
                     let var = TermVariable::create(format!("z{}", var_index), arg_type.clone());
                     var_index += 1;
                     var
@@ -206,7 +207,7 @@ fn create_computational_content_for_elimination_axioms(
             };
             
             curr_patterns.push(
-                Application::create(
+                Application::create_nested(
                     constr.clone(),
                     arg_vars
                 )
@@ -225,7 +226,7 @@ fn create_computational_content_for_elimination_axioms(
             match pat {
                 MinlogTerm::Application(app) => {
                     let mut new_args = vec![];
-                    for arg in app.operands().iter() {
+                    for arg in app.all_operands().iter() {
                         if let Some(idp) = rel_idps.iter().find(|ridp| {
                             arg.minlog_type() == ridp.extracted_type_pattern()
                         }) {
@@ -241,7 +242,7 @@ fn create_computational_content_for_elimination_axioms(
                             }
                             
                             new_args.push(
-                                Application::create(
+                                Application::create_nested(
                                     pterm,
                                     pterm_args
                                 )
@@ -251,10 +252,10 @@ fn create_computational_content_for_elimination_axioms(
                         }
                     }
                     
-                    let proof_var = proof_variables.get(app.operator()).unwrap();
+                    let proof_var = proof_variables.get(app.final_operator()).unwrap();
                     curr_instances.insert(
                         pat.clone(),
-                        Application::create(
+                        Application::create_nested(
                             proof_var.clone(),
                             new_args
                         )
@@ -289,7 +290,7 @@ fn create_computational_content_for_elimination_axioms(
             }
             
             let rewrite_rule = RewriteRule::create(
-                Application::create(
+                Application::create_nested(
                     pterm.clone(),
                     arguments
                 ),

@@ -52,12 +52,12 @@ fn constructor_to_totality_clause(
     match constructor.minlog_type().as_ref() {
         MinlogType::Algebra(_) => {
             let totality_pred = extract_totality(&constructor.minlog_type(), totalities);
-            PrimeFormula::create(totality_pred, vec![constructor.clone()])
+            PrimeFormula::create(totality_pred, constructor.clone())
         },
         MinlogType::Arrow(arrow_type) => {
             let mut var_index = 0usize;
             
-            let vars = arrow_type.arguments().iter().map(|arg_type| {
+            let vars = arrow_type.all_arguments().iter().map(|arg_type| {
                 let var = TermVariable::create(format!("v{}", var_index), arg_type.clone());
                 var_index += 1;
                 var
@@ -67,19 +67,19 @@ fn constructor_to_totality_clause(
                 term_to_totality_condition(var.clone(), totalities, &mut var_index)
             }).collect::<Vec<_>>();
 
-            let value = Application::create(
+            let value = Application::create_nested(
                 constructor.clone(),
                 vars.iter().map(|v| v.clone() as MinlogTerm).collect()
             );
             
             if let Some(totality_pred) = totalities.get(&value.minlog_type()) {
-                let value_clause = PrimeFormula::create(totality_pred.clone(), vec![value]);
+                let value_clause = PrimeFormula::create(totality_pred.clone(), value);
                 
                 if var_clauses.is_empty() {
                     AllQuantifier::closure(&value_clause)
                 } else {
                     AllQuantifier::closure(
-                        &Implication::create(var_clauses, value_clause)
+                        &Implication::create_nested(var_clauses, value_clause)
                     )
                 }
             } else {
@@ -100,17 +100,17 @@ fn term_to_totality_condition(
     match term.minlog_type().as_ref() {
         MinlogType::Variable(_) => {
             if let Some(totality) = totalities.get(&term.minlog_type()) {
-                Some(PrimeFormula::create(totality.clone(), vec![term]))
+                Some(PrimeFormula::create(totality.clone(), term))
             } else {
                 panic!("No totality predicate found for type variable");
             }
         },
         MinlogType::Algebra(_) => {
             let totality = extract_totality(&term.minlog_type(), totalities);
-            Some(PrimeFormula::create(totality, vec![term]))
+            Some(PrimeFormula::create(totality, term))
         },
         MinlogType::Arrow(arrow_type) => {
-            let argument_vars = arrow_type.arguments().iter().map(|arg_type| {
+            let argument_vars = arrow_type.all_arguments().iter().map(|arg_type| {
                 let var = TermVariable::create(format!("v{}", var_index), arg_type.clone());
                 *var_index += 1;
                 var
@@ -120,20 +120,20 @@ fn term_to_totality_condition(
                 term_to_totality_condition(arg_var.clone(), totalities, var_index)
             }).collect::<Vec<_>>();
             
-            let value = Application::create(
+            let value = Application::create_nested(
                 term.clone(),
                 argument_vars.iter().map(|v| v.clone() as MinlogTerm).collect()
             );
             
             if let Some(totality) = totalities.get(&value.minlog_type()) {
-                let value_clause = PrimeFormula::create(totality.clone(), vec![value]);
+                let value_clause = PrimeFormula::create(totality.clone(), value);
                 
                 if argument_clauses.is_empty() {
                     Some(value_clause)
                 } else {
-                    Some(AllQuantifier::create(
+                    Some(AllQuantifier::create_nested(
                         argument_vars,
-                        Implication::create(argument_clauses, value_clause)
+                        Implication::create_nested(argument_clauses, value_clause)
                     ))
                 }
             } else {
@@ -151,7 +151,7 @@ fn term_to_totality_condition(
             } else if conditions.len() == 1 {
                 Some(conditions.into_iter().next().unwrap())
             } else {
-                Some(Implication::create(
+                Some(Implication::create_nested(
                     conditions[..conditions.len()-1].to_vec(), 
                     conditions[conditions.len()-1].clone()
                 ))

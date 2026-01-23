@@ -11,71 +11,83 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AllQuantifier {
-    vars: Vec<MinlogTerm>,
+    var: MinlogTerm,
     body: Rc<MinlogPredicate>,
 }
 
 impl AllQuantifier {
-    pub fn create(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let vars = vars.into_iter()
-            .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
-            .collect::<Vec<MinlogTerm>>();
-        
-        if vars.is_empty() {
+    pub fn create(var: MinlogTerm, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
             return body;
         }
         
-        if vars.iter().any(|v| !v.is_variable()) {
+        if !var.is_variable() {
             panic!("AllQuantifier can only quantify over variable terms");
         }
         
-        for (i, v) in vars.iter().enumerate() {
-            for v2 in vars.iter().skip(i + 1) {
-                if v == v2 {
-                    panic!("AllQuantifier cannot quantify over the same variable multiple times");
-                }
-            }
+        if body.contains_bound_variable(&var) {
+            panic!("AllQuantifier variable {} already bound in body {}",
+                var.debug_string(),
+                body.debug_string()
+            );
         }
         
-        AllQuantifier::collapse(&Rc::new(MinlogPredicate::AllQuantifier(AllQuantifier { vars, body })))
+        Rc::new(MinlogPredicate::AllQuantifier(AllQuantifier { var, body }))
     }
     
-    pub fn collapse(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        if !minlog_formula.is_all_quantifier() || !minlog_formula.to_all_quantifier().unwrap().body.is_all_quantifier() {
-            minlog_formula.clone()
-        } else {
-            let mut aq = minlog_formula.to_all_quantifier().unwrap();
-            let mut vars = aq.vars().clone();
-            
-            while aq.body.is_all_quantifier() {
-                let next_aq = aq.body.to_all_quantifier().unwrap();
-                vars.extend(next_aq.vars().clone());
-                aq = next_aq;
-            }
-            
-            AllQuantifier::create(vars, aq.body().clone())
+    pub fn create_nested(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        let mut current_body = body;
+        
+        for var in vars.into_iter().rev() {
+            current_body = AllQuantifier::create(var, current_body);
         }
+        
+        current_body
     }
     
     pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let free_vars: Vec<MinlogTerm> = minlog_formula.get_free_variables(&mut IndexSet::new()).into_iter().collect();
-        if free_vars.is_empty() {
-            minlog_formula.clone()
-        } else {
-            AllQuantifier::create(free_vars, minlog_formula.clone())
+        let vars = minlog_formula.get_free_variables(&mut IndexSet::new())
+            .into_iter().collect();
+        
+        AllQuantifier::create_nested(vars, minlog_formula.clone())
+    }
+    
+    pub fn var(&self) -> &MinlogTerm {
+        &self.var
+    }
+    
+    pub fn all_vars(&self) -> Vec<MinlogTerm> {
+        let mut current = self;
+        let mut vars = vec![current.var.clone()];
+        
+        while let MinlogPredicate::AllQuantifier(next_aq) = current.body.as_ref() {
+            vars.push(next_aq.var.clone());
+            current = next_aq;
         }
+        
+        vars
     }
     
-    pub fn vars(&self) -> &Vec<MinlogTerm> {
-        &self.vars
-    }
-    
-    pub fn var(&self, index: usize) -> Option<&MinlogTerm> {
-        self.vars.get(index)
+    pub fn var_at(&self, index: usize) -> Option<&MinlogTerm> {
+        if index == 0 {
+            Some(&self.var)
+        } else if self.body.is_all_quantifier() {
+            self.body.to_all_quantifier().unwrap().var_at(index - 1)
+        } else {
+            None
+        }
     }
     
     pub fn body(&self) -> &Rc<MinlogPredicate> {
         &self.body
+    }
+    
+    pub fn final_body(&self) -> &Rc<MinlogPredicate> {
+        if let MinlogPredicate::AllQuantifier(next_aq) = self.body.as_ref() {
+            next_aq.final_body()
+        } else {
+            &self.body
+        }
     }
 }
 
@@ -86,7 +98,7 @@ impl PredicateBody for AllQuantifier {
     
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
         let normalized_body = self.body.normalize(eta, pi);
-        AllQuantifier::create(self.vars.clone(), normalized_body)
+        AllQuantifier::create(self.var.clone(), normalized_body)
     }
     
     fn depth(&self) -> usize {
@@ -106,28 +118,26 @@ impl PredicateBody for AllQuantifier {
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        self.vars.iter()
-            .flat_map(|v| v.get_type_variables(&mut IndexSet::new()))
-            .chain(self.body.get_type_variables(visited))
-            .collect()
+        self.body.get_type_variables(visited)
+            .union(&self.var.get_type_variables(&mut IndexSet::new()))
+            .cloned().collect()
     }
     
     fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        self.vars.iter()
-            .flat_map(|v| v.get_algebra_types(&mut IndexSet::new()))
-            .chain(self.body.get_algebra_types(visited))
-            .collect()
+        self.body.get_algebra_types(visited)
+            .union(&self.var.get_algebra_types(&mut IndexSet::new()))
+            .cloned().collect()
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
         self.body.get_free_variables(visited).into_iter()
-            .filter(|v| !self.vars.contains(v))
+            .filter(|v| v != &self.var)
             .collect()
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
-        self.vars.iter().cloned()
-            .chain(self.body.get_bound_variables(visited))
+        self.body.get_bound_variables(visited).into_iter()
+            .chain(std::iter::once(self.var.clone()))
             .collect()
     }
     
@@ -148,45 +158,39 @@ impl PredicateBody for AllQuantifier {
     }
     
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
-        if let Some(tm) = from.to_term() && self.vars.contains(&tm) {
+        if let Some(tm) = from.to_term() && tm == self.var {
             Rc::new(MinlogPredicate::AllQuantifier(self.clone()))
         } else if let Some(pred) = from.to_predicate() && pred.is_all_quantifier() && self == pred.to_all_quantifier().unwrap() {
             to.to_predicate().unwrap()
         } else {
-            let new_vars = if let Some(tse) = from.to_term_subst_entry() {
-                self.vars.iter()
-                    .map(|v| v.substitute(&tse, &to.to_term_subst_entry().unwrap()))
-                    .collect()
+            let new_var = if let Some(tse) = from.to_term_subst_entry() {
+                self.var.substitute(&tse, &to.to_term_subst_entry().unwrap())
             } else {
-                self.vars.clone()
+                self.var.clone()
             };
             
             let new_body = self.body.substitute(from, to);
             
-            AllQuantifier::create(new_vars, new_body)
+            AllQuantifier::create(new_var, new_body)
         }
     }
     
     fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let MinlogPredicate::AllQuantifier(other_aq) = other.as_ref() {
-            if self.vars.len() != other_aq.vars.len() {
-                return Some((Rc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()));
+            if self.var.minlog_type() != other_aq.var.minlog_type() {
+                return Some((self.var.minlog_type().into(), other_aq.var.minlog_type().into()));
             }
             
-            let mut subst = PredicateSubstitution::make_empty();
+            let other_body = if self.var == other_aq.var {
+                other_aq.body()
+            } else {
+                &other_aq.body.substitute(
+                    &other_aq.var.clone().into(),
+                    &self.var.clone().into()
+                )
+            };
             
-            for (v1, v2) in self.vars.iter().zip(other_aq.vars.iter()) {
-                if v1 == v2 {
-                    continue;
-                } else if v1.minlog_type() == v2.minlog_type() {
-                    subst.extend((v2.clone().into(), v1.clone().into()));
-                } else {
-                    return Some((v1.clone().into(), v2.clone().into()));
-                }
-            }
-            
-            let substituted_body = subst.substitute::<PredSubstEntry>(&other_aq.body().into());
-            self.body.first_conflict_with(&substituted_body.to_predicate().unwrap())
+            self.body.first_conflict_with(other_body)
         } else {
             Some((Rc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()))
         }
@@ -199,42 +203,21 @@ impl PredicateBody for AllQuantifier {
         
         let aq_instance = instance.to_all_quantifier().unwrap();
         
-        if self.vars.len() != aq_instance.vars.len() {
-            return MatchOutput::FailedMatch;
-        }
-        
-        let mut conditions = self.vars.iter().zip(aq_instance.vars.iter())
-            .filter_map(|(v1, v2)| {
-                if v1 != v2 {
-                    Some((v1.clone().into(), v2.clone().into()))
-                } else {
-                    None
-                }
-            })
-            .collect::<IndexMap<_, _>>();
-        
-        if self.body != aq_instance.body {
-            conditions.insert(self.body.clone().into(), aq_instance.body.clone().into());
-        }
+        let conditions = IndexMap::from([
+            (self.var.clone().into(), aq_instance.var.clone().into()),
+            (self.body.clone().into(), aq_instance.body.clone().into()),
+        ]);
         
         MatchOutput::Matched(conditions)
     }
 }
 
 impl PrettyPrintable for AllQuantifier {
-    fn to_pp_element(&self, detail: bool) -> PPElement {
-        let variables = PPElement::list(
-            self.vars.iter().map(|v| v.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 0, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 0, false),
-            BreakType::Flexible,
-        );
-        
+    fn to_pp_element(&self, detail: bool) -> PPElement {        
         PPElement::group(vec![
             PPElement::text("all".to_string()),
             PPElement::break_elem(1, 4, false),
-            variables,
+            self.var.to_pp_element(detail),
             PPElement::break_elem(0, 4, false),
             PPElement::text(":".to_string()),
             PPElement::break_elem(1, 4, false),

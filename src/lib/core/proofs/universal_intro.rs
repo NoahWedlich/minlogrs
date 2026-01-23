@@ -24,7 +24,7 @@ impl UniversalIntro {
         }
         
         let inner_formula = proof.proved_formula();
-        let universal_formula = AllQuantifier::create(vec![variable.clone()], inner_formula);
+        let universal_formula = AllQuantifier::create(variable.clone(), inner_formula);
         
         Rc::new(MinlogProof::UniversalIntro(UniversalIntro {
             proof,

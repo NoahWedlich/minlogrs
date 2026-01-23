@@ -18,11 +18,8 @@ pub struct KernelMatchTerm {
 impl KernelMatchTerm {
     pub fn create(minlog_type: Rc<MinlogType>, branches: Vec<(MinlogTerm, MinlogTerm)>) -> MinlogTerm {
         if let Some(arr_type) = minlog_type.to_arrow() {
-            let argument_type = arr_type.arguments()[0].clone();
-            let return_type = ArrowType::create(
-                arr_type.arguments()[1..].to_vec(),
-                arr_type.value().clone(),
-            );
+            let argument_type = arr_type.argument().clone();
+            let return_type = arr_type.value().clone();
             
             for (pattern, result) in branches.iter() {
                 if pattern.minlog_type() != argument_type {
@@ -64,26 +61,16 @@ impl TermBody for KernelMatchTerm {
         MatchTerm::create(self.minlog_type.clone(), normalized_branches)
     }
     
-    fn apply_args(&self, args: &Vec<MinlogTerm >) -> Option<MinlogTerm> {
-        if let Some(to_match) = args.first() {
-            for (pattern, instance) in self.branches.iter() {
-                if let Some(subst) = TermSubstitution::match_with(&pattern.clone().into(), &to_match.clone().into()) {
-                    let substituted_instance = subst.substitute::<TermSubstEntry>(&instance.clone().into()).to_term().unwrap();
-                    
-                    let remaining_args = args[1..].to_vec();
-                    
-                    if remaining_args.is_empty() {
-                        return Some(substituted_instance.clone());
-                    } else {
-                        return Some(Application::create(substituted_instance.clone(), remaining_args.clone()));
-                    }
-                }
+    fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm> {
+        for (pattern, instance) in self.branches.iter() {
+            if let Some(subst) = TermSubstitution::match_with(&pattern.clone().into(), &arg.clone().into()) {
+                let substituted_instance = subst.substitute::<TermSubstEntry>(&instance.clone().into()).to_term().unwrap();
+                
+                return Some(substituted_instance.clone());
             }
-            
-            None
-        } else {
-            None
         }
+        
+        None
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
@@ -379,7 +366,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     

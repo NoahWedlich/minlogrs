@@ -21,8 +21,10 @@ impl KernelConstructor {
         }
         
         if !minlog_type.is_algebra() && (!minlog_type.is_arrow() ||
-            !minlog_type.to_arrow().unwrap().value().is_algebra()) {
-            panic!("Constructor type must be an algebra type or an arrow type ending in an algebra type");
+            !minlog_type.to_arrow().unwrap().final_value().is_algebra()) {
+            panic!("Constructor type must be an algebra type or an arrow type ending in an algebra type, got {}",
+                minlog_type.debug_string()
+            );
         }
         
         MinlogTerm::Constructor(Rc::new(KernelConstructor {
@@ -49,7 +51,7 @@ impl TermBody for KernelConstructor {
         let algebra_type = if let Some(algebra) = self.minlog_type.to_algebra() {
             algebra
         } else if let Some(arrow) = self.minlog_type.to_arrow() {
-            arrow.value().to_algebra()?
+            arrow.final_value().to_algebra()?
         } else {
             return None;
         };
@@ -202,7 +204,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     

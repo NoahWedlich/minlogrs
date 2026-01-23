@@ -75,7 +75,7 @@ impl AlgebraType {
             let constructor_type = constructor.minlog_type();
             
             if let Some(arrow_type) = constructor_type.to_arrow() {
-                for arg_type in arrow_type.arguments().iter() {
+                for arg_type in arrow_type.all_arguments().iter() {
                     let polarized_algs = arg_type.get_polarized_algebras(Polarity::StrictlyPositive, &mut IndexSet::new());
                     for polarized_alg in polarized_algs.iter() {
                         if !polarized_alg.polarity.is_strictly_positive() &&

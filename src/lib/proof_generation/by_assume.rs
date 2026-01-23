@@ -2,15 +2,11 @@
 use crate::includes::{
     essential::*,
     utils::*,
-    core::proofs::*,
-};
-
-use crate::core::{
-    predicates::{
-        minlog_predicate::MinlogPredicate,
-        implication::Implication,
-        all_quantifier::AllQuantifier
-    }, terms::minlog_term::MinlogTerm
+    core::{
+        terms::*,
+        predicates::*,
+        proofs::*,
+    }
 };
 
 enum AssumptionOrVariable {
@@ -23,6 +19,8 @@ pub fn generate_proof_by_assume(target: &Rc<MinlogPredicate>, names: &Vec<String
 }
 
 pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext, goal_name: String) -> Rc<MinlogProof> {
+    println!("Generating proof by assume for target: {}", target.debug_string());
+    
     let mut assumptions_and_vars = vec![];
     let mut remaining = target.clone();
     
@@ -39,7 +37,7 @@ pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &
         
         loop {
             if let Some(imp) = remaining.to_implication() {
-                for assumption in imp.premises().iter() {
+                for assumption in imp.all_premises().iter() {
                     assumptions_and_vars.push(AssumptionOrVariable::Assumption(
                         Assumption::create(
                             format!("a{}", assumption_count),
@@ -49,11 +47,11 @@ pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &
                     assumption_count += 1;
                 }
                 
-                remaining = imp.conclusion().clone();
+                remaining = imp.final_conclusion().clone();
             } else if let Some(all) = remaining.to_all_quantifier() {
-                let var = all.vars()[0].clone();
+                let var = all.var().clone();
                 assumptions_and_vars.push(AssumptionOrVariable::Variable(var.clone()));
-                remaining = AllQuantifier::create(all.vars()[1..].to_vec(), all.body().clone()).clone();
+                remaining = all.body().clone();
             } else {
                 break;
             }
@@ -61,13 +59,13 @@ pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &
     } else {
         for name in names {
             if let Some(imp) = remaining.to_implication() {
-                let assumption = Assumption::create(name.clone(), imp.premises()[0].clone());
+                let assumption = Assumption::create(name.clone(), imp.premise().clone());
                 assumptions_and_vars.push(AssumptionOrVariable::Assumption(assumption));
-                remaining = Implication::create(imp.premises()[1..].to_vec(), imp.conclusion().clone()).clone();
+                remaining = imp.conclusion().clone();
             } else if let Some(all) = remaining.to_all_quantifier() {
-                let var = all.vars()[0].clone();
+                let var = all.var().clone();
                 assumptions_and_vars.push(AssumptionOrVariable::Variable(var.clone()));
-                remaining = AllQuantifier::create(all.vars()[1..].to_vec(), all.body().clone()).clone();
+                remaining = all.body().clone();
             } else {
                 panic!("Couldn't assume {} from target {}", name, target.debug_string());
             }

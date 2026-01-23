@@ -15,20 +15,20 @@ pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<M
     
     let mut variables = vec![];
     while let Some(all) = proof.proved_formula().to_all_quantifier() {
-        let var = all.vars()[0].clone();
+        let var = all.var().clone();
         variables.push(var.clone());
         proof = UniversalElim::create(proof, var);
     }
     
     let mut idp_premises = vec![];
     while let Some(imp_inner) = proof.proved_formula().to_implication()
-        && let Some(first_prime) = imp_inner.premises().first().unwrap().to_prime()
-        && let Some(idp) = first_prime.body().to_inductive_predicate()
+        && let Some(first_prime) = imp_inner.premise().to_prime()
+        && let Some(idp) = first_prime.final_body().to_inductive_predicate()
         && idp.references_idp(inductive_predicate)
     {
         let assumption = Assumption::create(
             format!("idp_premise_{}", idp_premises.len()),
-            imp_inner.premises()[0].clone()
+            imp_inner.premise().clone()
         );
         
         idp_premises.push(assumption.clone());
@@ -37,7 +37,7 @@ pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<M
     
     let mut goal_index = 0;
     while let Some(imp) = proof.proved_formula().to_implication() {
-        let premise = imp.premises()[0].clone();
+        let premise = imp.premise().clone();
         let provided_vars = variables.iter().cloned().collect::<IndexSet<_>>()
             .intersection(&premise.get_free_variables(&mut IndexSet::new())).cloned().collect::<IndexSet<_>>();
         

@@ -111,14 +111,14 @@ impl InductivePredicate {
         
         for (_, body) in self.clauses().iter() {
             if let Some(implication) = body.to_implication() {
-                for premise in implication.premises().iter() {
-                    let polarized_args = premise.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new());
-                    for polarized_arg in polarized_args.iter() {
-                        if !polarized_arg.polarity.is_strictly_positive() &&
-                            polarized_arg.value.to_inductive_predicate().unwrap().references_idp(&self_idp_pred) {
-                            panic!("Inductive predicate '{}' is not well-founded due to negative occurrence in clause body '{}'",
-                            self.definition.name(), body.debug_string());
-                        }
+                let polarized_args = implication.premise()
+                    .get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new());
+                
+                for polarized_arg in polarized_args.iter() {
+                    if !polarized_arg.polarity.is_strictly_positive() &&
+                        polarized_arg.value.to_inductive_predicate().unwrap().references_idp(&self_idp_pred) {
+                        panic!("Inductive predicate '{}' is not well-founded due to negative occurrence in clause body '{}'",
+                        self.definition.name(), body.debug_string());
                     }
                 }
             }
@@ -202,9 +202,7 @@ impl PredicateBody for InductivePredicate {
             self.definition.get_type_variables(visited).iter()
                 .flat_map(|tv| {
                     self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_type_variables(&mut IndexSet::new())
-                }).chain(
-                    self.clauses().iter().flat_map(|(_, body)| body.get_type_variables(visited))
-                ).collect()
+                }).collect()
         }
     }
     
@@ -217,9 +215,7 @@ impl PredicateBody for InductivePredicate {
             self.definition.get_type_variables(visited).iter()
                 .flat_map(|tv| {
                     self.params.substitute::<PredSubstEntry>(&tv.into()).to_type().unwrap().get_algebra_types(&mut IndexSet::new())
-                }).chain(
-                    self.clauses().iter().flat_map(|(_, body)| body.get_algebra_types(visited))
-                ).collect()
+                }).collect()
         }
     }
     
@@ -232,9 +228,7 @@ impl PredicateBody for InductivePredicate {
             self.definition.get_free_variables(visited).iter()
                 .flat_map(|tv| {
                     self.params.substitute::<PredSubstEntry>(&tv.clone().into()).to_term().unwrap().get_free_variables(&mut IndexSet::new())
-                }).chain(
-                    self.clauses().iter().flat_map(|(_, body)| body.get_free_variables(visited))
-                ).collect()
+                }).collect()
         }
     }
     
@@ -247,9 +241,7 @@ impl PredicateBody for InductivePredicate {
             self.definition.get_bound_variables(visited).iter()
                 .flat_map(|tv| {
                     self.params.substitute::<PredSubstEntry>(&tv.into()).to_term().unwrap().get_bound_variables(&mut IndexSet::new())
-                }).chain(
-                    self.clauses().iter().flat_map(|(_, body)| body.get_bound_variables(visited))
-                ).collect()
+                }).collect()
         }
     }
     

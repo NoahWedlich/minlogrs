@@ -16,25 +16,17 @@ pub fn generate_proof_by_use(target: &Rc<MinlogPredicate>, to_use: &Rc<MinlogPro
             let substituted_proof: ProofSubstEntry = subst.substitute(&proof.into());
             return substituted_proof.to_proof().unwrap();
         } else if let Some(imp) = proof.proved_formula().to_implication() {
-            if let Some(first_premise) = imp.premises().first() {
-                proof = ImplicationElim::create(
-                    proof,
-                    Goal::create(
-                        format!("g{}", goal_index),
-                        first_premise.clone(),
-                        context.clone()
-                    )
-                );
-                goal_index += 1;
-            } else {
-                panic!("Found implication with no premises while trying to use proof.");
-            }
+            proof = ImplicationElim::create(
+                proof,
+                Goal::create(
+                    format!("g{}", goal_index),
+                    imp.premise().clone(),
+                    context.clone()
+                )
+            );
+            goal_index += 1;
         } else if let Some(all) = proof.proved_formula().to_all_quantifier() {
-            if let Some(var) = all.vars().first() {
-                proof = UniversalElim::create(proof, var.clone());
-            } else {
-                panic!("Found universal quantifier with no variables while trying to use proof.");
-            }
+            proof = UniversalElim::create(proof, all.var().clone());
         } else {
             panic!("Failed to match the provided proof's formula with the target formula.");
         }

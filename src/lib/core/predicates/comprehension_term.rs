@@ -11,75 +11,82 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ComprehensionTerm {
-    vars: Vec<MinlogTerm>,
+    var: MinlogTerm,
     body: Rc<MinlogPredicate>,
     arity: Rc<MinlogType>,
 }
 
 impl ComprehensionTerm {
-    pub fn create(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let vars = vars.into_iter()
-            .filter(|v| !v.is_tuple() || !v.to_tuple().unwrap().elements().is_empty())
-            .collect::<Vec<MinlogTerm>>();
-        
-        if vars.is_empty() {
+    pub fn create(var: MinlogTerm, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
             return body;
         }
         
-        if vars.iter().any(|v| !v.is_variable()) {
-            panic!("Tried to create comprehension term with non-variable bound terms");
+        if !var.is_variable() {
+            panic!("Tried to create comprehension term with non-variable bound term");
         }
         
-        for (i, var) in vars.iter().enumerate() {
-            for other in &vars[i+1..] {
-                if var == other {
-                    panic!("Tried to create comprehension term with duplicate bound variable '{}'", var.debug_string());
-                }
-            }
-        }
+        let unpacked_arity = body.unpacked_arity();
+        let mut var_types = vec![var.minlog_type().clone()];
+        var_types.extend(unpacked_arity);
         
-        let arity = TupleType::create(vars.iter().map(|v| v.minlog_type()).collect());
-        ComprehensionTerm::collapse(&Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm { vars, body, arity })))
+        let arity = TupleType::create(var_types);
+        Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm { var, body, arity }))
     }
     
-    pub fn collapse(minlog_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        if !minlog_predicate.is_comprehension_term() || !minlog_predicate.to_comprehension_term().unwrap().body.is_comprehension_term() {
-            minlog_predicate.clone()
-        } else {
-            let mut comp_term = minlog_predicate.to_comprehension_term().unwrap();
-            let mut vars = comp_term.vars.clone();
-            
-            while comp_term.body.is_comprehension_term() {
-                let inner_comp = comp_term.body.to_comprehension_term().unwrap();
-                vars.extend(inner_comp.vars.iter().cloned());
-                comp_term = inner_comp;
-            }
-            
-            ComprehensionTerm::create(vars, comp_term.body.clone())
+    pub fn create_nested(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+        let mut current = body;
+        
+        for var in vars.into_iter().rev() {
+            current = ComprehensionTerm::create(var, current);
         }
+        
+        current
     }
     
     pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
-        let mut vars = vec![];
-        for free_var in minlog_formula.get_free_variables(&mut IndexSet::new()) {
-            if free_var.is_variable() && !vars.contains(&free_var) {
-                vars.push(free_var);
-            }
+        let vars = minlog_formula.get_free_variables(&mut IndexSet::new())
+            .into_iter().collect();
+        
+        ComprehensionTerm::create_nested(vars, minlog_formula.clone())
+    }
+    
+    pub fn var(&self) -> &MinlogTerm {
+        &self.var
+    }
+    
+    pub fn all_vars(&self) -> Vec<MinlogTerm> {
+        let mut current = self;
+        let mut vars = vec![current.var.clone()];
+        
+        while let MinlogPredicate::Comprehension(cterm) = current.body.as_ref() {
+            vars.push(cterm.var.clone());
+            current = cterm;
         }
         
-        ComprehensionTerm::create(vars, minlog_formula.clone())
+        vars
     }
     
-    pub fn vars(&self) -> &Vec<MinlogTerm> {
-        &self.vars
-    }
-    
-    pub fn var(&self, index: usize) -> Option<&MinlogTerm> {
-        self.vars.get(index)
+    pub fn var_at(&self, index: usize) -> Option<&MinlogTerm> {
+        if index == 0 {
+            Some(&self.var)
+        } else if let MinlogPredicate::Comprehension(cterm) = self.body.as_ref() {
+            cterm.var_at(index - 1)
+        } else {
+            None
+        }
     }
     
     pub fn body(&self) -> &Rc<MinlogPredicate> {
         &self.body
+    }
+    
+    pub fn final_body(&self) -> &Rc<MinlogPredicate> {
+        if let MinlogPredicate::Comprehension(cterm) = self.body.as_ref() {
+            cterm.final_body()
+        } else {
+            &self.body
+        }
     }
 }
 
@@ -91,18 +98,10 @@ impl PredicateBody for ComprehensionTerm {
     fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
         let new_body = self.body.normalize(eta, pi);
         
-        let vars = if eta {
-            self.vars.iter()
-                .filter(|v| new_body.contains_free_variable(v))
-                .cloned().collect()
-        } else {
-            self.vars.clone()
-        };
-        
-        if vars.is_empty() {
+        if eta && !new_body.contains_free_variable(&self.var) {
             new_body
         } else {
-            ComprehensionTerm::create(vars, new_body)
+            ComprehensionTerm::create(self.var.clone(), new_body)
         }
     }
     
@@ -123,23 +122,27 @@ impl PredicateBody for ComprehensionTerm {
     }
     
     fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        self.vars.iter().flat_map(|v| v.get_type_variables(&mut IndexSet::new())).chain(
-            self.body.get_type_variables(visited)
-        ).collect()
+        self.body.get_type_variables(visited).union(
+            &self.var.get_type_variables(&mut IndexSet::new())
+        ).cloned().collect()
     }
 
     fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        self.vars.iter().flat_map(|v| v.get_algebra_types(&mut IndexSet::new())).chain(
-            self.body.get_algebra_types(visited)
-        ).collect()
+        self.body.get_algebra_types(visited).union(
+            &self.var.get_algebra_types(&mut IndexSet::new())
+        ).cloned().collect()
     }
 
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
-        self.body.get_free_variables(visited).difference(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
+        self.body.get_free_variables(visited).difference(
+            &IndexSet::from([self.var.clone()])
+        ).cloned().collect()
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
-        self.body.get_bound_variables(visited).union(&self.vars.iter().cloned().collect::<IndexSet<_>>()).cloned().collect()
+        self.body.get_bound_variables(visited).union(
+            &IndexSet::from([self.var.clone()])
+        ).cloned().collect()
     }
     
     fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
@@ -163,25 +166,19 @@ impl PredicateBody for ComprehensionTerm {
     fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
         match from {
             PredSubstEntry::Type(_) => {
-                let new_vars = self.vars.iter()
-                    .map(|v| v.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
-                    .collect();
-                
+                let new_var = self.var.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap());
                 let new_body = self.body.substitute(from, to);
                 
-                ComprehensionTerm::create(new_vars, new_body)
+                ComprehensionTerm::create(new_var, new_body)
             },
             PredSubstEntry::Term(from_tm) => {
-                if from_tm.is_variable() && self.vars.contains(from_tm) {
+                if from_tm.is_variable() && self.var == *from_tm {
                     Rc::new(MinlogPredicate::Comprehension(self.clone()))
                 } else {
-                    let new_vars = self.vars.iter()
-                        .map(|v| v.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap()))
-                        .collect();
-                    
+                    let new_var = self.var.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap());
                     let new_body = self.body.substitute(from, to);
                     
-                    ComprehensionTerm::create(new_vars, new_body)
+                    ComprehensionTerm::create(new_var, new_body)
                 }
             },
             PredSubstEntry::Predicate(from_p) => {
@@ -189,7 +186,7 @@ impl PredicateBody for ComprehensionTerm {
                     to.to_predicate().unwrap()
                 } else {
                     let new_body = self.body.substitute(from, to);
-                    ComprehensionTerm::create(self.vars.clone(), new_body)
+                    ComprehensionTerm::create(self.var.clone(), new_body)
                 }
             },
         }
@@ -201,24 +198,20 @@ impl PredicateBody for ComprehensionTerm {
         }
         
         if let Some(other_cterm) = other.to_comprehension_term() {
-            if self.vars.len() != other_cterm.vars.len() {
-                return Some((Rc::new(MinlogPredicate::Comprehension(self.clone())).into(), other.clone().into()));
-            }
-
-            let mut subst = PredicateSubstitution::make_empty();
-            
-            for (v1, v2) in self.vars.iter().zip(other_cterm.vars.iter()) {
-                if v1 == v2 {
-                    continue;
-                } else if v1.minlog_type() == v2.minlog_type() {
-                    subst.extend((v2.clone().into(), v1.clone().into()));
-                } else {
-                    return Some((v1.clone().into(), v2.clone().into()));
-                }
+            if self.var.minlog_type() != other_cterm.var.minlog_type() {
+                return Some((self.var.minlog_type().clone().into(), other_cterm.var.minlog_type().clone().into()));
             }
             
-            let substituted_body = subst.substitute::<PredSubstEntry>(&other_cterm.body().into());
-            self.body.first_conflict_with(&substituted_body.to_predicate().unwrap())
+            let other_body = if self.var == other_cterm.var {
+                other_cterm.body()
+            } else {
+                &other_cterm.body.substitute(
+                    &other_cterm.var.clone().into(),
+                    &self.var.clone().into()
+                )
+            };
+            
+            self.body.first_conflict_with(other_body)
         } else {
             Some((Rc::new(MinlogPredicate::Comprehension(self.clone())).into(), other.clone().into()))
         }
@@ -231,23 +224,10 @@ impl PredicateBody for ComprehensionTerm {
         
         let cterm_instance = instance.to_comprehension_term().unwrap();
         
-        if self.vars.len() != cterm_instance.vars.len() {
-            return MatchOutput::FailedMatch;
-        }
-        
-        let mut conditions = self.vars.iter().zip(cterm_instance.vars.iter())
-            .filter_map(|(v1, v2)| {
-                if v1 != v2 {
-                    Some((v1.clone().into(), v2.clone().into()))
-                } else {
-                    None
-                }
-            })
-            .collect::<IndexMap<_, _>>();
-        
-        if self.body != cterm_instance.body {
-            conditions.insert(self.body.clone().into(), cterm_instance.body.clone().into());
-        }
+        let conditions = IndexMap::from([
+            (self.var.clone().into(), cterm_instance.var.clone().into()),
+            (self.body.clone().into(), cterm_instance.body.clone().into()),
+        ]);
         
         MatchOutput::Matched(conditions)
     }
@@ -255,18 +235,10 @@ impl PredicateBody for ComprehensionTerm {
 
 impl PrettyPrintable for ComprehensionTerm {
     fn to_pp_element(&self, detail: bool) -> PPElement {        
-        let variables = PPElement::list(
-            self.vars.iter().map(|v| v.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 0, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 0, false),
-            BreakType::Flexible,
-        );
-        
         PPElement::group(vec![
             PPElement::text("{".to_string()),
             PPElement::break_elem(1, 4, false),
-            variables,
+            self.var.to_pp_element(detail),
             PPElement::break_elem(1, 0, false),
             PPElement::text("|".to_string()),
             PPElement::break_elem(1, 4, false),

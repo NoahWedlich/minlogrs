@@ -207,7 +207,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     

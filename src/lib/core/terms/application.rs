@@ -10,83 +10,69 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelApplication {
-    operands: Vec<MinlogTerm>,
+    operand: MinlogTerm,
     operator: MinlogTerm,
     minlog_type: Rc<MinlogType>,
 }
 
 impl KernelApplication {
-    pub fn create(operator: MinlogTerm, operands: Vec<MinlogTerm>) -> MinlogTerm {
-        if operands.is_empty() {
-            return operator;
-        }
-        
+    pub fn create(operator: MinlogTerm, operand: MinlogTerm) -> MinlogTerm {
         let operator_type = operator.minlog_type();
+        
         if !operator_type.is_arrow() {
             panic!("Tried to create an Application with a non-arrow operator");
         }
         
-        let arrow = operator_type.to_arrow().unwrap();
+        let arrow_type = operator_type.to_arrow().unwrap();
         
-        if operator.minlog_type().arity() < operands.len() {
-            panic!("Tried to create an Application with too many operands");
+        if arrow_type.argument() != &operand.minlog_type() {
+            panic!("Tried to create an Application with an operand of the wrong type: expected {}, got {}",
+                arrow_type.argument().debug_string(),
+                operand.minlog_type().debug_string()
+            );
         }
         
-        for (i, op) in operands.iter().enumerate() {
-            if !op.minlog_type().eq(&arrow.arguments()[i]) {
-                panic!("Tried to create an Application with an operand of the wrong type: expected {}, got {}",
-                    arrow.arguments()[i].debug_string(),
-                    op.minlog_type().debug_string()
-                );
-            }
+        let minlog_type = arrow_type.value().clone();
+        
+        MinlogTerm::Application(Rc::new(KernelApplication { operand, operator, minlog_type, }).into())
+    }
+    
+    pub fn operand(&self) -> &MinlogTerm {
+        &self.operand
+    }
+    
+    pub fn all_operands(&self) -> Vec<MinlogTerm> {
+        let mut current = &Application::Kernel(Rc::new(self.clone()));
+        let mut operands = vec![current.operand().clone()];
+        
+        while let Some(next_app) = current.operator().to_application() {
+            operands.push(next_app.operand().clone());
+            current = next_app;
         }
         
-        let remaining_arg_types = arrow.arguments()[operands.len()..].to_vec();
-        
-        let minlog_type = if remaining_arg_types.is_empty() {
-            Rc::clone(arrow.value())
+        operands.into_iter().rev().collect()
+    }
+    
+    pub fn operand_at(&self, index: usize) -> Option<&MinlogTerm> {
+        if index == 0 {
+            Some(&self.operand)
+        } else if self.operator.is_application() {
+            self.operator.to_application().unwrap().operand_at(index - 1)
         } else {
-            ArrowType::create(remaining_arg_types, Rc::clone(arrow.value()))
-        };
-        
-        KernelApplication::collapse(&MinlogTerm::Application(Rc::new(KernelApplication {
-            operands,
-            operator,
-            minlog_type,
-        }).into()))
-    }
-    
-    fn collapse(minlog_term: &MinlogTerm) -> MinlogTerm {
-        if !minlog_term.is_application() || !minlog_term.to_application().unwrap().operator().is_application() {
-            minlog_term.clone()
-        } else {
-            let mut application = minlog_term.to_application().unwrap();
-            let mut operands = application.operands().clone();
-            
-            while application.operator().is_application() {
-                let next_application = application.operator().to_application().unwrap();
-                operands.splice(0..0, next_application.operands().iter().cloned());
-                application = next_application;
-            }
-            
-            Application::create(application.operator().clone(), operands)
+            None
         }
-    }
-    
-    pub fn operand_count(&self) -> usize {
-        self.operands.len()
-    }
-    
-    pub fn operands(&self) -> &Vec<MinlogTerm> {
-        &self.operands
-    }
-    
-    pub fn operand(&self, index: usize) -> Option<&MinlogTerm> {
-        self.operands.get(index)
     }
     
     pub fn operator(&self) -> &MinlogTerm {
         &self.operator
+    }
+    
+    pub fn final_operator(&self) -> &MinlogTerm {
+        if let Some(next_app) = self.operator.to_application() {
+            next_app.final_operator()
+        } else {
+            &self.operator
+        }
     }
 }
 
@@ -96,53 +82,58 @@ impl TermBody for KernelApplication {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm {
-        if self.operands.is_empty() {
-            return self.operator.normalize(eta, pi);
+        if pi && (self.operand.is_tuple() || self.operand.is_match_term()) {
+            println!("Warning: Pi-normalization for Applications is not implemented yet.");
         }
         
-        if pi {
-            for op in &self.operands {
-                if op.is_tuple() || op.is_match_term() {
-                    println!("Warning: Pi-normalization for Applications is not implemented yet.");
-                    break;
-                }
-            }
-        }
+        let normalized_operator = self.operator.normalize(eta, pi);
+        let normalized_operand = self.operand.normalize(eta, pi);
         
-        if let Some(computed) = self.operator.apply_args(&self.operands) {
+        if let Some(computed) = normalized_operator.apply_arg(self.operand.clone()) {
             computed.normalize(eta, pi)
-        } else {
-            let normalized_operator = self.operator.normalize(eta, pi);
-            let normalized_operands: Vec<MinlogTerm> = self.operands.iter()
-                .map(|op| op.normalize(eta, pi)).collect();
+        } else if let Some(program_term) = self.final_operator().to_program_term() {
+            let all_args = self.all_operands();
+            let to_match = Application::create_nested(
+                self.final_operator().clone(),
+                all_args,
+            );
             
-            Application::create(normalized_operator, normalized_operands)
+            if let Some(computed) = program_term.apply_arg(to_match) {
+                computed.normalize(eta, pi)
+            } else {
+                Application::create(normalized_operator, normalized_operand)
+            }
+        }  else {
+            
+            Application::create(normalized_operator, normalized_operand)
         }
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
-        let new_operands = self.operands.iter()
-            .filter_map(|op| op.remove_nulls())
-            .collect::<Vec<_>>();
-        
-        self.operator.remove_nulls().map(|new_operator| {
-            Application::create(new_operator, new_operands)
-        })
+        if let Some(new_operator) = self.operator.remove_nulls() {
+            if let Some(new_operand) = self.operand.remove_nulls() {
+                Some(Application::create(new_operator, new_operand))
+            } else {
+                Some(new_operator)
+            }
+        } else {
+            None
+        }
     }
     
     fn length(&self) -> usize {
-        1 + self.operands.iter().map(|op| op.length()).sum::<usize>() + self.operator.length()
+        1 + self.operand.length() + self.operator.length()
     }
     
     fn depth(&self) -> usize {
         1 + max(
-            self.operands.iter().map(|op| op.depth()).max().unwrap_or(0),
+            self.operand.depth(),
             self.operator.depth(),
         )
     }
     
     fn constructor_pattern(&self) -> bool {
-        self.operator.is_constructor() && self.operands.iter().all(|op| op.constructor_pattern())
+        self.operator.is_constructor() && self.operand.constructor_pattern()
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
@@ -155,45 +146,40 @@ impl TermBody for KernelApplication {
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.operator.get_free_variables(visited)
-            .union(&self.operands.iter().flat_map(|op| op.get_free_variables(visited)).collect::<IndexSet<_>>())
+            .union(&self.operand.get_free_variables(visited))
             .cloned().collect()
     }
 
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.operator.get_bound_variables(visited)
-            .union(&self.operands.iter().flat_map(|op| op.get_bound_variables(visited)).collect::<IndexSet<_>>())
+            .union(&self.operand.get_bound_variables(visited))
             .cloned().collect()
     }
 
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.operator.get_constructors(visited)
-            .union(&self.operands.iter().flat_map(|op| op.get_constructors(visited)).collect::<IndexSet<_>>())
+            .union(&self.operand.get_constructors(visited))
             .cloned().collect()
     }
 
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
         self.operator.get_program_terms(visited)
-            .union(&self.operands.iter().flat_map(|op| op.get_program_terms(visited)).collect::<IndexSet<_>>())
+            .union(&self.operand.get_program_terms(visited))
             .cloned().collect()
     }
     
     fn alpha_equivalent(&self, other: &MinlogTerm,
         forward: &mut Vec<(TermVariable, TermVariable)>,
-        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool {
-            
+        backward: &mut Vec<(TermVariable, TermVariable)>) -> bool
+    {
         if !other.is_application() {
             return false;
         }
         
         let other = other.to_application().unwrap();
         
-        if self.operands.len() != other.operands().len() {
-            return false;
-        }
-        
         self.operator.alpha_equivalent(other.operator(), forward, backward) &&
-            self.operands.iter().zip(other.operands().iter())
-            .all(|(a, b)| a.alpha_equivalent(b, forward, backward))
+            self.operand.alpha_equivalent(other.operand(), forward, backward)
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
@@ -201,8 +187,8 @@ impl TermBody for KernelApplication {
             to.to_term().unwrap()
         } else {
             let operator = self.operator.substitute(from, to);
-            let operands: Vec<MinlogTerm> = self.operands.iter().map(|op| op.substitute(from, to)).collect();
-            Application::create(operator, operands)
+            let operand = self.operand.substitute(from, to);
+            Application::create(operator, operand)
         }
     }
 
@@ -217,18 +203,12 @@ impl TermBody for KernelApplication {
         
         let other_app = other.to_application().unwrap();
         
-        if self.operands.len() != other_app.operands().len() {
-            return Some((MinlogTerm::Application(Rc::new(self.clone()).into()).into(), other.clone().into()));
+        if let Some(conflict) = self.operator.first_conflict_with(other_app.operator()) {
+            return Some(conflict);
         }
         
-        if let Some((f, o)) = self.operator.first_conflict_with(other_app.operator()) {
-            return Some((f, o));
-        }
-        
-        for (a, b) in self.operands.iter().zip(other_app.operands().iter()) {
-            if let Some((f, o)) = a.first_conflict_with(b) {
-                return Some((f, o));
-            }
+        if let Some(conflict) = self.operand.first_conflict_with(other_app.operand()) {
+            return Some(conflict);
         }
         
         None
@@ -241,22 +221,10 @@ impl TermBody for KernelApplication {
         
         let app_instance = instance.to_application().unwrap();
         
-        if self.operands.len() != app_instance.operands().len() {
-            return MatchOutput::FailedMatch;
-        }
-        
-        let mut conditions = self.operands.iter().zip(app_instance.operands().iter())
-            .filter_map(|(p_op, i_op)| {
-                if p_op != i_op {
-                    Some((p_op.into(), i_op.into()))
-                } else {
-                    None
-                }
-            }).collect::<IndexMap<_, _>>();
-        
-        if self.operator != *app_instance.operator() {
-            conditions.insert(self.operator.clone().into(), app_instance.operator().clone().into());
-        }
+        let conditions = IndexMap::from([
+            (self.operator.clone().into(), app_instance.operator().clone().into()),
+            (self.operand.clone().into(), app_instance.operand().clone().into()),
+        ]);
         
         MatchOutput::Matched(conditions)
     }
@@ -264,23 +232,11 @@ impl TermBody for KernelApplication {
 
 impl PrettyPrintable for KernelApplication {
     fn to_pp_element(&self, detail: bool) -> PPElement {
-        if self.operands.is_empty() {
-            return self.operator.to_pp_element(detail);
-        }
-        
-        let operands = PPElement::list(
-            self.operands.iter().map(|op| op.to_pp_element(detail)).collect(),
-            PPElement::break_elem(0, 0, false),
-            PPElement::text(",".to_string()),
-            PPElement::break_elem(1, 0, false),
-            BreakType::Flexible
-        );
-        
         PPElement::group(vec![
             self.operator.to_pp_element(detail),
             PPElement::text(" (".to_string()),
             PPElement::break_elem(1, 4, false),
-            operands,
+            self.operand.to_pp_element(detail),
             PPElement::break_elem(1, 0, false),
             PPElement::text(")".to_string())
         ], BreakType::Consistent, 0)
@@ -300,17 +256,19 @@ impl PrettyPrintable for KernelApplication {
 }
 
 pub trait NativeApplication: NativeTermBody {
-    fn operand_count(&self) -> usize;
+    fn operand(&self) -> &MinlogTerm;
     
-    fn operands(&self) -> &Vec<MinlogTerm>;
+    fn all_operands(&self) -> Vec<MinlogTerm>;
     
-    fn operand(&self, index: usize) -> Option<&MinlogTerm>;
+    fn operand_at(&self, index: usize) -> Option<&MinlogTerm>;
     
     fn operator(&self) -> &MinlogTerm;
     
+    fn final_operator(&self) -> &MinlogTerm;
+    
     fn to_kernel(&self) -> KernelApplication {
         KernelApplication {
-            operands: self.operands().clone(),
+            operand: self.operand().clone(),
             operator: self.operator().clone(),
             minlog_type: self.minlog_type(),
         }
@@ -329,7 +287,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     
@@ -363,13 +321,15 @@ wrapper_enum::wrapper_enum! {
     }
     
     fwd trait ApplicationForwards {
-        pub fwd fn operand_count(&self) -> usize
+        pub fwd fn operand(&self) -> &MinlogTerm
         
-        pub fwd fn operands(&self) -> &Vec<MinlogTerm>
+        pub fwd fn all_operands(&self) -> Vec<MinlogTerm>
         
-        pub fwd fn operand(&self, index: usize) -> Option<&MinlogTerm>
+        pub fwd fn operand_at(&self, index: usize) -> Option<&MinlogTerm>
         
         pub fwd fn operator(&self) -> &MinlogTerm
+        
+        pub fwd fn final_operator(&self) -> &MinlogTerm
     }
     
     ext trait PrettyPrintable {
@@ -384,8 +344,18 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl Application {
-    pub fn create(operator: MinlogTerm, operands: Vec<MinlogTerm>) -> MinlogTerm {
-        KernelApplication::create(operator, operands)
+    pub fn create(operator: MinlogTerm, operand: MinlogTerm) -> MinlogTerm {
+        KernelApplication::create(operator, operand)
+    }
+    
+    pub fn create_nested(operator: MinlogTerm, operands: Vec<MinlogTerm>) -> MinlogTerm {
+        let mut current_operator = operator;
+        
+        for operand in operands.into_iter() {
+            current_operator = Application::create(current_operator, operand);
+        }
+        
+        current_operator
     }
     
     pub fn into_kernel_application(self) -> Rc<KernelApplication> {

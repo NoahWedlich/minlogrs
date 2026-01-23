@@ -61,26 +61,17 @@ impl TermBody for KernelProgramTerm {
         ProgramTerm::create(self.pconst.clone(), self.parameters.clone())
     }
     
-    fn apply_args(&self, args: &Vec<MinlogTerm >) -> Option<MinlogTerm> {
+    fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm> {
         for rule in self.computation_rules().iter().chain(self.rewrite_rules().iter()) {
-            let applicable_args = min(args.len(), rule.arity());
-            let (args_to_apply, remaining_args) = args.split_at(applicable_args);
-            let to_match = Application::create(MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()), args_to_apply.to_vec());
-            
-            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &to_match.into()) {
-                let result = subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap();
-                
-                if remaining_args.is_empty() {
-                    return Some(result);
-                } else {
-                    return Some(Application::create(result, remaining_args.to_vec()));
-                }
+            if let Some(subst) = TermSubstitution::match_with(&rule.pattern().into(), &arg.clone().into()) {
+                return Some(subst.substitute::<TermSubstEntry>(&rule.result().into()).to_term().unwrap());
             }
         }
         
         None
     }
     
+    // Add Reductions compatible with Algebra Reductions
     fn remove_nulls(&self) -> Option<MinlogTerm> {
         let new_parameters = TermSubstitution::from_pairs(
             self.parameters.pairs().iter().filter_map(|(from, to)| {
@@ -142,18 +133,6 @@ impl TermBody for KernelProgramTerm {
             
             self.computation_rules().iter().chain(self.rewrite_rules().iter())
                 .flat_map(|r| r.get_free_variables(visited))
-                .collect()
-        }
-    }
-    
-    fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::ProgramTerm(Rc::new(self.clone()).into())) {
-            IndexSet::new()
-        } else {
-            visited.insert(MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()));
-            
-            self.computation_rules().iter().chain(self.rewrite_rules().iter())
-                .flat_map(|r| r.get_bound_variables(visited))
                 .collect()
         }
     }
@@ -360,7 +339,7 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
-        fwd fn apply_args(&self, args: &Vec<MinlogTerm>) -> Option<MinlogTerm>
+        fwd fn apply_arg(&self, arg: MinlogTerm) -> Option<MinlogTerm>
     
         fwd fn remove_nulls(&self) -> Option<MinlogTerm>
     

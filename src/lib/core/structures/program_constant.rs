@@ -14,55 +14,37 @@ pub struct RewriteRule {
     result: MinlogTerm,
 }
 
+// TODO: Deprecate this in a favor of a system more like MatchTerm
 impl RewriteRule {
     pub fn create(pattern: MinlogTerm, result: MinlogTerm) -> Rc<RewriteRule> {
         if let Some(pc) = pattern.to_program_term() {
             if pc.minlog_type().arity() != 0 {
-                panic!("Rewrite rule pattern must be a full application of a program constant");
+                panic!("Rewrite rule pattern must be a full application of a program constant, found {}", pattern.debug_string());
             }
             
             if result.minlog_type() != pattern.minlog_type() {
-                panic!("Rewrite rule result type must match the program constant type");
+                panic!("Rewrite rule result type must match the program constant type, expected {}, found {}",
+                    pattern.minlog_type().debug_string(), result.minlog_type().debug_string());
             }
         } else if let Some(app) = pattern.to_application() {
-            if !app.operator().is_program_term() {
-                panic!("Rewrite rule must either be a program constant or a full application of a program constant");
+            if !app.final_operator().is_program_term() {
+                panic!("Rewrite rule must either be a program constant or a full application of a program constant, found {}", pattern.debug_string());
             }
             
-            let pc = app.operator().to_program_term().unwrap();
+            let pc = app.final_operator().to_program_term().unwrap();
             
-            for (op, arg) in app.operands().iter().zip(pc.minlog_type().to_arrow().unwrap().arguments()) {
-                if op.minlog_type() != *arg {
-                    panic!("Rewrite rule pattern operand types must match the program constant argument types");
+            for (operand, arg) in app.all_operands().iter().zip(pc.minlog_type().to_arrow().unwrap().all_arguments().iter()) {
+                if operand.minlog_type() != *arg {
+                    panic!("Rewrite rule pattern operand types must match the program constant argument types, expected {}, found {}",
+                        arg.debug_string(),
+                        operand.minlog_type().debug_string());
                 }
             }
         } else {
             panic!("Rewrite rule must either be a program constant or a full application of a program constant: found {}", pattern.debug_string());
         }
         
-        if let Some(arrow) = result.minlog_type().to_arrow() {
-            let idx_offset = 0; // TODO: Calculate from the vars in the pattern
-            let vars = arrow.arguments().iter().enumerate().map(|(i, t)|
-                TermVariable::create(
-                    format!("aux{}", i + idx_offset),
-                    t.clone()
-                )
-            ).collect::<Vec<_>>();
-            
-            let wrapped_pattern = Application::create(
-                pattern.clone(),
-                vars.clone()
-            );
-            
-            let wrapped_result = Application::create(
-                result.clone(),
-                vars
-            );
-            
-            Rc::new(RewriteRule { pattern: wrapped_pattern, result: wrapped_result })
-        } else {
-            Rc::new(RewriteRule { pattern, result })
-        }
+        Rc::new(RewriteRule { pattern, result })
     }
     
     pub fn pattern(&self) -> MinlogTerm {
@@ -77,15 +59,15 @@ impl RewriteRule {
         if let Some(pc) = self.pattern.to_program_term() {
             pc.pconst().clone()
         } else if let Some(app) = self.pattern.to_application() {
-            app.operator().to_program_term().unwrap().pconst().clone()
+            app.final_operator().to_program_term().unwrap().pconst().clone()
         } else {
             panic!("Rewrite rule must either be a program constant or a full application of a program constant");
         }
     }
     
     pub fn arity(&self) -> usize {
-        if let Some(app) = self.pattern.to_application() {
-            app.operands().len()
+        if self.pattern.is_application() {
+            1
         } else {
             0
         }
@@ -102,12 +84,10 @@ impl RewriteRule {
             }
             
             bound.push(term.clone());
-        } else if let Some(app) = term.to_application() {
-            for op in app.operands() {
-                if !RewriteRule::is_left_linear(op, bound) {
-                    return false;
-                }
-            }
+        } else if let Some(app) = term.to_application()
+            && !RewriteRule::is_left_linear(app.operand(), bound)
+        {
+            return false;
         }
         
         true
@@ -117,22 +97,16 @@ impl RewriteRule {
         if self.pattern.is_program_term() {
             true
         } else if let Some(app) = self.pattern.to_application() {
-            if !app.operator().is_program_term() {
+            if !app.final_operator().is_program_term() {
                 return false;
             }
             
-            if app.operands().iter().any(|op| !op.constructor_pattern()) {
+            if !app.operand().constructor_pattern() {
                 return false;
             }
             
             let mut bound = vec![];
-            for op in app.operands() {
-                if !RewriteRule::is_left_linear(op, &mut bound) {
-                    return false;
-                }
-            }
-            
-            true
+            RewriteRule::is_left_linear(app.operand(), &mut bound)
         } else {
             false
         }

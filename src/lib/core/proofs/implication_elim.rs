@@ -18,32 +18,24 @@ pub struct ImplicationElim {
 }
 
 impl ImplicationElim {
-    pub fn create(implication: Rc<MinlogProof>, premise: Rc<MinlogProof>) -> Rc<MinlogProof> {
+    pub fn create(implication: Rc<MinlogProof>, proof_premise: Rc<MinlogProof>) -> Rc<MinlogProof> {
         let implication_formula = implication.proved_formula();
         if !implication_formula.is_implication() {
             panic!("ImplicationElim::create called with a non-implication proof as implication");
         }
         
         let implication_obj = implication_formula.to_implication().unwrap();
-        let premises = implication_obj.premises();
+        let premise = implication_obj.premise();
         let conclusion = implication_obj.conclusion();
         
-        if premises.is_empty() {
-            panic!("ImplicationElim::create called with an implication that has no premises");
+        if *premise != proof_premise.proved_formula() {
+            panic!("Can't eliminate implication {} with premise {}", implication_formula.debug_string(), proof_premise.proved_formula().debug_string());
         }
         
-        if premises[0] != premise.proved_formula() {
-            panic!("Can't eliminate implication {} with premise {}", implication_formula.debug_string(), premise.proved_formula().debug_string());
-        }
-        
-        let formula = if premises.len() == 1 {
-            conclusion.clone()
-        } else {
-            Implication::create(premises[1..].to_vec(), conclusion.clone())
-        };
+        let formula = conclusion.clone();
         
         Rc::new(MinlogProof::ImplicationElim(ImplicationElim {
-            premise,
+            premise: proof_premise,
             implication,
             formula,
         }))
@@ -84,7 +76,7 @@ impl ProofBody for ImplicationElim {
             if let Some(prem_term) = self.premise.extracted_term() {
                 Application::create(
                     imp_term,
-                    vec![prem_term],
+                    prem_term,
                 )
             } else {
                 imp_term

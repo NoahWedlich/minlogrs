@@ -27,27 +27,15 @@ impl UniversalElim {
         }
         
         let all_quantifier = universal_formula.to_all_quantifier().unwrap();
-        let vars = all_quantifier.vars();
+        let var = all_quantifier.var();
         
-        if vars.is_empty() {
-            panic!("UniversalElim::create called with an universal formula that has no bound variables");
-        }
-        
-        let var = vars[0].clone();
-        let remaining_vars = vars[1..].to_vec();
-        
-        let inner_formula = all_quantifier.body().substitute(&var.clone().into(), &term.clone().into());
-        let resulting_formula = if remaining_vars.is_empty() {
-            inner_formula
-        } else {
-            AllQuantifier::create(remaining_vars, inner_formula)
-        };
+        let formula = all_quantifier.body().substitute(&var.clone().into(), &term.clone().into());
         
         Rc::new(MinlogProof::UniversalElim(UniversalElim {
             proof,
             term,
-            replaced_variable: var,
-            formula: resulting_formula,
+            replaced_variable: var.clone(),
+            formula,
         }))
     }
     

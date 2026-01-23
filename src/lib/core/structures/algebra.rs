@@ -42,11 +42,11 @@ impl Algebra {
                 panic!("Constructor type's algebra does not match the algebra it is being added to");
             }
         } else if let Some(arrow_type) = constructor.minlog_type().to_arrow() {
-            if !arrow_type.value().is_algebra() {
+            if !arrow_type.final_value().is_algebra() {
                 panic!("Constructor type must be an algebra type or an arrow type ending in an algebra type");
             }
             
-            if arrow_type.value().to_algebra().unwrap().algebra().as_ref() != self {
+            if arrow_type.final_value().to_algebra().unwrap().algebra().as_ref() != self {
                 panic!("Constructor type's algebra does not match the algebra it is being added to");
             }
         } else {
