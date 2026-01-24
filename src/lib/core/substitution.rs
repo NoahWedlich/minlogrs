@@ -205,6 +205,8 @@ impl<T: Substitutable> Substitution<T> {
         Some(result)
     }
     
+    /// Similar to `unify`, but on an arbitrary slice of values
+    /// instead of just two.
     pub fn unify_all(elements: &[T]) -> Option<Self> {
         let mut result = Self::make_empty();
         
