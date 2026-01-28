@@ -12,18 +12,18 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PredicateVariable {
     name: String,
-    arity: Rc<MinlogType>,
+    arity: Arc<MinlogType>,
     index: usize,
 }
 
 impl PredicateVariable {
-    pub fn create(name: String, arity: Rc<MinlogType>) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Variable(PredicateVariable { name, arity, index: 0 }))
+    pub fn create(name: String, arity: Arc<MinlogType>) -> Arc<MinlogPredicate> {
+        Arc::new(MinlogPredicate::Variable(PredicateVariable { name, arity, index: 0 }))
     }
     
-    pub fn unshadow(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn unshadow(pred: &Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         if let Some(pv) = pred.to_variable() {
-            Rc::new(MinlogPredicate::Variable(PredicateVariable {
+            Arc::new(MinlogPredicate::Variable(PredicateVariable {
                 name: pv.name.clone(),
                 arity: pv.arity.clone(),
                 index: pv.index + 1,
@@ -43,15 +43,15 @@ impl PredicateVariable {
 }
 
 impl PredicateBody for PredicateVariable {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.arity.clone()
     }
     
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Variable(self.clone()))
+    fn normalize(&self, _eta: bool, _pi: bool) -> Arc<MinlogPredicate> {
+        Arc::new(MinlogPredicate::Variable(self.clone()))
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         let name = if self.index > 0 {
             format!("{}_{}^et", self.name, self.index)
         } else {
@@ -61,7 +61,7 @@ impl PredicateBody for PredicateVariable {
         TypeVariable::create(name)
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         TypeConstant::create_null()
     }
     
@@ -72,26 +72,26 @@ impl PredicateBody for PredicateVariable {
         TermSubstitution::from_pairs(vec![(pattern.into(), et.into())])
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.arity().get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.arity.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         IndexSet::from([Polarized {
             polarity: current,
-            value: Rc::new(MinlogPredicate::Variable(self.clone())),
+            value: Arc::new(MinlogPredicate::Variable(self.clone())),
         }])
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         match from {
             PredSubstEntry::Type(from_t) => {
                 let new_arity = self.arity.substitute(from_t, &to.to_type().unwrap());
-                Rc::new(MinlogPredicate::Variable(PredicateVariable {
+                Arc::new(MinlogPredicate::Variable(PredicateVariable {
                     name: self.name.clone(),
                     arity: new_arity,
                     index: self.index,
@@ -101,16 +101,16 @@ impl PredicateBody for PredicateVariable {
                 if from_p.is_variable() && self == from_p.to_variable().unwrap() {
                     to.to_predicate().unwrap()
                 } else {
-                    Rc::new(MinlogPredicate::Variable(self.clone()))
+                    Arc::new(MinlogPredicate::Variable(self.clone()))
                 }
             },
             _ => {
-                Rc::new(MinlogPredicate::Variable(self.clone()))
+                Arc::new(MinlogPredicate::Variable(self.clone()))
             }
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let Some(conflict) = self.arity.first_conflict_with(&other.arity()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -118,19 +118,19 @@ impl PredicateBody for PredicateVariable {
         if other.is_variable() && self == other.to_variable().unwrap() {
             None
         } else {
-            Some((Rc::new(MinlogPredicate::Variable(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogPredicate::Variable(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if self.arity() != instance.arity() {
             MatchOutput::Matched(IndexMap::from([
-                (Rc::new(MinlogPredicate::Variable(self.clone())).into(), instance.clone().into()),
+                (Arc::new(MinlogPredicate::Variable(self.clone())).into(), instance.clone().into()),
                 (self.arity().into(), instance.arity().into()),
             ]))
         } else {
             MatchOutput::Substitution(
-                Rc::new(MinlogPredicate::Variable(self.clone())).into(),
+                Arc::new(MinlogPredicate::Variable(self.clone())).into(),
                 instance.clone().into(),
             )
         }

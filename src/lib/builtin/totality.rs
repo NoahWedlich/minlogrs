@@ -9,7 +9,7 @@ pub use crate::includes::{
     }
 };
 
-pub fn extract_totality(algebra: &Rc<MinlogType>, totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>) -> Rc<MinlogPredicate> {
+pub fn extract_totality(algebra: &Arc<MinlogType>, totalities: &mut IndexMap<Arc<MinlogType>, Arc<MinlogPredicate>>) -> Arc<MinlogPredicate> {
     if !algebra.is_algebra() {
         panic!("extract_totality called with a non-algebra type");
     }
@@ -43,8 +43,8 @@ pub fn extract_totality(algebra: &Rc<MinlogType>, totalities: &mut IndexMap<Rc<M
 
 fn constructor_to_totality_clause(
     constructor: &MinlogTerm,
-    totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>
-) -> Rc<MinlogPredicate> {
+    totalities: &mut IndexMap<Arc<MinlogType>, Arc<MinlogPredicate>>
+) -> Arc<MinlogPredicate> {
     if !constructor.is_constructor() {
         panic!("constructor_to_totality_clause called with a non-constructor term");
     }
@@ -94,9 +94,9 @@ fn constructor_to_totality_clause(
 
 fn term_to_totality_condition(
     term: MinlogTerm,
-    totalities: &mut IndexMap<Rc<MinlogType>, Rc<MinlogPredicate>>,
+    totalities: &mut IndexMap<Arc<MinlogType>, Arc<MinlogPredicate>>,
     var_index: &mut usize
-) -> Option<Rc<MinlogPredicate>> {
+) -> Option<Arc<MinlogPredicate>> {
     match term.minlog_type().as_ref() {
         MinlogType::Variable(_) => {
             if let Some(totality) = totalities.get(&term.minlog_type()) {

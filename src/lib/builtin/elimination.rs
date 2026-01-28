@@ -10,7 +10,7 @@ use crate::includes::{
     }
 };
 
-pub fn extract_elimination_axiom(idp: &Rc<MinlogPredicate>, elim_axioms: &mut IndexMap<Rc<MinlogPredicate>, Rc<MinlogProof>>) -> Rc<MinlogProof> {
+pub fn extract_elimination_axiom(idp: &Arc<MinlogPredicate>, elim_axioms: &mut IndexMap<Arc<MinlogPredicate>, Arc<MinlogProof>>) -> Arc<MinlogProof> {
     if let Some(axiom) = elim_axioms.get(idp) {
         return axiom.clone();
     }
@@ -77,9 +77,9 @@ pub fn extract_elimination_axiom(idp: &Rc<MinlogPredicate>, elim_axioms: &mut In
 }
 
 fn outer_clause_to_elimination_clause(
-    clause: &Rc<MinlogPredicate>,
-    pvars: &IndexMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
-) -> Rc<MinlogPredicate> {
+    clause: &Arc<MinlogPredicate>,
+    pvars: &IndexMap<Arc<MinlogPredicate>, Arc<MinlogPredicate>>
+) -> Arc<MinlogPredicate> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {
             if let Some(pvar) = pvars.get(prime.final_body()) {
@@ -110,9 +110,9 @@ fn outer_clause_to_elimination_clause(
 }
 
 fn inner_clause_to_elimination_clause(
-    clause: &Rc<MinlogPredicate>,
-    pvars: &IndexMap<Rc<MinlogPredicate>, Rc<MinlogPredicate>>
-) -> Vec<Rc<MinlogPredicate>> {
+    clause: &Arc<MinlogPredicate>,
+    pvars: &IndexMap<Arc<MinlogPredicate>, Arc<MinlogPredicate>>
+) -> Vec<Arc<MinlogPredicate>> {
     match clause.as_ref() {
         MinlogPredicate::Prime(prime) => {
             if let Some(pvar) = pvars.get(prime.final_body()) {
@@ -150,9 +150,9 @@ fn inner_clause_to_elimination_clause(
 }
 
 fn create_computational_content_for_elimination_axioms(
-    rel_idps: &IndexSet<Rc<MinlogPredicate>>,
-    elimination_clauses: &IndexMap<Rc<MinlogPredicate>, IndexMap<String, Rc<MinlogPredicate>>>,
-    elim_axioms: &mut IndexMap<Rc<MinlogPredicate>, Rc<MinlogProof>>
+    rel_idps: &IndexSet<Arc<MinlogPredicate>>,
+    elimination_clauses: &IndexMap<Arc<MinlogPredicate>, IndexMap<String, Arc<MinlogPredicate>>>,
+    elim_axioms: &mut IndexMap<Arc<MinlogPredicate>, Arc<MinlogProof>>
 ) {
     // TODO: Rewrite this to make it clearer and more efficient
     if rel_idps.iter().any(|ridp| ridp.extracted_type().is_null()) {

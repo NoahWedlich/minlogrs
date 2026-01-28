@@ -10,7 +10,7 @@ use crate::includes::{
     proof_generation::*,
 };
 
-pub fn generate_proof_by_intro(target: &Rc<MinlogPredicate>, clause: &String, context: &ProofContext) -> Rc<MinlogProof> {
+pub fn generate_proof_by_intro(target: &Arc<MinlogPredicate>, clause: &String, context: &ProofContext) -> Arc<MinlogProof> {
     let idps = target.get_polarized_inductive_preds(Polarity::StrictlyPositive, &mut IndexSet::new())
         .into_iter().filter_map(|polarized| {
             if polarized.polarity == Polarity::StrictlyPositive {

@@ -11,14 +11,14 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelTuple {
     elements: Vec<MinlogTerm>,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelTuple {
     pub fn create(elements: Vec<MinlogTerm>) -> MinlogTerm {
-        let element_types: Vec<Rc<MinlogType>> = elements.iter().map(|e| e.minlog_type()).collect();
+        let element_types: Vec<Arc<MinlogType>> = elements.iter().map(|e| e.minlog_type()).collect();
         let minlog_type = TupleType::create(element_types);
-        MinlogTerm::Tuple(Rc::new(KernelTuple { elements, minlog_type }).into())
+        MinlogTerm::Tuple(Arc::new(KernelTuple { elements, minlog_type }).into())
     }
     
     pub fn elements(&self) -> &Vec<MinlogTerm> {
@@ -31,7 +31,7 @@ impl KernelTuple {
 }
 
 impl TermBody for KernelTuple {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
@@ -70,11 +70,11 @@ impl TermBody for KernelTuple {
         1 + self.elements.iter().map(|e| e.depth()).max().unwrap_or(0)
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -119,7 +119,7 @@ impl TermBody for KernelTuple {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
-        if let Some(tm) = from.to_term() && tm.is_tuple() && Tuple::Kernel(Rc::new(self.clone())) == *tm.to_tuple().unwrap() {
+        if let Some(tm) = from.to_term() && tm.is_tuple() && Tuple::Kernel(Arc::new(self.clone())) == *tm.to_tuple().unwrap() {
             to.to_term().unwrap()
         } else {
             let new_elements = self.elements.iter().map(|e| e.substitute(from, to)).collect();
@@ -216,12 +216,12 @@ pub trait NativeTuple: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum Tuple {
-        Kernel(kernel: Rc<KernelTuple>),
-        Native(native: Rc<dyn NativeTuple>),
+        Kernel(kernel: Arc<KernelTuple>),
+        Native(native: Arc<dyn NativeTuple>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -235,9 +235,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -280,10 +280,10 @@ impl Tuple {
         KernelTuple::create(elements)
     }
     
-    pub fn into_kernel_tuple(self) -> Rc<KernelTuple> {
+    pub fn into_kernel_tuple(self) -> Arc<KernelTuple> {
         match self {
             Tuple::Kernel(k) => k,
-            Tuple::Native(n) => Rc::new(n.to_kernel()),
+            Tuple::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -310,26 +310,26 @@ impl PartialEq for Tuple {
 
 impl Eq for Tuple {}
 
-impl From<Rc<KernelTuple>> for Tuple {
-    fn from(k: Rc<KernelTuple>) -> Self {
+impl From<Arc<KernelTuple>> for Tuple {
+    fn from(k: Arc<KernelTuple>) -> Self {
         Tuple::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelTuple>> for Tuple {
-    fn from(k: &Rc<KernelTuple>) -> Self {
+impl From<&Arc<KernelTuple>> for Tuple {
+    fn from(k: &Arc<KernelTuple>) -> Self {
         Tuple::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeTuple>> for Tuple {
-    fn from(n: Rc<dyn NativeTuple>) -> Self {
+impl From<Arc<dyn NativeTuple>> for Tuple {
+    fn from(n: Arc<dyn NativeTuple>) -> Self {
         Tuple::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeTuple>> for Tuple {
-    fn from(n: &Rc<dyn NativeTuple>) -> Self {
+impl From<&Arc<dyn NativeTuple>> for Tuple {
+    fn from(n: &Arc<dyn NativeTuple>) -> Self {
         Tuple::Native(n.clone())
     }
 }

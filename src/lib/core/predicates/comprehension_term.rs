@@ -12,12 +12,12 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ComprehensionTerm {
     var: MinlogTerm,
-    body: Rc<MinlogPredicate>,
-    arity: Rc<MinlogType>,
+    body: Arc<MinlogPredicate>,
+    arity: Arc<MinlogType>,
 }
 
 impl ComprehensionTerm {
-    pub fn create(var: MinlogTerm, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create(var: MinlogTerm, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
             return body;
         }
@@ -31,10 +31,10 @@ impl ComprehensionTerm {
         var_types.extend(unpacked_arity);
         
         let arity = TupleType::create(var_types);
-        Rc::new(MinlogPredicate::Comprehension(ComprehensionTerm { var, body, arity }))
+        Arc::new(MinlogPredicate::Comprehension(ComprehensionTerm { var, body, arity }))
     }
     
-    pub fn create_nested(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create_nested(vars: Vec<MinlogTerm>, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let mut current = body;
         
         for var in vars.into_iter().rev() {
@@ -44,7 +44,7 @@ impl ComprehensionTerm {
         current
     }
     
-    pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn closure(minlog_formula: &Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let vars = minlog_formula.get_free_variables(&mut IndexSet::new())
             .into_iter().collect();
         
@@ -77,11 +77,11 @@ impl ComprehensionTerm {
         }
     }
     
-    pub fn body(&self) -> &Rc<MinlogPredicate> {
+    pub fn body(&self) -> &Arc<MinlogPredicate> {
         &self.body
     }
     
-    pub fn final_body(&self) -> &Rc<MinlogPredicate> {
+    pub fn final_body(&self) -> &Arc<MinlogPredicate> {
         if let MinlogPredicate::Comprehension(cterm) = self.body.as_ref() {
             cterm.final_body()
         } else {
@@ -91,11 +91,11 @@ impl ComprehensionTerm {
 }
 
 impl PredicateBody for ComprehensionTerm {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.arity.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate> {
         let new_body = self.body.normalize(eta, pi);
         
         if eta && !new_body.contains_free_variable(&self.var) {
@@ -109,11 +109,11 @@ impl PredicateBody for ComprehensionTerm {
         self.body.depth() + 1
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         self.body.extracted_type_pattern()
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         self.body.extracted_type()
     }
     
@@ -121,13 +121,13 @@ impl PredicateBody for ComprehensionTerm {
         self.body.et_pattern_to_et()
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_type_variables(visited).union(
             &self.var.get_type_variables(&mut IndexSet::new())
         ).cloned().collect()
     }
 
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_algebra_types(visited).union(
             &self.var.get_algebra_types(&mut IndexSet::new())
         ).cloned().collect()
@@ -145,25 +145,25 @@ impl PredicateBody for ComprehensionTerm {
         ).cloned().collect()
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_pred_vars(current, visited)
     }
 
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         let mut result = self.body.get_polarized_comp_terms(current, visited);
-        result.insert(Polarized::new(current, Rc::new(MinlogPredicate::Comprehension(self.clone()))));
+        result.insert(Polarized::new(current, Arc::new(MinlogPredicate::Comprehension(self.clone()))));
         result
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_inductive_preds(current, visited)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_prime_formulas(current, visited)
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         match from {
             PredSubstEntry::Type(_) => {
                 let new_var = self.var.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap());
@@ -173,7 +173,7 @@ impl PredicateBody for ComprehensionTerm {
             },
             PredSubstEntry::Term(from_tm) => {
                 if from_tm.is_variable() && self.var == *from_tm {
-                    Rc::new(MinlogPredicate::Comprehension(self.clone()))
+                    Arc::new(MinlogPredicate::Comprehension(self.clone()))
                 } else {
                     let new_var = self.var.substitute(&from.to_term_subst_entry().unwrap(), &to.to_term_subst_entry().unwrap());
                     let new_body = self.body.substitute(from, to);
@@ -192,7 +192,7 @@ impl PredicateBody for ComprehensionTerm {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let Some(conflict) = self.arity.first_conflict_with(&other.arity()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -213,11 +213,11 @@ impl PredicateBody for ComprehensionTerm {
             
             self.body.first_conflict_with(other_body)
         } else {
-            Some((Rc::new(MinlogPredicate::Comprehension(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogPredicate::Comprehension(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if !instance.is_comprehension_term() {
             return MatchOutput::FailedMatch;
         }

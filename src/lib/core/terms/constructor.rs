@@ -11,11 +11,11 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelConstructor {
     name: String,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelConstructor {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> MinlogTerm {
+    pub fn create(name: String, minlog_type: Arc<MinlogType>) -> MinlogTerm {
         if name.is_empty() {
             panic!("Constructor name cannot be empty");
         }
@@ -27,7 +27,7 @@ impl KernelConstructor {
             );
         }
         
-        MinlogTerm::Constructor(Rc::new(KernelConstructor {
+        MinlogTerm::Constructor(Arc::new(KernelConstructor {
             name,
             minlog_type,
         }).into())
@@ -39,7 +39,7 @@ impl KernelConstructor {
 }
 
 impl TermBody for KernelConstructor {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
@@ -77,16 +77,16 @@ impl TermBody for KernelConstructor {
         self.minlog_type.is_algebra()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
     fn get_constructors(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        IndexSet::from([MinlogTerm::Constructor(Rc::new(self.clone()).into())])
+        IndexSet::from([MinlogTerm::Constructor(Arc::new(self.clone()).into())])
     }
     
     fn alpha_equivalent(&self, other: &MinlogTerm,
@@ -107,7 +107,7 @@ impl TermBody for KernelConstructor {
                 Constructor::create(self.name.clone(), new_type)
             },
             TermSubstEntry::Term(from_tm) => {
-                if from_tm.is_constructor() && Constructor::Kernel(Rc::new(self.clone())) == *from_tm.to_constructor().unwrap() {
+                if from_tm.is_constructor() && Constructor::Kernel(Arc::new(self.clone())) == *from_tm.to_constructor().unwrap() {
                     to.to_term().unwrap()
                 } else {
                     Constructor::create(self.name.clone(), self.minlog_type.clone())
@@ -122,13 +122,13 @@ impl TermBody for KernelConstructor {
         }
         
         if !other.is_constructor() {
-            return Some((MinlogTerm::Constructor(Rc::new(self.clone()).into()).into(), other.clone().into()));
+            return Some((MinlogTerm::Constructor(Arc::new(self.clone()).into()).into(), other.clone().into()));
         }
         
         let other_constr = other.to_constructor().unwrap();
         
         if self.name != other_constr.name() || self.minlog_type != other_constr.minlog_type() {
-            return Some((MinlogTerm::Constructor(Rc::new(self.clone()).into()).into(), other.clone().into()));
+            return Some((MinlogTerm::Constructor(Arc::new(self.clone()).into()).into(), other.clone().into()));
         }
         None
     }
@@ -195,12 +195,12 @@ pub trait NativeConstructor: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum Constructor {
-        Kernel(kernel: Rc<KernelConstructor>),
-        Native(native: Rc<dyn NativeConstructor>),
+        Kernel(kernel: Arc<KernelConstructor>),
+        Native(native: Arc<dyn NativeConstructor>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -214,9 +214,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -253,14 +253,14 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl Constructor {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> MinlogTerm {
+    pub fn create(name: String, minlog_type: Arc<MinlogType>) -> MinlogTerm {
         KernelConstructor::create(name, minlog_type)
     }
     
-    pub fn into_kernel_constructor(self) -> Rc<KernelConstructor> {
+    pub fn into_kernel_constructor(self) -> Arc<KernelConstructor> {
         match self {
             Constructor::Kernel(k) => k,
-            Constructor::Native(n) => Rc::new(n.to_kernel()),
+            Constructor::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -287,26 +287,26 @@ impl PartialEq for Constructor {
 
 impl Eq for Constructor {}
 
-impl From<Rc<KernelConstructor>> for Constructor {
-    fn from(k: Rc<KernelConstructor>) -> Self {
+impl From<Arc<KernelConstructor>> for Constructor {
+    fn from(k: Arc<KernelConstructor>) -> Self {
         Constructor::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelConstructor>> for Constructor {
-    fn from(k: &Rc<KernelConstructor>) -> Self {
+impl From<&Arc<KernelConstructor>> for Constructor {
+    fn from(k: &Arc<KernelConstructor>) -> Self {
         Constructor::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeConstructor>> for Constructor {
-    fn from(n: Rc<dyn NativeConstructor>) -> Self {
+impl From<Arc<dyn NativeConstructor>> for Constructor {
+    fn from(n: Arc<dyn NativeConstructor>) -> Self {
         Constructor::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeConstructor>> for Constructor {
-    fn from(n: &Rc<dyn NativeConstructor>) -> Self {
+impl From<&Arc<dyn NativeConstructor>> for Constructor {
+    fn from(n: &Arc<dyn NativeConstructor>) -> Self {
         Constructor::Native(n.clone())
     }
 }

@@ -6,7 +6,7 @@ use crate::includes::{
     }
 };
 
-impl Substitutable for Rc<MinlogType> {
+impl Substitutable for Arc<MinlogType> {
     fn substitute(&self, from: &Self, to: &Self) -> Self {
         self.as_ref().substitute(from, to)
     }
@@ -24,4 +24,4 @@ impl Substitutable for Rc<MinlogType> {
     }
 }
 
-pub type TypeSubstitution = Substitution<Rc<MinlogType>>;
+pub type TypeSubstitution = Substitution<Arc<MinlogType>>;

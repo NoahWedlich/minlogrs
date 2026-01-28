@@ -1,32 +1,5 @@
 
-use indexmap::{IndexMap, IndexSet};
-use std::rc::Rc;
-use lib::{builtin::{elimination::extract_elimination_axiom, totality::extract_totality},
-core::{predicates::comprehension_term::ComprehensionTerm,
-    proofs::{minlog_proof::{MinlogProof, ProofBody},
-    proof_context::ProofContext},
-    structures::program_constant::{ProgramConstant, RewriteRule},
-    terms::{application::Application, program_term::ProgramTerm, term_substitution::TermSubstitution}, types::type_constant::TypeConstant}};
-use lib::proof_generation::by_use::generate_proof_by_use;
-use lib::proof_generation::by_assume::{generate_proof_by_assume, generate_proof_by_assume_with_name};
-use lib::proof_generation::by_intro::generate_proof_by_intro;
-use lib::proof_generation::by_elim::generate_proof_by_elim;
-use lib::core::predicates::all_quantifier::AllQuantifier;
-use lib::core::predicates::implication::Implication;
-use lib::core::predicates::predicate_substitution::PredicateSubstitution;
-use lib::core::predicates::inductive_predicate::InductivePredicate;
-use lib::core::predicates::prime_formula::PrimeFormula;
-use lib::core::structures::inductive_constant::InductiveConstant;
-use lib::core::terms::term_variable::TermVariable;
-use lib::core::types::tuple_type::TupleType;
-use lib::core::types::type_substitution::TypeSubstitution;
-use lib::core::types::type_variable::TypeVariable;
-use lib::utils::pretty_printer::*;
-use lib::utils::proof_tree_display::*;
-use lib::core::types::{algebra_type::*, arrow_type::*};
-use lib::core::terms::constructor::*;
-
-use lib::core::structures::{algebra::*};
+use lib::includes::all::*;
 
 fn main() {
     let tvar = TypeVariable::create("T".to_string());
@@ -559,7 +532,7 @@ fn main() {
     println!("Final Subproof by Introduction:");
     println!("{}", subproof_final.render_proof_tree());
 
-    let complete_subproof_0 = normalized_proof2.substitute(&Rc::new(MinlogProof::Goal(goal4.clone())).into(), &subproof_final.into());
+    let complete_subproof_0 = normalized_proof2.substitute(&Arc::new(MinlogProof::Goal(goal4.clone())).into(), &subproof_final.into());
     println!("Complete Subproof 0:");
     println!("{}", complete_subproof_0.render_proof_tree());
     
@@ -571,11 +544,11 @@ fn main() {
     println!("Complete Subproof 1:");
     println!("{}", complete_subproof_1.render_proof_tree());
     
-    let complete_subproof_2 = subproof2.substitute(&Rc::new(MinlogProof::Goal(goal3.clone())).into(), &complete_subproof_1.into());
+    let complete_subproof_2 = subproof2.substitute(&Arc::new(MinlogProof::Goal(goal3.clone())).into(), &complete_subproof_1.into());
     println!("Complete Subproof 2:");
     println!("{}", complete_subproof_2.render_proof_tree());
     
-    let complete_subproof_3 = normalized_proof.substitute(&Rc::new(MinlogProof::Goal(goal2.clone())).into(), &complete_subproof_2.into());
+    let complete_subproof_3 = normalized_proof.substitute(&Arc::new(MinlogProof::Goal(goal2.clone())).into(), &complete_subproof_2.into());
     println!("Complete Subproof 3:");
     println!("{}", complete_subproof_3.render_proof_tree());
     
@@ -587,11 +560,11 @@ fn main() {
     println!("Complete Subproof 4:");
     println!("{}", complete_subproof_4.render_proof_tree());
     
-    let complete_proof_5 = subproof0.substitute(&Rc::new(MinlogProof::Goal(goal1.clone())).into(), &complete_subproof_4.into());
+    let complete_proof_5 = subproof0.substitute(&Arc::new(MinlogProof::Goal(goal1.clone())).into(), &complete_subproof_4.into());
     println!("Complete Subproof 5:");
     println!("{}", complete_proof_5.render_proof_tree());
     
-    let complete_proof = assume_proof.substitute(&Rc::new(MinlogProof::Goal(goal0.clone())).into(), &complete_proof_5.into());
+    let complete_proof = assume_proof.substitute(&Arc::new(MinlogProof::Goal(goal0.clone())).into(), &complete_proof_5.into());
     println!("Complete Proof:");
     println!("{}", complete_proof.render_proof_tree());
     

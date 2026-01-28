@@ -12,10 +12,10 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum ProofSubstEntry {
-    Type(Rc<MinlogType>),
+    Type(Arc<MinlogType>),
     Term(MinlogTerm),
-    Predicate(Rc<MinlogPredicate>),
-    Proof(Rc<MinlogProof>),
+    Predicate(Arc<MinlogPredicate>),
+    Proof(Arc<MinlogProof>),
 }
 
 impl ProofSubstEntry {
@@ -43,7 +43,7 @@ impl ProofSubstEntry {
         !matches!(self, ProofSubstEntry::Proof(_))
     }
     
-    pub fn to_type(&self) -> Option<Rc<MinlogType>> {
+    pub fn to_type(&self) -> Option<Arc<MinlogType>> {
         match self {
             ProofSubstEntry::Type(t) => Some(t.clone()),
             _ => None,
@@ -57,14 +57,14 @@ impl ProofSubstEntry {
         }
     }
 
-    pub fn to_predicate(&self) -> Option<Rc<MinlogPredicate>> {
+    pub fn to_predicate(&self) -> Option<Arc<MinlogPredicate>> {
         match self {
             ProofSubstEntry::Predicate(p) => Some(p.clone()),
             _ => None,
         }
     }
 
-    pub fn to_proof(&self) -> Option<Rc<MinlogProof>> {
+    pub fn to_proof(&self) -> Option<Arc<MinlogProof>> {
         match self {
             ProofSubstEntry::Proof(p) => Some(p.clone()),
             _ => None,
@@ -198,14 +198,14 @@ impl PrettyPrintable for ProofSubstEntry {
     }
 }
 
-impl From<Rc<MinlogType>> for ProofSubstEntry {
-    fn from(t: Rc<MinlogType>) -> Self {
+impl From<Arc<MinlogType>> for ProofSubstEntry {
+    fn from(t: Arc<MinlogType>) -> Self {
         ProofSubstEntry::Type(t)
     }
 }
 
-impl From<&Rc<MinlogType>> for ProofSubstEntry {
-    fn from(t: &Rc<MinlogType>) -> Self {
+impl From<&Arc<MinlogType>> for ProofSubstEntry {
+    fn from(t: &Arc<MinlogType>) -> Self {
         ProofSubstEntry::Type(t.clone())
     }
 }
@@ -222,26 +222,26 @@ impl From<&MinlogTerm> for ProofSubstEntry {
     }
 }
 
-impl From<Rc<MinlogPredicate>> for ProofSubstEntry {
-    fn from(p: Rc<MinlogPredicate>) -> Self {
+impl From<Arc<MinlogPredicate>> for ProofSubstEntry {
+    fn from(p: Arc<MinlogPredicate>) -> Self {
         ProofSubstEntry::Predicate(p)
     }
 }
 
-impl From<&Rc<MinlogPredicate>> for ProofSubstEntry {
-    fn from(p: &Rc<MinlogPredicate>) -> Self {
+impl From<&Arc<MinlogPredicate>> for ProofSubstEntry {
+    fn from(p: &Arc<MinlogPredicate>) -> Self {
         ProofSubstEntry::Predicate(p.clone())
     }
 }
 
-impl From<Rc<MinlogProof>> for ProofSubstEntry {
-    fn from(pr: Rc<MinlogProof>) -> Self {
+impl From<Arc<MinlogProof>> for ProofSubstEntry {
+    fn from(pr: Arc<MinlogProof>) -> Self {
         ProofSubstEntry::Proof(pr)
     }
 }
 
-impl From<&Rc<MinlogProof>> for ProofSubstEntry {
-    fn from(pr: &Rc<MinlogProof>) -> Self {
+impl From<&Arc<MinlogProof>> for ProofSubstEntry {
+    fn from(pr: &Arc<MinlogProof>) -> Self {
         ProofSubstEntry::Proof(pr.clone())
     }
 }
@@ -302,7 +302,7 @@ impl ProofSubstitution {
         true
     }
     
-    pub fn admissible_predicate(&self, predicate: &Rc<MinlogPredicate>) -> bool {
+    pub fn admissible_predicate(&self, predicate: &Arc<MinlogPredicate>) -> bool {
         for pred_var in predicate.get_predicate_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&ProofSubstEntry::Predicate(pred_var.clone()));
             if let ProofSubstEntry::Predicate(p) = substituted {

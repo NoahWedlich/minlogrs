@@ -12,7 +12,7 @@ use crate::includes::{
 pub struct KernelAbstraction {
     var: MinlogTerm,
     kernel: MinlogTerm,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelAbstraction {
@@ -27,7 +27,7 @@ impl KernelAbstraction {
         
         let minlog_type = ArrowType::create(var.minlog_type(), kernel.minlog_type());
         
-        MinlogTerm::Abstraction(Rc::new(KernelAbstraction { var, kernel, minlog_type, }).into())
+        MinlogTerm::Abstraction(Arc::new(KernelAbstraction { var, kernel, minlog_type, }).into())
     }
     
     pub fn closure(minlog_term: &MinlogTerm) -> MinlogTerm {
@@ -42,7 +42,7 @@ impl KernelAbstraction {
     }
     
     pub fn all_vars(&self) -> Vec<MinlogTerm> {
-        let mut current = &Abstraction::Kernel(Rc::new(self.clone()));
+        let mut current = &Abstraction::Kernel(Arc::new(self.clone()));
         let mut vars = vec![current.var().clone()];
         
         while let Some(next_abstraction) = current.kernel().to_abstraction() {
@@ -77,7 +77,7 @@ impl KernelAbstraction {
 }
 
 impl TermBody for KernelAbstraction {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
@@ -127,11 +127,11 @@ impl TermBody for KernelAbstraction {
         1 + self.kernel.depth()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -176,10 +176,10 @@ impl TermBody for KernelAbstraction {
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
         if let Some(from_tm) = from.to_term() {
-            if from_tm.is_abstraction() && Abstraction::Kernel(Rc::new(self.clone())) == *from_tm.to_abstraction().unwrap() {
+            if from_tm.is_abstraction() && Abstraction::Kernel(Arc::new(self.clone())) == *from_tm.to_abstraction().unwrap() {
                 to.to_term().unwrap()
             } else if from_tm.is_variable() && from_tm == self.var {
-                MinlogTerm::Abstraction(Rc::new(self.clone()).into())
+                MinlogTerm::Abstraction(Arc::new(self.clone()).into())
             } else {
                 let new_kernel = self.kernel.substitute(from, to);
                 Abstraction::create(self.var.clone(), new_kernel)
@@ -198,7 +198,7 @@ impl TermBody for KernelAbstraction {
         }
         
         if !other.is_abstraction() {
-            return Some((MinlogTerm::Abstraction(Rc::new(self.clone()).into()).into(), other.clone().into()));
+            return Some((MinlogTerm::Abstraction(Arc::new(self.clone()).into()).into(), other.clone().into()));
         }
         
         let other_abs = other.to_abstraction().unwrap();
@@ -290,12 +290,12 @@ pub trait NativeAbstraction: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum Abstraction {
-        Kernel(kernel: Rc<KernelAbstraction>),
-        Native(native: Rc<dyn NativeAbstraction>),
+        Kernel(kernel: Arc<KernelAbstraction>),
+        Native(native: Arc<dyn NativeAbstraction>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -309,9 +309,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -370,10 +370,10 @@ impl Abstraction {
         result
     }
     
-    pub fn into_kernel_abstraction(self) -> Rc<KernelAbstraction> {
+    pub fn into_kernel_abstraction(self) -> Arc<KernelAbstraction> {
         match self {
             Abstraction::Kernel(k) => k,
-            Abstraction::Native(n) => Rc::new(n.to_kernel()),
+            Abstraction::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -400,26 +400,26 @@ impl PartialEq for Abstraction {
 
 impl Eq for Abstraction {}
 
-impl From<Rc<KernelAbstraction>> for Abstraction {
-    fn from(k: Rc<KernelAbstraction>) -> Self {
+impl From<Arc<KernelAbstraction>> for Abstraction {
+    fn from(k: Arc<KernelAbstraction>) -> Self {
         Abstraction::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelAbstraction>> for Abstraction {
-    fn from(k: &Rc<KernelAbstraction>) -> Self {
+impl From<&Arc<KernelAbstraction>> for Abstraction {
+    fn from(k: &Arc<KernelAbstraction>) -> Self {
         Abstraction::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeAbstraction>> for Abstraction {
-    fn from(n: Rc<dyn NativeAbstraction>) -> Self {
+impl From<Arc<dyn NativeAbstraction>> for Abstraction {
+    fn from(n: Arc<dyn NativeAbstraction>) -> Self {
         Abstraction::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeAbstraction>> for Abstraction {
-    fn from(n: &Rc<dyn NativeAbstraction>) -> Self {
+impl From<&Arc<dyn NativeAbstraction>> for Abstraction {
+    fn from(n: &Arc<dyn NativeAbstraction>) -> Self {
         Abstraction::Native(n.clone())
     }
 }

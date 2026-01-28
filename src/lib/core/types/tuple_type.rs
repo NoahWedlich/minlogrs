@@ -9,27 +9,27 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TupleType {
-    types: Vec<Rc<MinlogType>>,
+    types: Vec<Arc<MinlogType>>,
 }
 
 impl TupleType {
-    pub fn create(types: Vec<Rc<MinlogType>>) -> Rc<MinlogType> {
+    pub fn create(types: Vec<Arc<MinlogType>>) -> Arc<MinlogType> {
         if types.len() == 1 {
             return types[0].clone();
         }
         
-        Rc::new(MinlogType::Tuple(TupleType { types }))
+        Arc::new(MinlogType::Tuple(TupleType { types }))
     }
     
-    pub fn create_unit() -> Rc<MinlogType> {
+    pub fn create_unit() -> Arc<MinlogType> {
         TupleType::create(vec![])
     }
     
-    pub fn types(&self) -> &Vec<Rc<MinlogType>> {
+    pub fn types(&self) -> &Vec<Arc<MinlogType>> {
         &self.types
     }
     
-    pub fn type_at(&self, index: usize) -> Option<&Rc<MinlogType>> {
+    pub fn type_at(&self, index: usize) -> Option<&Arc<MinlogType>> {
         self.types.get(index)
     }
 }
@@ -43,19 +43,19 @@ impl TypeBody for TupleType {
         self.types.iter().map(|t| t.level()).max().unwrap_or(0)
     }
 
-    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         self.types.iter()
             .flat_map(|t| t.get_polarized_tvars(current, visited))
             .collect()
     }
 
-    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         self.types.iter()
             .flat_map(|t| t.get_polarized_algebras(current, visited))
             .collect()
     }
     
-    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
+    fn remove_nulls(&self) -> Option<Arc<MinlogType>> {
         let mut new_types = vec![];
         
         for t in &self.types {
@@ -71,11 +71,11 @@ impl TypeBody for TupleType {
         }
     }
 
-    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Arc<MinlogType>, to: &Arc<MinlogType>) -> Arc<MinlogType> {
         if from.is_tuple() && self == from.to_tuple().unwrap() {
             to.clone()
         } else {
-            let new_types: Vec<Rc<MinlogType>> = self.types.iter()
+            let new_types: Vec<Arc<MinlogType>> = self.types.iter()
                 .map(|t| t.substitute(from, to))
                 .collect();
             
@@ -83,7 +83,7 @@ impl TypeBody for TupleType {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogType>) -> Option<(Arc<MinlogType>, Arc<MinlogType>)> {
         if !other.is_tuple() {
             return Some((TupleType::create(self.types.clone()), other.clone()));
         }
@@ -103,7 +103,7 @@ impl TypeBody for TupleType {
         None
     }
 
-    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+    fn match_with(&self, instance: &Arc<MinlogType>) -> MatchOutput<Arc<MinlogType>> {
         if !instance.is_tuple() {
             return MatchOutput::FailedMatch;
         }

@@ -6,7 +6,7 @@ use crate::includes::{
     proof_generation::*,
 };
 
-pub fn generate_proof_by_elim(inductive_predicate: &Rc<MinlogPredicate>) -> Rc<MinlogProof> {
+pub fn generate_proof_by_elim(inductive_predicate: &Arc<MinlogPredicate>) -> Arc<MinlogProof> {
     let elim_axiom = extract_elimination_axiom(inductive_predicate, &mut IndexMap::new());
     
     let mut proof = elim_axiom;

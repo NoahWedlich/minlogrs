@@ -11,23 +11,23 @@ use crate::includes::{
 
 wrapper_enum::wrapper_enum! {
     pub fwd bnd trait PredicateBody: PrettyPrintable + Clone + PartialEq + Eq + Hash {
-        pub fwd fn arity(&self) -> Rc<MinlogType>
+        pub fwd fn arity(&self) -> Arc<MinlogType>
         
-        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate>
+        pub fwd fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate>
         
         pub fwd fn depth(&self) -> usize {
             0
         }
         
-        pub fwd fn extracted_type_pattern(&self) -> Rc<MinlogType>
-        pub fwd fn extracted_type(&self) -> Rc<MinlogType>
+        pub fwd fn extracted_type_pattern(&self) -> Arc<MinlogType>
+        pub fwd fn extracted_type(&self) -> Arc<MinlogType>
         pub fwd fn et_pattern_to_et(&self) -> TermSubstitution
         
-        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
             IndexSet::new()
         }
         
-        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
             IndexSet::new()
         }
 
@@ -39,27 +39,27 @@ wrapper_enum::wrapper_enum! {
             IndexSet::new()
         }
         
-        pub fwd fn get_polarized_pred_vars(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_pred_vars(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fwd fn get_polarized_comp_terms(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_comp_terms(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fwd fn get_polarized_inductive_preds(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_inductive_preds(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fwd fn get_polarized_prime_formulas(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+        pub fwd fn get_polarized_prime_formulas(&self, _current: Polarity, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
             IndexSet::new()
         }
         
-        pub fwd fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate>
+        pub fwd fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate>
         
-        pub fwd fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
+        pub fwd fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)>
         
-        pub fwd fn match_with(&self, ctx: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
+        pub fwd fn match_with(&self, ctx: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry>
     }
     
     #[derive(PartialEq, Eq, Hash)]
@@ -85,7 +85,7 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl MinlogPredicate {
-    pub fn unpacked_arity(&self) -> Vec<Rc<MinlogType>> {
+    pub fn unpacked_arity(&self) -> Vec<Arc<MinlogType>> {
         if let Some(tuple_type) = self.arity().to_tuple() {
             tuple_type.types().clone()
         } else {
@@ -97,7 +97,7 @@ impl MinlogPredicate {
         self.unpacked_arity().is_empty()
     }
     
-    pub fn to_cterm(pred: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn to_cterm(pred: &Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let arity = pred.unpacked_arity();
         
         let vars = arity.iter().enumerate().map(|(i, t)| {
@@ -109,31 +109,31 @@ impl MinlogPredicate {
         ComprehensionTerm::create_nested(vars, prime_formula)
     }
     
-    pub fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
+    pub fn get_predicate_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogPredicate>> {
         self.get_polarized_pred_vars(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
+    pub fn get_comprehension_terms(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogPredicate>> {
         self.get_polarized_comp_terms(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
     
-    pub fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
+    pub fn get_inductive_predicates(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogPredicate>> {
         self.get_polarized_inductive_preds(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
 
-    pub fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogPredicate>> {
+    pub fn get_prime_formulas(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogPredicate>> {
         self.get_polarized_prime_formulas(Polarity::Unknown, visited)
             .into_iter().map(|p| p.value).collect()
     }
 
-    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+    pub fn contains_type_variable(&self, var: &Arc<MinlogType>) -> bool {
         var.is_variable() && self.get_type_variables(&mut IndexSet::new()).contains(var)
     }
     
-    pub fn contains_algebra_type(&self, alg: &Rc<MinlogType>) -> bool {
+    pub fn contains_algebra_type(&self, alg: &Arc<MinlogType>) -> bool {
         alg.is_algebra() && self.get_algebra_types(&mut IndexSet::new()).contains(alg)
     }
     
@@ -145,19 +145,19 @@ impl MinlogPredicate {
         var.is_variable() && self.get_bound_variables(&mut IndexSet::new()).contains(var)
     }
     
-    pub fn contains_predicate_variable(&self, pvar: &Rc<MinlogPredicate>) -> bool {
+    pub fn contains_predicate_variable(&self, pvar: &Arc<MinlogPredicate>) -> bool {
         pvar.is_variable() && self.get_predicate_variables(&mut IndexSet::new()).contains(pvar)
     }
     
-    pub fn contains_comprehension_term(&self, cterm: &Rc<MinlogPredicate>) -> bool {
+    pub fn contains_comprehension_term(&self, cterm: &Arc<MinlogPredicate>) -> bool {
         cterm.is_comprehension_term() && self.get_comprehension_terms(&mut IndexSet::new()).contains(cterm)
     }
     
-    pub fn contains_inductive_predicate(&self, ipred: &Rc<MinlogPredicate>) -> bool {
+    pub fn contains_inductive_predicate(&self, ipred: &Arc<MinlogPredicate>) -> bool {
         ipred.is_inductive_predicate() && self.get_inductive_predicates(&mut IndexSet::new()).contains(ipred)
     }
     
-    pub fn contains_prime_formula(&self, pform: &Rc<MinlogPredicate>) -> bool {
+    pub fn contains_prime_formula(&self, pform: &Arc<MinlogPredicate>) -> bool {
         pform.is_prime() && self.get_prime_formulas(&mut IndexSet::new()).contains(pform)
     }
 }

@@ -12,13 +12,13 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct UniversalIntro {
-    proof: Rc<MinlogProof>,
+    proof: Arc<MinlogProof>,
     variable: MinlogTerm,
-    formula: Rc<MinlogPredicate>,
+    formula: Arc<MinlogPredicate>,
 }
 
 impl UniversalIntro {
-    pub fn create(proof: Rc<MinlogProof>, variable: MinlogTerm) -> Rc<MinlogProof> {
+    pub fn create(proof: Arc<MinlogProof>, variable: MinlogTerm) -> Arc<MinlogProof> {
         if proof.get_assumptions().iter().any(|assump| assump.contains_free_variable(&variable)) {
             panic!("UniversalIntro::create called with a proof that has assumptions depending on the variable");
         }
@@ -26,14 +26,14 @@ impl UniversalIntro {
         let inner_formula = proof.proved_formula();
         let universal_formula = AllQuantifier::create(variable.clone(), inner_formula);
         
-        Rc::new(MinlogProof::UniversalIntro(UniversalIntro {
+        Arc::new(MinlogProof::UniversalIntro(UniversalIntro {
             proof,
             variable,
             formula: universal_formula,
         }))
     }
     
-    pub fn proof(&self) -> Rc<MinlogProof> {
+    pub fn proof(&self) -> Arc<MinlogProof> {
         self.proof.clone()
     }
     
@@ -43,20 +43,20 @@ impl UniversalIntro {
 }
 
 impl ProofBody for UniversalIntro {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::UniversalIntro(UniversalIntro {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::UniversalIntro(UniversalIntro {
             proof: self.proof.normalize(eta, pi),
             variable: self.variable.clone(),
             formula: self.formula.normalize(eta, pi),
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::UniversalIntro(UniversalIntro {
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::UniversalIntro(UniversalIntro {
             proof: self.proof.unfold(),
             variable: self.variable.clone(),
             formula: self.formula.clone(),
@@ -67,11 +67,11 @@ impl ProofBody for UniversalIntro {
         self.proof.extracted_term()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.proof.get_type_variables()
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.proof.get_algebra_types()
     }
     
@@ -87,39 +87,39 @@ impl ProofBody for UniversalIntro {
             .cloned().collect()
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_predicate_variables()
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_comprehension_terms()
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_prime_formulas()
     }
 
-    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_goals(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_goals()
     }
 
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_assumptions()
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_axioms()
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_theorems()
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_universal_intro() && self == from_proof.to_universal_intro().unwrap() {
             to.to_proof().unwrap()
         } else {
@@ -130,7 +130,7 @@ impl ProofBody for UniversalIntro {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(ue_intro) = other.to_universal_intro() {
             if let Some(conflict) = self.proof.first_conflict_with(&ue_intro.proof) {
                 return Some(conflict);
@@ -142,11 +142,11 @@ impl ProofBody for UniversalIntro {
             
             None
         } else {
-            Some((Rc::new(MinlogProof::UniversalIntro(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::UniversalIntro(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_universal_intro() {
             return MatchOutput::FailedMatch;
         }

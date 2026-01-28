@@ -7,7 +7,7 @@ use crate::includes::{
     }
 };
 
-pub fn generate_proof_by_use(target: &Rc<MinlogPredicate>, to_use: &Rc<MinlogProof>, context: &ProofContext) -> Rc<MinlogProof> {
+pub fn generate_proof_by_use(target: &Arc<MinlogPredicate>, to_use: &Arc<MinlogProof>, context: &ProofContext) -> Arc<MinlogProof> {
     let mut proof = to_use.clone();
     let mut goal_index = proof.get_goals().len();
     

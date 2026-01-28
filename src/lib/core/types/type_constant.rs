@@ -17,29 +17,29 @@ pub enum TypeConstant {
 }
 
 impl TypeConstant {
-    pub fn create_null() -> Rc<MinlogType> {
-        Rc::new(MinlogType::NullType(TypeConstant::NullType))
+    pub fn create_null() -> Arc<MinlogType> {
+        Arc::new(MinlogType::NullType(TypeConstant::NullType))
     }
     
-    pub fn create_atomic() -> Rc<MinlogType> {
-        Rc::new(MinlogType::Atomic(TypeConstant::Atomic))
+    pub fn create_atomic() -> Arc<MinlogType> {
+        Arc::new(MinlogType::Atomic(TypeConstant::Atomic))
     }
     
-    pub fn create_existential() -> Rc<MinlogType> {
-        Rc::new(MinlogType::Existential(TypeConstant::Existential))
+    pub fn create_existential() -> Arc<MinlogType> {
+        Arc::new(MinlogType::Existential(TypeConstant::Existential))
     }
     
-    pub fn create_proposition() -> Rc<MinlogType> {
-        Rc::new(MinlogType::Proposition(TypeConstant::Proposition))
+    pub fn create_proposition() -> Arc<MinlogType> {
+        Arc::new(MinlogType::Proposition(TypeConstant::Proposition))
     }
     
-    pub fn create_wildcard() -> Rc<MinlogType> {
-        Rc::new(MinlogType::Wildcard(TypeConstant::Wildcard))
+    pub fn create_wildcard() -> Arc<MinlogType> {
+        Arc::new(MinlogType::Wildcard(TypeConstant::Wildcard))
     }
 }
 
 impl TypeBody for TypeConstant {
-    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
+    fn remove_nulls(&self) -> Option<Arc<MinlogType>> {
         match self {
             TypeConstant::NullType => None,
             TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
@@ -49,7 +49,7 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Arc<MinlogType>, to: &Arc<MinlogType>) -> Arc<MinlogType> {
         if (from.is_null() && matches!(self, TypeConstant::NullType)) ||
               (from.is_atomic() && matches!(self, TypeConstant::Atomic)) ||
               (from.is_existential() && matches!(self, TypeConstant::Existential)) ||
@@ -66,7 +66,7 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogType>) -> Option<(Arc<MinlogType>, Arc<MinlogType>)> {
         match self {
             TypeConstant::NullType => if other.is_null() {
                 None
@@ -92,7 +92,7 @@ impl TypeBody for TypeConstant {
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+    fn match_with(&self, instance: &Arc<MinlogType>) -> MatchOutput<Arc<MinlogType>> {
         match (self, instance) {
             (TypeConstant::Wildcard, _) => {
                 MatchOutput::Matched(IndexMap::new())

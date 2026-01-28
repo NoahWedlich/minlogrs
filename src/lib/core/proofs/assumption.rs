@@ -13,22 +13,22 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Assumption {
     name: String,
-    formula: Rc<MinlogPredicate>,
+    formula: Arc<MinlogPredicate>,
     index: usize,
 }
 
 impl Assumption {
-    pub fn create(name: String, formula: Rc<MinlogPredicate>) -> Rc<MinlogProof> {
+    pub fn create(name: String, formula: Arc<MinlogPredicate>) -> Arc<MinlogProof> {
         if !formula.is_formula() {
             panic!("Only assumptions of nullary predicates are allowed.")
         }
         
-        Rc::new(MinlogProof::Assumption(Assumption { name, formula, index: 0 }))
+        Arc::new(MinlogProof::Assumption(Assumption { name, formula, index: 0 }))
     }
     
-    pub fn unshadow(proof: &Rc<MinlogProof>) -> Rc<MinlogProof> {
+    pub fn unshadow(proof: &Arc<MinlogProof>) -> Arc<MinlogProof> {
         if let Some(assump) = proof.to_assumption() {
-            Rc::new(MinlogProof::Assumption(Assumption {
+            Arc::new(MinlogProof::Assumption(Assumption {
                 name: assump.name.clone(),
                 formula: assump.formula.clone(),
                 index: assump.index + 1,
@@ -48,20 +48,20 @@ impl Assumption {
 }
 
 impl ProofBody for Assumption {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Assumption(Assumption {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Assumption(Assumption {
             name: self.name.clone(),
             formula: self.formula.normalize(eta, pi),
             index: self.index,
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Assumption(self.clone()))
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Assumption(self.clone()))
     }
     
     fn extracted_term(&self) -> Option<MinlogTerm> {
@@ -77,11 +77,11 @@ impl ProofBody for Assumption {
         )
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -93,27 +93,27 @@ impl ProofBody for Assumption {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_predicate_variables(&mut IndexSet::new())
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_comprehension_terms(&mut IndexSet::new())
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_inductive_predicates(&mut IndexSet::new())
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_prime_formulas(&mut IndexSet::new())
     }
     
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
-        IndexSet::from([Rc::new(MinlogProof::Assumption(self.clone()))])
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
+        IndexSet::from([Arc::new(MinlogProof::Assumption(self.clone()))])
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_assumption() && self == from_proof.to_assumption().unwrap() {
             to.to_proof().unwrap()
         } else {
@@ -124,7 +124,7 @@ impl ProofBody for Assumption {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(conflict) = self.formula.first_conflict_with(&other.proved_formula()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -132,11 +132,11 @@ impl ProofBody for Assumption {
         if other.is_assumption() && self == other.to_assumption().unwrap() {
             None
         } else {
-            Some((Rc::new(MinlogProof::Assumption(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::Assumption(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_assumption() {
             return MatchOutput::FailedMatch;
         }

@@ -10,22 +10,22 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelTermWildcard {
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelTermWildcard {
-    pub fn create(minlog_type: Rc<MinlogType>) -> MinlogTerm {
-        MinlogTerm::Wildcard(Rc::new(KernelTermWildcard { minlog_type }).into())
+    pub fn create(minlog_type: Arc<MinlogType>) -> MinlogTerm {
+        MinlogTerm::Wildcard(Arc::new(KernelTermWildcard { minlog_type }).into())
     }
 }
 
 impl TermBody for KernelTermWildcard {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
     fn normalize(&self, _eta: bool, _pi: bool) -> MinlogTerm {
-        MinlogTerm::Wildcard(Rc::new(self.clone()).into())
+        MinlogTerm::Wildcard(Arc::new(self.clone()).into())
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
@@ -42,11 +42,11 @@ impl TermBody for KernelTermWildcard {
         true
     }
 
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -60,12 +60,12 @@ impl TermBody for KernelTermWildcard {
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
         match from {
             TermSubstEntry::Type(from_t) => {
-                MinlogTerm::Wildcard(Rc::new(KernelTermWildcard {
+                MinlogTerm::Wildcard(Arc::new(KernelTermWildcard {
                     minlog_type: self.minlog_type.substitute(from_t, &to.to_type().unwrap()),
                 }).into())
             },
             _ => {
-                MinlogTerm::Wildcard(Rc::new(self.clone()).into())
+                MinlogTerm::Wildcard(Arc::new(self.clone()).into())
             }
         }
     }
@@ -118,12 +118,12 @@ pub trait NativeTermWildcard: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum TermWildcard {
-        Kernel(kernel: Rc<KernelTermWildcard>),
-        Native(native: Rc<dyn NativeTermWildcard>),
+        Kernel(kernel: Arc<KernelTermWildcard>),
+        Native(native: Arc<dyn NativeTermWildcard>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -137,9 +137,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -175,14 +175,14 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl TermWildcard {
-    pub fn create(minlog_type: Rc<MinlogType>) -> MinlogTerm {
+    pub fn create(minlog_type: Arc<MinlogType>) -> MinlogTerm {
         KernelTermWildcard::create(minlog_type)
     }
     
-    pub fn into_kernel_wildcard(self) -> Rc<KernelTermWildcard> {
+    pub fn into_kernel_wildcard(self) -> Arc<KernelTermWildcard> {
         match self {
             TermWildcard::Kernel(kw) => kw,
-            TermWildcard::Native(nw) => Rc::new(nw.to_kernel()),
+            TermWildcard::Native(nw) => Arc::new(nw.to_kernel()),
         }
     }
 }
@@ -209,26 +209,26 @@ impl PartialEq for TermWildcard {
 
 impl Eq for TermWildcard {}
 
-impl From<Rc<KernelTermWildcard>> for TermWildcard {
-    fn from(kw: Rc<KernelTermWildcard>) -> Self {
+impl From<Arc<KernelTermWildcard>> for TermWildcard {
+    fn from(kw: Arc<KernelTermWildcard>) -> Self {
         TermWildcard::Kernel(kw)
     }
 }
 
-impl From<&Rc<KernelTermWildcard>> for TermWildcard {
-    fn from(kw: &Rc<KernelTermWildcard>) -> Self {
+impl From<&Arc<KernelTermWildcard>> for TermWildcard {
+    fn from(kw: &Arc<KernelTermWildcard>) -> Self {
         TermWildcard::Kernel(kw.clone())
     }
 }
 
-impl From<Rc<dyn NativeTermWildcard>> for TermWildcard {
-    fn from(nw: Rc<dyn NativeTermWildcard>) -> Self {
+impl From<Arc<dyn NativeTermWildcard>> for TermWildcard {
+    fn from(nw: Arc<dyn NativeTermWildcard>) -> Self {
         TermWildcard::Native(nw)
     }
 }
 
-impl From<&Rc<dyn NativeTermWildcard>> for TermWildcard {
-    fn from(nw: &Rc<dyn NativeTermWildcard>) -> Self {
+impl From<&Arc<dyn NativeTermWildcard>> for TermWildcard {
+    fn from(nw: &Arc<dyn NativeTermWildcard>) -> Self {
         TermWildcard::Native(nw.clone())
     }
 }

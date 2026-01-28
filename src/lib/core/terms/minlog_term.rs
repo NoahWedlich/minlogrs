@@ -10,7 +10,7 @@ use crate::includes::{
 
 wrapper_enum::wrapper_enum! {
     pub fwd bnd trait TermBody: PrettyPrintable {
-        pub fwd fn minlog_type(&self) -> Rc<MinlogType>
+        pub fwd fn minlog_type(&self) -> Arc<MinlogType>
         
         pub fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
         
@@ -32,11 +32,11 @@ wrapper_enum::wrapper_enum! {
             false
         }
         
-        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
             IndexSet::new()
         }
 
-        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+        pub fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
             IndexSet::new()
         }
 
@@ -92,11 +92,11 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl MinlogTerm {
-    pub fn contains_type_variable(&self, var: &Rc<MinlogType>) -> bool {
+    pub fn contains_type_variable(&self, var: &Arc<MinlogType>) -> bool {
         self.minlog_type().contains_type_variable(var)
     }
 
-    pub fn contains_algebra_type(&self, var: &Rc<MinlogType>) -> bool {
+    pub fn contains_algebra_type(&self, var: &Arc<MinlogType>) -> bool {
         self.minlog_type().contains_algebra_type(var)
     }
 
@@ -117,8 +117,8 @@ impl MinlogTerm {
     }
 }
 
-pub trait NativeTermBody: TermBody + Any {
-    fn minlog_to_native(term: &MinlogTerm) -> Option<Rc<Self>> where Self: Sized;
+pub trait NativeTermBody: TermBody + Any + Sync + Send {
+    fn minlog_to_native(term: &MinlogTerm) -> Option<Arc<Self>> where Self: Sized;
     
     fn native_to_minlog(&self) -> MinlogTerm;
     

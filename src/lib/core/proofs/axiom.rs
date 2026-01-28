@@ -11,20 +11,20 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Axiom {
     name: String,
-    formula: Rc<MinlogPredicate>,
-    content: RefCell<Option<MinlogTerm>>,
+    formula: Arc<MinlogPredicate>,
+    content: Arc<RwLock<Option<MinlogTerm>>>,
 }
 
 impl Axiom {
-    pub fn create(name: String, formula: Rc<MinlogPredicate>) -> Rc<MinlogProof> {
+    pub fn create(name: String, formula: Arc<MinlogPredicate>) -> Arc<MinlogProof> {
         if !formula.is_formula() {
             panic!("Can only create axioms of nullary predicates")
         }
         
-        Rc::new(MinlogProof::Axiom(Axiom { name, formula, content: RefCell::new(None) }))
+        Arc::new(MinlogProof::Axiom(Axiom { name, formula, content: Arc::new(RwLock::new(None)) }))
     }
     
     pub fn name(&self) -> &str {
@@ -32,11 +32,11 @@ impl Axiom {
     }
     
     pub fn has_content(&self) -> bool {
-        self.content.borrow().is_some()
+        self.content.read().unwrap().is_some()
     }
     
     pub fn content(&self) -> Option<MinlogTerm> {
-        self.content.borrow().clone()
+        self.content.read().unwrap().clone()
     }
     
     pub fn set_content(&self, content: MinlogTerm) {
@@ -47,30 +47,30 @@ impl Axiom {
             );
         }
         
-        *self.content.borrow_mut() = Some(content);
+        *self.content.write().unwrap() = Some(content);
     }
 }
 
 impl ProofBody for Axiom {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Axiom(Axiom {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Axiom(Axiom {
             name: self.name.clone(),
             formula: self.formula.normalize(eta, pi),
-            content: RefCell::new(self.content.borrow().clone()),
+            content: Arc::new(RwLock::new(self.content.read().unwrap().clone())),
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Axiom(self.clone()))
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Axiom(self.clone()))
     }
     
     fn extracted_term(&self) -> Option<MinlogTerm> {
         self.formula.extracted_type().remove_nulls().map(|t| {
-            if let Some(content) = self.content.borrow().clone() {
+            if let Some(content) = self.content.read().unwrap().clone() {
                 let et_subst = self.formula.et_pattern_to_et();
                 et_subst.substitute(&content)
             } else {
@@ -80,11 +80,11 @@ impl ProofBody for Axiom {
         })?.remove_nulls()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -96,39 +96,39 @@ impl ProofBody for Axiom {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_predicate_variables(&mut IndexSet::new())
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_comprehension_terms(&mut IndexSet::new())
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_inductive_predicates(&mut IndexSet::new())
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_prime_formulas(&mut IndexSet::new())
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
-        IndexSet::from([Rc::new(MinlogProof::Axiom(self.clone()))])
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
+        IndexSet::from([Arc::new(MinlogProof::Axiom(self.clone()))])
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_axiom() && self == from_proof.to_axiom().unwrap() {
             to.to_proof().unwrap()
         } else {
-            Rc::new(MinlogProof::Axiom(Axiom {
+            Arc::new(MinlogProof::Axiom(Axiom {
                 name: self.name.clone(),
                 formula: self.formula.substitute_with(from, to),
-                content: RefCell::new(self.content.borrow().as_ref().map(|c| c.substitute_with(from, to)).clone()),
+                content: Arc::new(RwLock::new(self.content.read().unwrap().as_ref().map(|c| c.substitute_with(from, to)).clone())),
             }))
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(conflict) = self.formula.first_conflict_with(&other.proved_formula()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -136,11 +136,11 @@ impl ProofBody for Axiom {
         if other.is_axiom() && self == other.to_axiom().unwrap() {
             None
         } else {
-            Some((Rc::new(MinlogProof::Axiom(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::Axiom(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_axiom() {
             return MatchOutput::FailedMatch;
         }
@@ -197,3 +197,11 @@ impl Hash for Axiom {
         self.formula.hash(state);
     }
 }
+
+impl PartialEq for Axiom {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.formula == other.formula
+    }
+}
+
+impl Eq for Axiom {}

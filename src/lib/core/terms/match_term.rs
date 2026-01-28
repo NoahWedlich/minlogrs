@@ -10,13 +10,13 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelMatchTerm {
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
     branches: Vec<(MinlogTerm, MinlogTerm)>,
 }
 
 // TODO: Allow anonymous recursion
 impl KernelMatchTerm {
-    pub fn create(minlog_type: Rc<MinlogType>, branches: Vec<(MinlogTerm, MinlogTerm)>) -> MinlogTerm {
+    pub fn create(minlog_type: Arc<MinlogType>, branches: Vec<(MinlogTerm, MinlogTerm)>) -> MinlogTerm {
         if let Some(arr_type) = minlog_type.to_arrow() {
             let argument_type = arr_type.argument().clone();
             let return_type = arr_type.value().clone();
@@ -31,7 +31,7 @@ impl KernelMatchTerm {
                 }
             }
             
-            MinlogTerm::MatchTerm(Rc::new(KernelMatchTerm {
+            MinlogTerm::MatchTerm(Arc::new(KernelMatchTerm {
                 minlog_type,
                 branches,
             }).into())
@@ -46,7 +46,7 @@ impl KernelMatchTerm {
 }
 
 impl TermBody for KernelMatchTerm {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
@@ -100,11 +100,11 @@ impl TermBody for KernelMatchTerm {
         0
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)|
@@ -115,11 +115,11 @@ impl TermBody for KernelMatchTerm {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)| {
@@ -132,10 +132,10 @@ impl TermBody for KernelMatchTerm {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)| {
@@ -148,10 +148,10 @@ impl TermBody for KernelMatchTerm {
     }
     
     fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)| {
@@ -164,10 +164,10 @@ impl TermBody for KernelMatchTerm {
     }
     
     fn get_constructors(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)| {
@@ -180,10 +180,10 @@ impl TermBody for KernelMatchTerm {
     }
     
     fn get_program_terms(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::MatchTerm(Rc::new(self.clone()).into())) {
+        if visited.contains(&MinlogTerm::MatchTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::MatchTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::MatchTerm(Arc::new(self.clone()).into()));
             
             self.branches.iter()
                 .flat_map(|(p, i)| {
@@ -226,7 +226,7 @@ impl TermBody for KernelMatchTerm {
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
         if let Some(tm) = from.to_term() && let Some(match_term) = tm.to_match_term()
-            && MatchTerm::Kernel(Rc::new(self.clone())) == *match_term
+            && MatchTerm::Kernel(Arc::new(self.clone())) == *match_term
         {
             to.to_term().unwrap()
         } else {
@@ -245,7 +245,7 @@ impl TermBody for KernelMatchTerm {
         if let Some(other_match) = other.to_match_term() {
             if self.branches.len() != other_match.branches().len() {
                 return Some((
-                    TermSubstEntry::Term(MinlogTerm::MatchTerm(Rc::new(self.clone()).into())),
+                    TermSubstEntry::Term(MinlogTerm::MatchTerm(Arc::new(self.clone()).into())),
                     TermSubstEntry::Term(other.clone())
                 ));
             }
@@ -263,7 +263,7 @@ impl TermBody for KernelMatchTerm {
             None
         } else {
             Some((
-                TermSubstEntry::Term(MinlogTerm::MatchTerm(Rc::new(self.clone()).into())),
+                TermSubstEntry::Term(MinlogTerm::MatchTerm(Arc::new(self.clone()).into())),
                 TermSubstEntry::Term(other.clone())
             ))
         }
@@ -357,12 +357,12 @@ pub trait NativeMatchTerm: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum MatchTerm {
-        Kernel(kernel: Rc<KernelMatchTerm>),
-        Native(native: Rc<dyn NativeMatchTerm>),
+        Kernel(kernel: Arc<KernelMatchTerm>),
+        Native(native: Arc<dyn NativeMatchTerm>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -376,9 +376,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -415,14 +415,14 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl MatchTerm {
-    pub fn create(minlog_type: Rc<MinlogType>, branches: Vec<(MinlogTerm, MinlogTerm)>) -> MinlogTerm {
+    pub fn create(minlog_type: Arc<MinlogType>, branches: Vec<(MinlogTerm, MinlogTerm)>) -> MinlogTerm {
         KernelMatchTerm::create(minlog_type, branches)
     }
     
-    pub fn into_kernel_match_term(self) -> Rc<KernelMatchTerm> {
+    pub fn into_kernel_match_term(self) -> Arc<KernelMatchTerm> {
         match self {
             MatchTerm::Kernel(k) => k,
-            MatchTerm::Native(n) => Rc::new(n.to_kernel()),
+            MatchTerm::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -449,26 +449,26 @@ impl PartialEq for MatchTerm {
 
 impl Eq for MatchTerm {}
 
-impl From<Rc<KernelMatchTerm>> for MatchTerm {
-    fn from(k: Rc<KernelMatchTerm>) -> Self {
+impl From<Arc<KernelMatchTerm>> for MatchTerm {
+    fn from(k: Arc<KernelMatchTerm>) -> Self {
         MatchTerm::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelMatchTerm>> for MatchTerm {
-    fn from(k: &Rc<KernelMatchTerm>) -> Self {
+impl From<&Arc<KernelMatchTerm>> for MatchTerm {
+    fn from(k: &Arc<KernelMatchTerm>) -> Self {
         MatchTerm::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeMatchTerm>> for MatchTerm {
-    fn from(n: Rc<dyn NativeMatchTerm>) -> Self {
+impl From<Arc<dyn NativeMatchTerm>> for MatchTerm {
+    fn from(n: Arc<dyn NativeMatchTerm>) -> Self {
         MatchTerm::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeMatchTerm>> for MatchTerm {
-    fn from(n: &Rc<dyn NativeMatchTerm>) -> Self {
+impl From<&Arc<dyn NativeMatchTerm>> for MatchTerm {
+    fn from(n: &Arc<dyn NativeMatchTerm>) -> Self {
         MatchTerm::Native(n.clone())
     }
 }

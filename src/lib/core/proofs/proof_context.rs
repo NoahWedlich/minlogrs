@@ -10,7 +10,7 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ProofContext {
-    pub assumptions: IndexSet<Rc<MinlogProof>>,
+    pub assumptions: IndexSet<Arc<MinlogProof>>,
     pub variables: IndexSet<MinlogTerm>,
 }
 
@@ -26,7 +26,7 @@ impl ProofContext {
         self.assumptions.is_empty() && self.variables.is_empty()
     }
     
-    pub fn add_assumption(&mut self, assumption: Rc<MinlogProof>) {
+    pub fn add_assumption(&mut self, assumption: Arc<MinlogProof>) {
         if !assumption.is_assumption() {
             panic!("Tried to add non-assumption to proof context.");
         }
@@ -42,7 +42,7 @@ impl ProofContext {
         self.variables.insert(variable);
     }
     
-    pub fn get_assumptions(&self) -> &IndexSet<Rc<MinlogProof>> {
+    pub fn get_assumptions(&self) -> &IndexSet<Arc<MinlogProof>> {
         &self.assumptions
     }
     
@@ -50,7 +50,7 @@ impl ProofContext {
         &self.variables
     }
     
-    pub fn contains_assumption(&self, assumption: &Rc<MinlogProof>) -> bool {
+    pub fn contains_assumption(&self, assumption: &Arc<MinlogProof>) -> bool {
         self.assumptions.contains(assumption)
     }
     
@@ -58,7 +58,7 @@ impl ProofContext {
         self.variables.contains(variable)
     }
     
-    pub fn remove_assumption(&mut self, assumption: &Rc<MinlogProof>) {
+    pub fn remove_assumption(&mut self, assumption: &Arc<MinlogProof>) {
         self.assumptions.shift_remove(assumption);
     }
     

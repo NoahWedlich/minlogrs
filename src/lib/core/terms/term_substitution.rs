@@ -10,7 +10,7 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TermSubstEntry {
-    Type(Rc<MinlogType>),
+    Type(Arc<MinlogType>),
     Term(MinlogTerm),
 }
 
@@ -23,7 +23,7 @@ impl TermSubstEntry {
         matches!(self, TermSubstEntry::Term(_))
     }
     
-    pub fn to_type(&self) -> Option<Rc<MinlogType>> {
+    pub fn to_type(&self) -> Option<Arc<MinlogType>> {
         if let TermSubstEntry::Type(t) = self {
             Some(t.clone())
         } else {
@@ -126,14 +126,14 @@ impl PrettyPrintable for TermSubstEntry {
     }
 }
 
-impl From<Rc<MinlogType>> for TermSubstEntry {
-    fn from(t: Rc<MinlogType>) -> Self {
+impl From<Arc<MinlogType>> for TermSubstEntry {
+    fn from(t: Arc<MinlogType>) -> Self {
         TermSubstEntry::Type(t)
     }
 }
 
-impl From<&Rc<MinlogType>> for TermSubstEntry {
-    fn from(t: &Rc<MinlogType>) -> Self {
+impl From<&Arc<MinlogType>> for TermSubstEntry {
+    fn from(t: &Arc<MinlogType>) -> Self {
         TermSubstEntry::Type(t.clone())
     }
 }
@@ -175,7 +175,7 @@ impl SubstitutableWith<TermSubstEntry> for MinlogTerm {
     }
 }
 
-impl<T: SubstitutableWith<Rc<MinlogType>>> SubstitutableWith<TermSubstEntry> for T {
+impl<T: SubstitutableWith<Arc<MinlogType>>> SubstitutableWith<TermSubstEntry> for T {
     fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
         match (from, to) {
             (TermSubstEntry::Type(from_t), TermSubstEntry::Type(to_t)) => {
@@ -186,8 +186,8 @@ impl<T: SubstitutableWith<Rc<MinlogType>>> SubstitutableWith<TermSubstEntry> for
     }
 }
 
-impl From<MatchOutput<Rc<MinlogType>>> for MatchOutput<TermSubstEntry> {
-    fn from(output: MatchOutput<Rc<MinlogType>>) -> Self {
+impl From<MatchOutput<Arc<MinlogType>>> for MatchOutput<TermSubstEntry> {
+    fn from(output: MatchOutput<Arc<MinlogType>>) -> Self {
         match output {
             MatchOutput::Substitution(from, to) => {
                 MatchOutput::Substitution(from.into(), to.into())

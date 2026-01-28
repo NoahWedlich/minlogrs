@@ -12,14 +12,14 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct UniversalElim {
-    proof: Rc<MinlogProof>,
+    proof: Arc<MinlogProof>,
     term: MinlogTerm,
     replaced_variable: MinlogTerm,
-    formula: Rc<MinlogPredicate>,
+    formula: Arc<MinlogPredicate>,
 }
 
 impl UniversalElim {
-    pub fn create(proof: Rc<MinlogProof>, term: MinlogTerm) -> Rc<MinlogProof> {
+    pub fn create(proof: Arc<MinlogProof>, term: MinlogTerm) -> Arc<MinlogProof> {
         let universal_formula = proof.proved_formula();
         
         if !universal_formula.is_all_quantifier() {
@@ -31,7 +31,7 @@ impl UniversalElim {
         
         let formula = all_quantifier.body().substitute(&var.clone().into(), &term.clone().into());
         
-        Rc::new(MinlogProof::UniversalElim(UniversalElim {
+        Arc::new(MinlogProof::UniversalElim(UniversalElim {
             proof,
             term,
             replaced_variable: var.clone(),
@@ -39,7 +39,7 @@ impl UniversalElim {
         }))
     }
     
-    pub fn proof(&self) -> Rc<MinlogProof> {
+    pub fn proof(&self) -> Arc<MinlogProof> {
         self.proof.clone()
     }
     
@@ -49,12 +49,12 @@ impl UniversalElim {
 }
 
 impl ProofBody for UniversalElim {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::UniversalElim(UniversalElim {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::UniversalElim(UniversalElim {
             proof: self.proof.normalize(eta, pi),
             term: self.term.clone(),
             replaced_variable: self.replaced_variable.clone(),
@@ -62,8 +62,8 @@ impl ProofBody for UniversalElim {
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::UniversalElim(UniversalElim {
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::UniversalElim(UniversalElim {
             proof: self.proof.unfold(),
             term: self.term.clone(),
             replaced_variable: self.replaced_variable.clone(),
@@ -75,13 +75,13 @@ impl ProofBody for UniversalElim {
         self.proof.extracted_term()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
             self.proof.get_type_variables()
             .union(&self.term.get_type_variables(&mut IndexSet::new()))
             .cloned().collect()
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
             self.proof.get_algebra_types()
             .union(&self.term.get_algebra_types(&mut IndexSet::new()))
             .cloned().collect()
@@ -101,39 +101,39 @@ impl ProofBody for UniversalElim {
             .cloned().collect()
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_predicate_variables()
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_comprehension_terms()
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_prime_formulas()
     }
     
-    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_goals(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_goals()
     }
     
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_assumptions()
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_axioms()
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_theorems()
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_universal_elim() && self == from_proof.to_universal_elim().unwrap() {
             to.to_proof().unwrap()
         } else if let Some(term) = from.to_term() && (self.replaced_variable == term || self.term == term) {
@@ -149,7 +149,7 @@ impl ProofBody for UniversalElim {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let MinlogProof::UniversalElim(other_universal_elim) = other.as_ref() {
             if let Some(conflict) = self.proof.first_conflict_with(&other_universal_elim.proof) {
                 return Some(conflict);
@@ -161,11 +161,11 @@ impl ProofBody for UniversalElim {
             
             None
         } else {
-            Some((Rc::new(MinlogProof::UniversalElim(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::UniversalElim(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_universal_elim() {
             return MatchOutput::FailedMatch;
         }

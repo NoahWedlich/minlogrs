@@ -11,20 +11,20 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AlgebraType {
-    algebra: Rc<Algebra>,
+    algebra: Arc<Algebra>,
     parameters: TypeSubstitution,
 }
 
 impl AlgebraType {
-    pub fn create(algebra: Rc<Algebra>, mut parameters: TypeSubstitution) -> Rc<MinlogType> {
+    pub fn create(algebra: Arc<Algebra>, mut parameters: TypeSubstitution) -> Arc<MinlogType> {
         let alg_tvars = algebra.get_polarized_tvars(Polarity::Unknown, &mut IndexSet::new())
             .into_iter().map(|ptv| ptv.value).collect::<Vec<_>>();
         parameters.restrict(|from| alg_tvars.contains(from));
         
-        Rc::new(MinlogType::Algebra(AlgebraType { algebra, parameters }))
+        Arc::new(MinlogType::Algebra(AlgebraType { algebra, parameters }))
     }
     
-    pub fn algebra(&self) -> &Rc<Algebra> {
+    pub fn algebra(&self) -> &Arc<Algebra> {
         &self.algebra
     }
     
@@ -62,14 +62,14 @@ impl AlgebraType {
         &self.parameters
     }
     
-    pub fn references_algebra(&self, algebra: &Rc<MinlogType>) -> bool {
+    pub fn references_algebra(&self, algebra: &Arc<MinlogType>) -> bool {
         self.constructors().iter().any(|c| {
             c.minlog_type().contains_algebra_type(algebra)
         })
     }
     
     pub fn ensure_well_founded(&self) {
-        let self_alg_type = Rc::new(MinlogType::Algebra(self.clone()));
+        let self_alg_type = Arc::new(MinlogType::Algebra(self.clone()));
 
         for constructor in self.constructors().iter() {
             let constructor_type = constructor.minlog_type();
@@ -109,7 +109,7 @@ impl TypeBody for AlgebraType {
         true
     }
     
-    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
+    fn remove_nulls(&self) -> Option<Arc<MinlogType>> {
         if let Some(reduction) = self.get_reduction() {
             let new_parameters = TypeSubstitution::from_pairs(
                 self.parameters.pairs().into_iter().filter_map(|(from, to)| {
@@ -125,7 +125,7 @@ impl TypeBody for AlgebraType {
             
             Some(AlgebraType::create(reduction.reduced_algebra, new_parameters))
         } else {
-            Some(Rc::new(MinlogType::Algebra(self.clone())))
+            Some(Arc::new(MinlogType::Algebra(self.clone())))
         }
     }
     
@@ -135,7 +135,7 @@ impl TypeBody for AlgebraType {
             .max().unwrap_or(0)
     }
     
-    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         if visited.contains(&MinlogType::Algebra(self.clone())) {
             IndexSet::new()
         } else {
@@ -147,7 +147,7 @@ impl TypeBody for AlgebraType {
         }
     }
 
-    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         if visited.contains(&MinlogType::Algebra(self.clone())) {
             IndexSet::new()
         } else {
@@ -157,13 +157,13 @@ impl TypeBody for AlgebraType {
                 .flat_map(|c| c.minlog_type().get_polarized_algebras(current, visited))
                 .collect::<IndexSet<_>>();
             
-            algebras.insert(Polarized::new(current, Rc::new(MinlogType::Algebra(self.clone()))));
+            algebras.insert(Polarized::new(current, Arc::new(MinlogType::Algebra(self.clone()))));
             
             algebras
         }
     }
     
-    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Arc<MinlogType>, to: &Arc<MinlogType>) -> Arc<MinlogType> {
         if from.is_algebra() && self == from.to_algebra().unwrap() {
             to.clone()
         } else {
@@ -174,26 +174,26 @@ impl TypeBody for AlgebraType {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogType>) -> Option<(Arc<MinlogType>, Arc<MinlogType>)> {
         if !other.is_algebra() {
-            return Some((Rc::new(MinlogType::Algebra(self.clone())), other.clone()));
+            return Some((Arc::new(MinlogType::Algebra(self.clone())), other.clone()));
         }
         
         let other_alg = other.to_algebra().unwrap();
         
         if self.algebra.as_ref() != other_alg.algebra.as_ref() {
-            return Some((Rc::new(MinlogType::Algebra(self.clone())), other.clone()));
+            return Some((Arc::new(MinlogType::Algebra(self.clone())), other.clone()));
         }
         
         for (from, to) in self.parameters.pairs().iter() {
-            let other_to = other_alg.parameters.substitute::<Rc<MinlogType>>(from);
+            let other_to = other_alg.parameters.substitute::<Arc<MinlogType>>(from);
             if let Some(conflict) = to.first_conflict_with(&other_to) {
                 return Some(conflict);
             }
         }
         
         for (from, to) in other_alg.parameters.pairs().iter() {
-            let self_to = self.parameters.substitute::<Rc<MinlogType>>(from);
+            let self_to = self.parameters.substitute::<Arc<MinlogType>>(from);
             if let Some(conflict) = to.first_conflict_with(&self_to) {
                 return Some(conflict);
             }
@@ -202,7 +202,7 @@ impl TypeBody for AlgebraType {
         None
     }
     
-    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+    fn match_with(&self, instance: &Arc<MinlogType>) -> MatchOutput<Arc<MinlogType>> {
         if !instance.is_algebra() {
             return MatchOutput::FailedMatch;
         }
@@ -232,7 +232,7 @@ impl PrettyPrintable for AlgebraType {
         } else {
             let params = PPElement::list(
                 tparams.iter().map(|param| {
-                    let substituted = self.parameters.substitute::<Rc<MinlogType>>(param);
+                    let substituted = self.parameters.substitute::<Arc<MinlogType>>(param);
                     if detail && &substituted != param {
                         PPElement::group(vec![
                             param.to_pp_element(detail),

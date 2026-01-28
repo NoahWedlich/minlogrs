@@ -12,11 +12,11 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AllQuantifier {
     var: MinlogTerm,
-    body: Rc<MinlogPredicate>,
+    body: Arc<MinlogPredicate>,
 }
 
 impl AllQuantifier {
-    pub fn create(var: MinlogTerm, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create(var: MinlogTerm, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
             return body;
         }
@@ -32,10 +32,10 @@ impl AllQuantifier {
             );
         }
         
-        Rc::new(MinlogPredicate::AllQuantifier(AllQuantifier { var, body }))
+        Arc::new(MinlogPredicate::AllQuantifier(AllQuantifier { var, body }))
     }
     
-    pub fn create_nested(vars: Vec<MinlogTerm>, body: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create_nested(vars: Vec<MinlogTerm>, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let mut current_body = body;
         
         for var in vars.into_iter().rev() {
@@ -45,7 +45,7 @@ impl AllQuantifier {
         current_body
     }
     
-    pub fn closure(minlog_formula: &Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn closure(minlog_formula: &Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let vars = minlog_formula.get_free_variables(&mut IndexSet::new())
             .into_iter().collect();
         
@@ -78,11 +78,11 @@ impl AllQuantifier {
         }
     }
     
-    pub fn body(&self) -> &Rc<MinlogPredicate> {
+    pub fn body(&self) -> &Arc<MinlogPredicate> {
         &self.body
     }
     
-    pub fn final_body(&self) -> &Rc<MinlogPredicate> {
+    pub fn final_body(&self) -> &Arc<MinlogPredicate> {
         if let MinlogPredicate::AllQuantifier(next_aq) = self.body.as_ref() {
             next_aq.final_body()
         } else {
@@ -92,11 +92,11 @@ impl AllQuantifier {
 }
 
 impl PredicateBody for AllQuantifier {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.body.arity()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate> {
         let normalized_body = self.body.normalize(eta, pi);
         AllQuantifier::create(self.var.clone(), normalized_body)
     }
@@ -105,11 +105,11 @@ impl PredicateBody for AllQuantifier {
         1 + self.body.depth()
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         self.body.extracted_type_pattern()
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         self.body.extracted_type()
     }
     
@@ -117,13 +117,13 @@ impl PredicateBody for AllQuantifier {
         self.body.et_pattern_to_et()
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_type_variables(visited)
             .union(&self.var.get_type_variables(&mut IndexSet::new()))
             .cloned().collect()
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_algebra_types(visited)
             .union(&self.var.get_algebra_types(&mut IndexSet::new()))
             .cloned().collect()
@@ -141,25 +141,25 @@ impl PredicateBody for AllQuantifier {
             .collect()
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_pred_vars(current, visited)
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_comp_terms(current, visited)
     }
     
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_inductive_preds(current, visited)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_prime_formulas(current, visited)
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         if let Some(tm) = from.to_term() && tm == self.var {
-            Rc::new(MinlogPredicate::AllQuantifier(self.clone()))
+            Arc::new(MinlogPredicate::AllQuantifier(self.clone()))
         } else if let Some(pred) = from.to_predicate() && pred.is_all_quantifier() && self == pred.to_all_quantifier().unwrap() {
             to.to_predicate().unwrap()
         } else {
@@ -175,7 +175,7 @@ impl PredicateBody for AllQuantifier {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let MinlogPredicate::AllQuantifier(other_aq) = other.as_ref() {
             if self.var.minlog_type() != other_aq.var.minlog_type() {
                 return Some((self.var.minlog_type().into(), other_aq.var.minlog_type().into()));
@@ -192,11 +192,11 @@ impl PredicateBody for AllQuantifier {
             
             self.body.first_conflict_with(other_body)
         } else {
-            Some((Rc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogPredicate::AllQuantifier(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if !instance.is_all_quantifier() {
             return MatchOutput::FailedMatch;
         }

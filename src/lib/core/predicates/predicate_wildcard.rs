@@ -11,29 +11,29 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct PredicateWildcard {
-    arity: Rc<MinlogType>,
+    arity: Arc<MinlogType>,
 }
 
 impl PredicateWildcard {
-    pub fn create(arity: Rc<MinlogType>) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Wildcard(PredicateWildcard { arity }))
+    pub fn create(arity: Arc<MinlogType>) -> Arc<MinlogPredicate> {
+        Arc::new(MinlogPredicate::Wildcard(PredicateWildcard { arity }))
     }
 }
 
 impl PredicateBody for PredicateWildcard {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.arity.clone()
     }
     
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::Wildcard(self.clone()))
+    fn normalize(&self, _eta: bool, _pi: bool) -> Arc<MinlogPredicate> {
+        Arc::new(MinlogPredicate::Wildcard(self.clone()))
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         TypeConstant::create_null()
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         TypeConstant::create_null()
     }
     
@@ -41,24 +41,24 @@ impl PredicateBody for PredicateWildcard {
         TermSubstitution::make_empty()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.arity().get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.arity.get_algebra_types(&mut IndexSet::new())
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         match from {
             PredSubstEntry::Type(from_t) => {
                 PredicateWildcard::create(self.arity.substitute(from_t, &to.to_type().unwrap()))
             },
-            _ => Rc::new(MinlogPredicate::Wildcard(self.clone())),
+            _ => Arc::new(MinlogPredicate::Wildcard(self.clone())),
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let Some(conflict) = self.arity.first_conflict_with(&other.arity()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -66,7 +66,7 @@ impl PredicateBody for PredicateWildcard {
         None
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         let conditions = if self.arity() != instance.arity() {
             IndexMap::from([(self.arity().into(), instance.arity().into())])
         } else {

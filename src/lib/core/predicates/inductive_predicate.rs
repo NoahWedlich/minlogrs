@@ -12,12 +12,12 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct InductivePredicate {
-    definition: Rc<InductiveConstant>,
+    definition: Arc<InductiveConstant>,
     params: PredicateSubstitution,
 }
 
 impl InductivePredicate {
-    pub fn create(definition: Rc<InductiveConstant>, mut params: PredicateSubstitution) -> Rc<MinlogPredicate> {
+    pub fn create(definition: Arc<InductiveConstant>, mut params: PredicateSubstitution) -> Arc<MinlogPredicate> {
         let idp_vars: Vec<PredSubstEntry> = definition.get_type_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into())
             .chain(definition.get_free_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into()))
             .chain(definition.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new()).into_iter().map(|pol| pol.value.into()))
@@ -25,13 +25,13 @@ impl InductivePredicate {
         
         params.restrict(|from| idp_vars.contains(from));
         
-        Rc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
+        Arc::new(MinlogPredicate::InductivePredicate(InductivePredicate {
             definition,
             params,
         }))
     }
     
-    pub fn definition(&self) -> &Rc<InductiveConstant> {
+    pub fn definition(&self) -> &Arc<InductiveConstant> {
         &self.definition
     }
     
@@ -43,7 +43,7 @@ impl InductivePredicate {
         self.definition.name()
     }
     
-    pub fn clauses(&self) -> Vec<(String, Rc<MinlogPredicate>)> {
+    pub fn clauses(&self) -> Vec<(String, Arc<MinlogPredicate>)> {
         self.definition.clauses().iter()
             .map(|(name, body)| (
                 name.clone(),
@@ -70,11 +70,11 @@ impl InductivePredicate {
         })
     }
     
-    pub fn get_algebra(&self) -> Option<Rc<MinlogType>> {
+    pub fn get_algebra(&self) -> Option<Arc<MinlogType>> {
         self.get_computational_content().map(|content| content.algebra)
     }
     
-    pub fn references_idp(&self, idp: &Rc<MinlogPredicate>) -> bool {
+    pub fn references_idp(&self, idp: &Arc<MinlogPredicate>) -> bool {
         if self == idp.to_inductive_predicate().unwrap() {
             return true;
         }
@@ -92,22 +92,22 @@ impl InductivePredicate {
         })
     }
     
-    pub fn collect_relevant_idps(&self, ridps: &mut IndexSet<Rc<MinlogPredicate>>) {
-        if ridps.contains(&Rc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
+    pub fn collect_relevant_idps(&self, ridps: &mut IndexSet<Arc<MinlogPredicate>>) {
+        if ridps.contains(&Arc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
             return;
         }
         
-        ridps.insert(Rc::new(MinlogPredicate::InductivePredicate(self.clone())));
+        ridps.insert(Arc::new(MinlogPredicate::InductivePredicate(self.clone())));
         
         for idp in self.get_polarized_inductive_preds(Polarity::Unknown, &mut IndexSet::new()).iter() {
-            if idp.value.to_inductive_predicate().unwrap().references_idp(&Rc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
+            if idp.value.to_inductive_predicate().unwrap().references_idp(&Arc::new(MinlogPredicate::InductivePredicate(self.clone()))) {
                 idp.value.to_inductive_predicate().unwrap().collect_relevant_idps(ridps);
             }
         }
     }
     
     pub fn ensure_well_founded(&self) {
-        let self_idp_pred = Rc::new(MinlogPredicate::InductivePredicate(self.clone()));
+        let self_idp_pred = Arc::new(MinlogPredicate::InductivePredicate(self.clone()));
         
         for (_, body) in self.clauses().iter() {
             if let Some(implication) = body.to_implication() {
@@ -127,12 +127,12 @@ impl InductivePredicate {
 }
 
 impl PredicateBody for InductivePredicate {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.params.substitute::<PredSubstEntry>(&self.definition.arity().into()).to_type().unwrap()
     }
     
-    fn normalize(&self, _eta: bool, _pi: bool) -> Rc<MinlogPredicate> {
-        Rc::new(MinlogPredicate::InductivePredicate(self.clone()))
+    fn normalize(&self, _eta: bool, _pi: bool) -> Arc<MinlogPredicate> {
+        Arc::new(MinlogPredicate::InductivePredicate(self.clone()))
     }
     
     fn depth(&self) -> usize {
@@ -145,7 +145,7 @@ impl PredicateBody for InductivePredicate {
             .max().unwrap_or(0)
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         if let Some(alg) = self.get_algebra() {
             let pred_vars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
                 .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
@@ -163,7 +163,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         if let Some(alg) = self.get_algebra() {
             let pred_vars = self.get_polarized_pred_vars(Polarity::Unknown, &mut IndexSet::new())
                 .into_iter().map(|p| p.value).collect::<IndexSet<_>>();
@@ -193,7 +193,7 @@ impl PredicateBody for InductivePredicate {
         )
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -206,7 +206,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -245,7 +245,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -265,7 +265,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -285,7 +285,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
 
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -295,13 +295,13 @@ impl PredicateBody for InductivePredicate {
                 .flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited))
                 .collect::<IndexSet<_>>();
             
-            results.insert(Polarized::new(current, Rc::new(MinlogPredicate::InductivePredicate(self.clone()))));
+            results.insert(Polarized::new(current, Arc::new(MinlogPredicate::InductivePredicate(self.clone()))));
     
             results
         }
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         if visited.contains(&MinlogPredicate::InductivePredicate(self.clone())) {
             IndexSet::new()
         } else {
@@ -321,7 +321,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         if let Some(pred) = from.to_predicate() && pred.is_inductive_predicate() && self == pred.to_inductive_predicate().unwrap() {
             to.to_predicate().unwrap()
         } else {
@@ -332,7 +332,7 @@ impl PredicateBody for InductivePredicate {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if !other.is_inductive_predicate() {
             panic!("Tried to find conflict between incompatible PredSubstEntry types");
         }
@@ -340,7 +340,7 @@ impl PredicateBody for InductivePredicate {
         let other_ipred = other.to_inductive_predicate().unwrap();
         
         if self.definition != other_ipred.definition {
-            return Some((Rc::new(MinlogPredicate::InductivePredicate(self.clone())).into(), other.clone().into()));
+            return Some((Arc::new(MinlogPredicate::InductivePredicate(self.clone())).into(), other.clone().into()));
         }
         
         for (from, to) in self.params.pairs().iter() {
@@ -353,7 +353,7 @@ impl PredicateBody for InductivePredicate {
         None
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if !instance.is_inductive_predicate() {
             return MatchOutput::FailedMatch;
         }

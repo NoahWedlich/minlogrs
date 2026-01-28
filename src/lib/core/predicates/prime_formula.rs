@@ -11,13 +11,13 @@ use crate::includes::{
 
 #[derive(PartialEq, Eq, Clone, Hash)]
 pub struct PrimeFormula {
-    body: Rc<MinlogPredicate>,
+    body: Arc<MinlogPredicate>,
     argument: MinlogTerm,
-    arity: Rc<MinlogType>,
+    arity: Arc<MinlogType>,
 }
 
 impl PrimeFormula {
-    pub fn create(body: Rc<MinlogPredicate>, argument: MinlogTerm) -> Rc<MinlogPredicate> {
+    pub fn create(body: Arc<MinlogPredicate>, argument: MinlogTerm) -> Arc<MinlogPredicate> {
         if argument.is_tuple() && argument.to_tuple().unwrap().elements().is_empty() {
             return body;
         }
@@ -41,10 +41,10 @@ impl PrimeFormula {
             TupleType::create(unpacked_arity[1..].to_vec())
         };
 
-        Rc::new(MinlogPredicate::Prime(PrimeFormula { body, argument, arity }))
+        Arc::new(MinlogPredicate::Prime(PrimeFormula { body, argument, arity }))
     }
     
-    pub fn create_nested(body: Rc<MinlogPredicate>, arguments: Vec<MinlogTerm>) -> Rc<MinlogPredicate> {
+    pub fn create_nested(body: Arc<MinlogPredicate>, arguments: Vec<MinlogTerm>) -> Arc<MinlogPredicate> {
         let mut current_body = body;
         
         for arg in arguments.into_iter() {
@@ -80,11 +80,11 @@ impl PrimeFormula {
         }
     }
     
-    pub fn body(&self) -> &Rc<MinlogPredicate> {
+    pub fn body(&self) -> &Arc<MinlogPredicate> {
         &self.body
     }
     
-    pub fn final_body(&self) -> &Rc<MinlogPredicate> {
+    pub fn final_body(&self) -> &Arc<MinlogPredicate> {
         if let Some(next_prime) = self.body.to_prime() {
             next_prime.final_body()
         } else {
@@ -94,11 +94,11 @@ impl PrimeFormula {
 }
 
 impl PredicateBody for PrimeFormula {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.arity.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate> {
         if pi && (self.argument.is_tuple() || self.argument.is_match_term()) {
             println!("Warning: Pi-normalization of Prime Formulas is not implemented yet.");
         }
@@ -138,11 +138,11 @@ impl PredicateBody for PrimeFormula {
         1 + max(self.argument.depth(), self.body.depth())
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         self.body.extracted_type_pattern()
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         self.body.extracted_type()
     }
     
@@ -150,13 +150,13 @@ impl PredicateBody for PrimeFormula {
         self.body.et_pattern_to_et()
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_type_variables(visited)
             .union(&self.argument.get_type_variables(&mut IndexSet::new()))
             .cloned().collect()
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.body.get_algebra_types(visited)
             .union(&self.argument.get_algebra_types(&mut IndexSet::new()))
             .cloned().collect()
@@ -174,25 +174,25 @@ impl PredicateBody for PrimeFormula {
             .cloned().collect()
     }
     
-    fn get_polarized_pred_vars(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_pred_vars(_current, visited)
     }
     
-    fn get_polarized_comp_terms(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_comp_terms(_current, visited)
     }
     
-    fn get_polarized_inductive_preds(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, _current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.body.get_polarized_inductive_preds(_current, visited)
     }
     
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         let mut primes = self.body.get_polarized_prime_formulas(current, visited);
-        primes.insert(Polarized::new(current, Rc::new(MinlogPredicate::Prime(self.clone()))));
+        primes.insert(Polarized::new(current, Arc::new(MinlogPredicate::Prime(self.clone()))));
         primes
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         if let Some(tse) = from.to_term_subst_entry() {
             let new_arg = self.argument.substitute(&tse, &to.to_term_subst_entry().unwrap());
             let new_body = self.body.substitute(from, to);
@@ -206,7 +206,7 @@ impl PredicateBody for PrimeFormula {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let Some(other_prime) = other.to_prime() {
             if let Some(conflict) = self.argument.first_conflict_with(&other_prime.argument) {
                 return Some((conflict.0.into(), conflict.1.into()));
@@ -214,11 +214,11 @@ impl PredicateBody for PrimeFormula {
             
             self.body.first_conflict_with(&other_prime.body)
         } else {
-            Some((Rc::new(MinlogPredicate::Prime(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogPredicate::Prime(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if !instance.is_prime() {
             return MatchOutput::FailedMatch;
         }

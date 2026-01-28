@@ -9,16 +9,16 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ArrowType {
-    argument: Rc<MinlogType>,
-    value: Rc<MinlogType>,
+    argument: Arc<MinlogType>,
+    value: Arc<MinlogType>,
 }
 
 impl ArrowType {
-    pub fn create(argument: Rc<MinlogType>, value: Rc<MinlogType>) -> Rc<MinlogType> {
-        Rc::new(MinlogType::Arrow(ArrowType { argument, value }))
+    pub fn create(argument: Arc<MinlogType>, value: Arc<MinlogType>) -> Arc<MinlogType> {
+        Arc::new(MinlogType::Arrow(ArrowType { argument, value }))
     }
     
-    pub fn create_nested(arguments: Vec<Rc<MinlogType>>, value: Rc<MinlogType>) -> Rc<MinlogType> {
+    pub fn create_nested(arguments: Vec<Arc<MinlogType>>, value: Arc<MinlogType>) -> Arc<MinlogType> {
         let mut current_value = value;
         
         for arg in arguments.into_iter().rev() {
@@ -28,11 +28,11 @@ impl ArrowType {
         current_value
     }
     
-    pub fn argument(&self) -> &Rc<MinlogType> {
+    pub fn argument(&self) -> &Arc<MinlogType> {
         &self.argument
     }
     
-    pub fn all_arguments(&self) -> Vec<Rc<MinlogType>> {
+    pub fn all_arguments(&self) -> Vec<Arc<MinlogType>> {
         let mut current = self;
         let mut args = vec![current.argument.clone()];
         
@@ -44,7 +44,7 @@ impl ArrowType {
         args
     }
     
-    pub fn argument_at(&self, index: usize) -> Option<&Rc<MinlogType>> {
+    pub fn argument_at(&self, index: usize) -> Option<&Arc<MinlogType>> {
         if index == 0 {
             Some(&self.argument)
         } else if self.value.is_arrow() {
@@ -54,11 +54,11 @@ impl ArrowType {
         }
     }
     
-    pub fn value(&self) -> &Rc<MinlogType> {
+    pub fn value(&self) -> &Arc<MinlogType> {
         &self.value
     }
     
-    pub fn final_value(&self) -> &Rc<MinlogType> {
+    pub fn final_value(&self) -> &Arc<MinlogType> {
         if let Some(next_arrow) = self.value.to_arrow() {
             next_arrow.final_value()
         } else {
@@ -80,7 +80,7 @@ impl TypeBody for ArrowType {
         max(self.argument.level(), self.value.level())
     }
     
-    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_tvars(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         let mut result = self.argument.get_polarized_tvars(current.invert(), visited);
         
         result.extend(self.value.get_polarized_tvars(current, visited));
@@ -88,7 +88,7 @@ impl TypeBody for ArrowType {
         result
     }
 
-    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Rc<MinlogType>>> {
+    fn get_polarized_algebras(&self, current: Polarity, visited: &mut IndexSet<MinlogType>) -> IndexSet<Polarized<Arc<MinlogType>>> {
         let mut result = self.argument.get_polarized_algebras(current.invert(), visited);
         
         result.extend(self.value.get_polarized_algebras(current, visited));
@@ -96,7 +96,7 @@ impl TypeBody for ArrowType {
         result
     }
     
-    fn remove_nulls(&self) -> Option<Rc<MinlogType>> {
+    fn remove_nulls(&self) -> Option<Arc<MinlogType>> {
         if let Some(new_value) = self.value.remove_nulls() {
             if let Some(new_argument) = self.argument.remove_nulls() {
                 Some(ArrowType::create(new_argument, new_value))
@@ -108,7 +108,7 @@ impl TypeBody for ArrowType {
         }
     }
 
-    fn substitute(&self, from: &Rc<MinlogType>, to: &Rc<MinlogType>) -> Rc<MinlogType> {
+    fn substitute(&self, from: &Arc<MinlogType>, to: &Arc<MinlogType>) -> Arc<MinlogType> {
         if from.is_arrow() && self == from.to_arrow().unwrap() {
             to.clone()
         } else {
@@ -119,9 +119,9 @@ impl TypeBody for ArrowType {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogType>) -> Option<(Rc<MinlogType>, Rc<MinlogType>)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogType>) -> Option<(Arc<MinlogType>, Arc<MinlogType>)> {
         if !other.is_arrow() {
-            return Some((Rc::new(MinlogType::Arrow(self.clone())), other.clone()));
+            return Some((Arc::new(MinlogType::Arrow(self.clone())), other.clone()));
         }
         
         let other_arrow = other.to_arrow().unwrap();
@@ -133,7 +133,7 @@ impl TypeBody for ArrowType {
         self.value.first_conflict_with(&other_arrow.value)
     }
     
-    fn match_with(&self, instance: &Rc<MinlogType>) -> MatchOutput<Rc<MinlogType>> {
+    fn match_with(&self, instance: &Arc<MinlogType>) -> MatchOutput<Arc<MinlogType>> {
         if !instance.is_arrow() {
             return MatchOutput::FailedMatch;
         }

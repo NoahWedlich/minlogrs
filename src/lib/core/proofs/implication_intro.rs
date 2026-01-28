@@ -12,13 +12,13 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImplicationIntro {
-    assumption: Rc<MinlogProof>,
-    conclusion: Rc<MinlogProof>,
-    formula: Rc<MinlogPredicate>,
+    assumption: Arc<MinlogProof>,
+    conclusion: Arc<MinlogProof>,
+    formula: Arc<MinlogPredicate>,
 }
 
 impl ImplicationIntro {
-    pub fn create(proof: Rc<MinlogProof>, assumption: Rc<MinlogProof>) -> Rc<MinlogProof> {
+    pub fn create(proof: Arc<MinlogProof>, assumption: Arc<MinlogProof>) -> Arc<MinlogProof> {
         if !assumption.is_assumption() {
             panic!("ImplicationIntro::create called with a non-assumption proof as assumption");
         }
@@ -27,37 +27,37 @@ impl ImplicationIntro {
         let conclusion_formula = proof.proved_formula();
         let implication_formula = Implication::create(premise_formula, conclusion_formula);
         
-        Rc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
+        Arc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
             assumption,
             conclusion: proof,
             formula: implication_formula,
         }))
     }
 
-    pub fn assumption(&self) -> Rc<MinlogProof> {
+    pub fn assumption(&self) -> Arc<MinlogProof> {
         self.assumption.clone()
     }
     
-    pub fn conclusion(&self) -> Rc<MinlogProof> {
+    pub fn conclusion(&self) -> Arc<MinlogProof> {
         self.conclusion.clone()
     }
 }
 
 impl ProofBody for ImplicationIntro {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
             assumption: self.assumption.normalize(eta, pi),
             conclusion: self.conclusion.normalize(eta, pi),
             formula: self.formula.normalize(eta, pi),
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::ImplicationIntro(ImplicationIntro {
             assumption: self.assumption.unfold(),
             conclusion: self.conclusion.unfold(),
             formula: self.formula.clone(),
@@ -77,13 +77,13 @@ impl ProofBody for ImplicationIntro {
         })?.remove_nulls()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.assumption.get_type_variables()
             .union(&self.conclusion.get_type_variables())
             .cloned().collect()
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.assumption.get_algebra_types()
             .union(&self.conclusion.get_algebra_types())
             .cloned().collect()
@@ -101,55 +101,55 @@ impl ProofBody for ImplicationIntro {
             .cloned().collect()
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.assumption.get_predicate_variables()
             .union(&self.conclusion.get_predicate_variables())
             .cloned().collect()
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.assumption.get_comprehension_terms()
             .union(&self.conclusion.get_comprehension_terms())
             .cloned().collect()
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.assumption.get_inductive_predicates()
             .union(&self.conclusion.get_inductive_predicates())
             .cloned().collect()
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.assumption.get_prime_formulas()
             .union(&self.conclusion.get_prime_formulas())
             .cloned().collect()
     }
 
-    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_goals(&self) -> IndexSet<Arc<MinlogProof>> {
         self.conclusion.get_goals()
             .union(&self.assumption.get_goals())
             .cloned().collect()
     }
 
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
         self.conclusion.get_assumptions()
             .difference(&IndexSet::from([self.assumption.clone()]))
             .cloned().collect()
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
         self.assumption.get_axioms()
             .union(&self.conclusion.get_axioms())
             .cloned().collect()
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
         self.assumption.get_theorems()
             .union(&self.conclusion.get_theorems())
             .cloned().collect()
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_implication_intro() && self == from_proof.to_implication_intro().unwrap() {
             to.to_proof().unwrap()
         } else {
@@ -160,7 +160,7 @@ impl ProofBody for ImplicationIntro {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let MinlogProof::ImplicationIntro(other_intro) = other.as_ref() {
             if let Some(conflict) = self.assumption.first_conflict_with(&other_intro.assumption) {
                 return Some(conflict);
@@ -172,11 +172,11 @@ impl ProofBody for ImplicationIntro {
             
             None
         } else {
-            Some((Rc::new(MinlogProof::ImplicationIntro(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::ImplicationIntro(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_implication_intro() {
             return MatchOutput::FailedMatch;
         }

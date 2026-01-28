@@ -10,15 +10,15 @@ use crate::includes::{
 };
 
 enum AssumptionOrVariable {
-    Assumption(Rc<MinlogProof>),
+    Assumption(Arc<MinlogProof>),
     Variable(MinlogTerm),
 }
 
-pub fn generate_proof_by_assume(target: &Rc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext) -> Rc<MinlogProof> {
+pub fn generate_proof_by_assume(target: &Arc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext) -> Arc<MinlogProof> {
     generate_proof_by_assume_with_name(target, names, context, "g0".to_string())
 }
 
-pub fn generate_proof_by_assume_with_name(target: &Rc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext, goal_name: String) -> Rc<MinlogProof> {
+pub fn generate_proof_by_assume_with_name(target: &Arc<MinlogPredicate>, names: &Vec<String>, context: &ProofContext, goal_name: String) -> Arc<MinlogProof> {
     println!("Generating proof by assume for target: {}", target.debug_string());
     
     let mut assumptions_and_vars = vec![];

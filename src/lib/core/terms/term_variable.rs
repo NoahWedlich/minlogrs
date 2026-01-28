@@ -11,20 +11,20 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelTermVariable {
     name: String,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
     index: usize,
 }
 
 impl KernelTermVariable {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> MinlogTerm {
-        MinlogTerm::Variable(Rc::new(KernelTermVariable { name, minlog_type, index: 0 }).into())
+    pub fn create(name: String, minlog_type: Arc<MinlogType>) -> MinlogTerm {
+        MinlogTerm::Variable(Arc::new(KernelTermVariable { name, minlog_type, index: 0 }).into())
     }
     
     pub fn unshadow(var: &MinlogTerm) -> MinlogTerm {
         if let Some(tv) = var.to_variable() {
-            MinlogTerm::Variable(Rc::new(KernelTermVariable {
+            MinlogTerm::Variable(Arc::new(KernelTermVariable {
                 name: tv.name().to_string(),
-                minlog_type: Rc::clone(&tv.minlog_type()),
+                minlog_type: tv.minlog_type().clone(),
                 index: tv.index() + 1,
             }).into())
         } else {
@@ -42,17 +42,17 @@ impl KernelTermVariable {
 }
 
 impl TermBody for KernelTermVariable {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
     fn normalize(&self, _eta: bool, _pi: bool) -> MinlogTerm {
-        MinlogTerm::Variable(Rc::new(self.clone()).into())
+        MinlogTerm::Variable(Arc::new(self.clone()).into())
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
         self.minlog_type.remove_nulls().map(|new_type| {
-            MinlogTerm::Variable(Rc::new(KernelTermVariable {
+            MinlogTerm::Variable(Arc::new(KernelTermVariable {
                 name: self.name.clone(),
                 minlog_type: new_type,
                 index: self.index,
@@ -68,16 +68,16 @@ impl TermBody for KernelTermVariable {
         true
     }
 
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
     fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        IndexSet::from([MinlogTerm::Variable(Rc::new(self.clone()).into())])
+        IndexSet::from([MinlogTerm::Variable(Arc::new(self.clone()).into())])
     }
     
     fn alpha_equivalent(&self, other: &MinlogTerm,
@@ -90,14 +90,14 @@ impl TermBody for KernelTermVariable {
         
         let other = other.to_variable().unwrap();
         
-        let self_as_tv = TermVariable::Kernel(Rc::new(self.clone()));
+        let self_as_tv = TermVariable::Kernel(Arc::new(self.clone()));
         
         let forward_pair = forward.iter().find(|(v1, _)| v1 == &self_as_tv);
         let backward_pair = backward.iter().find(|(v2, _)| v2 == other);
         
         match (forward_pair, backward_pair) {
             (Some((f1, f2)), Some((b2, b1))) => f1 == b1 && f2 == b2,
-            (None, None) => TermVariable::Kernel(Rc::new(self.clone())) == *other,
+            (None, None) => TermVariable::Kernel(Arc::new(self.clone())) == *other,
             _ => false,
         }
     }
@@ -105,17 +105,17 @@ impl TermBody for KernelTermVariable {
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
         match from {
             TermSubstEntry::Type(from_t) => {
-                MinlogTerm::Variable(Rc::new(KernelTermVariable {
+                MinlogTerm::Variable(Arc::new(KernelTermVariable {
                     name: self.name.clone(),
                     minlog_type: self.minlog_type.substitute(from_t, &to.to_type().unwrap()),
                     index: self.index,
                 }).into())
             },
             TermSubstEntry::Term(from_tm) => {
-                if from_tm.is_variable() && TermVariable::Kernel(Rc::new(self.clone())) == *from_tm.to_variable().unwrap() {
+                if from_tm.is_variable() && TermVariable::Kernel(Arc::new(self.clone())) == *from_tm.to_variable().unwrap() {
                     to.to_term().unwrap()
                 } else {
-                    MinlogTerm::Variable(Rc::new(self.clone()).into())
+                    MinlogTerm::Variable(Arc::new(self.clone()).into())
                 }
             }
         }
@@ -126,21 +126,21 @@ impl TermBody for KernelTermVariable {
             return Some((conflict.0.into(), conflict.1.into()));
         }
         
-        if other.is_variable() && TermVariable::Kernel(Rc::new(self.clone())) == *other.to_variable().unwrap() {
+        if other.is_variable() && TermVariable::Kernel(Arc::new(self.clone())) == *other.to_variable().unwrap() {
             None
         } else {
-            Some((MinlogTerm::Variable(Rc::new(self.clone()).into()).into(), other.clone().into()))
+            Some((MinlogTerm::Variable(Arc::new(self.clone()).into()).into(), other.clone().into()))
         }
     }
     
     fn match_with(&self, instance: &MinlogTerm) -> MatchOutput<TermSubstEntry> {
         if self.minlog_type() != instance.minlog_type() {
             MatchOutput::Matched(IndexMap::from([
-                (MinlogTerm::Variable(Rc::new(self.clone()).into()).into(), instance.clone().into()),
+                (MinlogTerm::Variable(Arc::new(self.clone()).into()).into(), instance.clone().into()),
                 (self.minlog_type().into(), instance.minlog_type().into())
             ]))
         } else {
-            MatchOutput::Substitution(MinlogTerm::Variable(Rc::new(self.clone()).into()).into(), instance.clone().into())
+            MatchOutput::Substitution(MinlogTerm::Variable(Arc::new(self.clone()).into()).into(), instance.clone().into())
         }
     }
 }
@@ -198,12 +198,12 @@ pub trait NativeTermVariable: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum TermVariable {
-        Kernel(kernel: Rc<KernelTermVariable>),
-        Native(native: Rc<dyn NativeTermVariable>),
+        Kernel(kernel: Arc<KernelTermVariable>),
+        Native(native: Arc<dyn NativeTermVariable>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -217,9 +217,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -258,14 +258,14 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl TermVariable {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> MinlogTerm {
+    pub fn create(name: String, minlog_type: Arc<MinlogType>) -> MinlogTerm {
         KernelTermVariable::create(name, minlog_type)
     }
     
-    pub fn into_kernel_variable(self) -> Rc<KernelTermVariable> {
+    pub fn into_kernel_variable(self) -> Arc<KernelTermVariable> {
         match self {
             TermVariable::Kernel(kv) => kv,
-            TermVariable::Native(nv) => Rc::new(nv.to_kernel()),
+            TermVariable::Native(nv) => Arc::new(nv.to_kernel()),
         }
     }
 }
@@ -292,26 +292,26 @@ impl PartialEq for TermVariable {
 
 impl Eq for TermVariable {}
 
-impl From<Rc<KernelTermVariable>> for TermVariable {
-    fn from(kv: Rc<KernelTermVariable>) -> Self {
+impl From<Arc<KernelTermVariable>> for TermVariable {
+    fn from(kv: Arc<KernelTermVariable>) -> Self {
         TermVariable::Kernel(kv)
     }
 }
 
-impl From<&Rc<KernelTermVariable>> for TermVariable {
-    fn from(kv: &Rc<KernelTermVariable>) -> Self {
+impl From<&Arc<KernelTermVariable>> for TermVariable {
+    fn from(kv: &Arc<KernelTermVariable>) -> Self {
         TermVariable::Kernel(kv.clone())
     }
 }
 
-impl From<Rc<dyn NativeTermVariable>> for TermVariable {
-    fn from(nv: Rc<dyn NativeTermVariable>) -> Self {
+impl From<Arc<dyn NativeTermVariable>> for TermVariable {
+    fn from(nv: Arc<dyn NativeTermVariable>) -> Self {
         TermVariable::Native(nv)
     }
 }
 
-impl From<&Rc<dyn NativeTermVariable>> for TermVariable {
-    fn from(nv: &Rc<dyn NativeTermVariable>) -> Self {
+impl From<&Arc<dyn NativeTermVariable>> for TermVariable {
+    fn from(nv: &Arc<dyn NativeTermVariable>) -> Self {
         TermVariable::Native(nv.clone())
     }
 }

@@ -11,7 +11,7 @@ pub trait ProofTreeDisplayable {
     }
 }
 
-impl<T: ProofTreeDisplayable> ProofTreeDisplayable for Rc<T> {
+impl<T: ProofTreeDisplayable> ProofTreeDisplayable for Arc<T> {
     fn to_proof_tree_node(&self) -> ProofTreeNode {
         self.as_ref().to_proof_tree_node()
     }

@@ -1,10 +1,9 @@
 
 pub mod essential {
     pub use std::{
-        rc::Rc,
+        sync::{Arc, RwLock},
         cmp::{min, max},
         hash::{Hash, Hasher},
-        cell::RefCell,
         any::Any,
     };
     
@@ -130,6 +129,7 @@ pub mod builtin {
 
 pub mod all {
     pub use super::essential::*;
+    pub use super::utils::*;
     pub use super::core::all::*;
     pub use super::proof_generation::*;
     pub use super::builtin::*;

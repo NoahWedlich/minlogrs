@@ -11,20 +11,20 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Implication {
-    premise: Rc<MinlogPredicate>,
-    conclusion: Rc<MinlogPredicate>,
+    premise: Arc<MinlogPredicate>,
+    conclusion: Arc<MinlogPredicate>,
 }
 
 impl Implication {
-    pub fn create(premise: Rc<MinlogPredicate>, conclusion: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create(premise: Arc<MinlogPredicate>, conclusion: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         if premise.arity() != conclusion.arity() {
             panic!("Premise and conclusion of an Implication must have the same arity");
         }
         
-        Rc::new(MinlogPredicate::Implication(Implication { premise, conclusion }))
+        Arc::new(MinlogPredicate::Implication(Implication { premise, conclusion }))
     }
     
-    pub fn create_nested(premises: Vec<Rc<MinlogPredicate>>, conclusion: Rc<MinlogPredicate>) -> Rc<MinlogPredicate> {
+    pub fn create_nested(premises: Vec<Arc<MinlogPredicate>>, conclusion: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
         let mut result = conclusion;
         
         for premise in premises.iter().rev() {
@@ -34,11 +34,11 @@ impl Implication {
         result
     }
     
-    pub fn premise(&self) -> &Rc<MinlogPredicate> {
+    pub fn premise(&self) -> &Arc<MinlogPredicate> {
         &self.premise
     }
     
-    pub fn all_premises(&self) -> Vec<Rc<MinlogPredicate>> {
+    pub fn all_premises(&self) -> Vec<Arc<MinlogPredicate>> {
         let mut current = self;
         let mut premises = vec![current.premise.clone()];
         
@@ -50,7 +50,7 @@ impl Implication {
         premises
     }
     
-    pub fn premise_at(&self, index: usize) -> Option<&Rc<MinlogPredicate>> {
+    pub fn premise_at(&self, index: usize) -> Option<&Arc<MinlogPredicate>> {
         if index == 0 {
             Some(&self.premise)
         } else if self.conclusion.is_implication() {
@@ -60,11 +60,11 @@ impl Implication {
         }
     }
     
-    pub fn conclusion(&self) -> &Rc<MinlogPredicate> {
+    pub fn conclusion(&self) -> &Arc<MinlogPredicate> {
         &self.conclusion
     }
     
-    pub fn final_conclusion(&self) -> &Rc<MinlogPredicate> {
+    pub fn final_conclusion(&self) -> &Arc<MinlogPredicate> {
         if let Some(next_implication) = self.conclusion.to_implication() {
             next_implication.final_conclusion()
         } else {
@@ -74,11 +74,11 @@ impl Implication {
 }
 
 impl PredicateBody for Implication {
-    fn arity(&self) -> Rc<MinlogType> {
+    fn arity(&self) -> Arc<MinlogType> {
         self.conclusion.arity()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogPredicate> {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate> {
         let normalized_premise = self.premise.normalize(eta, pi);
         let normalized_conclusion = self.conclusion.normalize(eta, pi);
         
@@ -89,7 +89,7 @@ impl PredicateBody for Implication {
         1 + max(self.premise.depth(), self.conclusion.depth())
     }
     
-    fn extracted_type_pattern(&self) -> Rc<MinlogType> {
+    fn extracted_type_pattern(&self) -> Arc<MinlogType> {
         let premise_type = self.premise.extracted_type_pattern();
         let conclusion_type = self.conclusion.extracted_type_pattern();
         
@@ -97,7 +97,7 @@ impl PredicateBody for Implication {
             .remove_nulls().unwrap_or(TypeConstant::create_null())
     }
     
-    fn extracted_type(&self) -> Rc<MinlogType> {
+    fn extracted_type(&self) -> Arc<MinlogType> {
         let premise_type = self.premise.extracted_type();
         let conclusion_type = self.conclusion.extracted_type();
         
@@ -112,13 +112,13 @@ impl PredicateBody for Implication {
         subst
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.conclusion.get_type_variables(visited).union(
             &self.premise.get_type_variables(visited)
         ).cloned().collect()
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
         self.conclusion.get_algebra_types(visited).union(
             &self.premise.get_algebra_types(visited)
         ).cloned().collect()
@@ -136,31 +136,31 @@ impl PredicateBody for Implication {
         ).cloned().collect()
     }
 
-    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.conclusion.get_polarized_pred_vars(current, visited).union(
             &self.premise.get_polarized_pred_vars(current.invert(), visited)
         ).cloned().collect()
     }
 
-    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.conclusion.get_polarized_comp_terms(current, visited).union(
             &self.premise.get_polarized_comp_terms(current.invert(), visited)
         ).cloned().collect()
     }
 
-    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.conclusion.get_polarized_inductive_preds(current, visited).union(
             &self.premise.get_polarized_inductive_preds(current.invert(), visited)
         ).cloned().collect()
     }
 
-    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
+    fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
         self.conclusion.get_polarized_prime_formulas(current, visited).union(
             &self.premise.get_polarized_prime_formulas(current.invert(), visited)
         ).cloned().collect()
     }
     
-    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Rc<MinlogPredicate> {
+    fn substitute(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Arc<MinlogPredicate> {
         if let Some(pred) = from.to_predicate() && pred.is_implication() && self == pred.to_implication().unwrap() {
             to.to_predicate().unwrap()
         } else {
@@ -171,7 +171,7 @@ impl PredicateBody for Implication {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogPredicate>) -> Option<(PredSubstEntry, PredSubstEntry)> {
         if let MinlogPredicate::Implication(other_implication) = other.as_ref() {
             if let Some(conflict) = self.premise.first_conflict_with(&other_implication.premise) {
                 return Some(conflict);
@@ -179,11 +179,11 @@ impl PredicateBody for Implication {
             
             self.conclusion.first_conflict_with(&other_implication.conclusion)
         } else {
-            Some((Rc::new(MinlogPredicate::Implication(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogPredicate::Implication(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogPredicate>) -> MatchOutput<PredSubstEntry> {
         if !instance.is_implication() {
             return MatchOutput::FailedMatch;
         }

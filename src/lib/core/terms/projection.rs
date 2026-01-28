@@ -12,7 +12,7 @@ use crate::includes::{
 pub struct KernelProjection {
     term: MinlogTerm,
     index: usize,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelProjection {
@@ -26,7 +26,7 @@ impl KernelProjection {
         }
         
         let minlog_type = term.minlog_type().to_tuple().unwrap().type_at(index).unwrap().clone();
-        MinlogTerm::Projection(Rc::new(KernelProjection { term, index, minlog_type }).into())
+        MinlogTerm::Projection(Arc::new(KernelProjection { term, index, minlog_type }).into())
     }
     
     pub fn term(&self) -> &MinlogTerm {
@@ -39,7 +39,7 @@ impl KernelProjection {
 }
 
 impl TermBody for KernelProjection {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
@@ -85,11 +85,11 @@ impl TermBody for KernelProjection {
         1 + self.term.depth()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -123,7 +123,7 @@ impl TermBody for KernelProjection {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
-        if let Some(tm) = from.to_term() && tm.is_projection() && Projection::Kernel(Rc::new(self.clone())) == *tm.to_projection().unwrap() {
+        if let Some(tm) = from.to_term() && tm.is_projection() && Projection::Kernel(Arc::new(self.clone())) == *tm.to_projection().unwrap() {
             to.to_term().unwrap()
         } else {
             let new_term = self.term.substitute(from, to);
@@ -207,12 +207,12 @@ pub trait NativeProjection: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum Projection {
-        Kernel(kernel: Rc<KernelProjection>),
-        Native(native: Rc<dyn NativeProjection>),
+        Kernel(kernel: Arc<KernelProjection>),
+        Native(native: Arc<dyn NativeProjection>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -226,9 +226,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -271,10 +271,10 @@ impl Projection {
         KernelProjection::create(term, index)
     }
     
-    pub fn into_kernel_projection(self) -> Rc<KernelProjection> {
+    pub fn into_kernel_projection(self) -> Arc<KernelProjection> {
         match self {
             Projection::Kernel(k) => k,
-            Projection::Native(n) => Rc::new(n.to_kernel()),
+            Projection::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -301,26 +301,26 @@ impl PartialEq for Projection {
 
 impl Eq for Projection {}
 
-impl From<Rc<KernelProjection>> for Projection {
-    fn from(k: Rc<KernelProjection>) -> Self {
+impl From<Arc<KernelProjection>> for Projection {
+    fn from(k: Arc<KernelProjection>) -> Self {
         Projection::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelProjection>> for Projection {
-    fn from(k: &Rc<KernelProjection>) -> Self {
+impl From<&Arc<KernelProjection>> for Projection {
+    fn from(k: &Arc<KernelProjection>) -> Self {
         Projection::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeProjection>> for Projection {
-    fn from(n: Rc<dyn NativeProjection>) -> Self {
+impl From<Arc<dyn NativeProjection>> for Projection {
+    fn from(n: Arc<dyn NativeProjection>) -> Self {
         Projection::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeProjection>> for Projection {
-    fn from(n: &Rc<dyn NativeProjection>) -> Self {
+impl From<&Arc<dyn NativeProjection>> for Projection {
+    fn from(n: &Arc<dyn NativeProjection>) -> Self {
         Projection::Native(n.clone())
     }
 }

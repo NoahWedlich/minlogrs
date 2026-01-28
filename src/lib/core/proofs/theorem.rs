@@ -13,44 +13,44 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Theorem {
     name: String,
-    formula: Rc<MinlogPredicate>,
-    proof: Rc<MinlogProof>,
+    formula: Arc<MinlogPredicate>,
+    proof: Arc<MinlogProof>,
 }
 
 impl Theorem {
-    pub fn create(name: String, proof: Rc<MinlogProof>) -> Rc<MinlogProof> {
+    pub fn create(name: String, proof: Arc<MinlogProof>) -> Arc<MinlogProof> {
         let formula = proof.proved_formula();
-        Rc::new(MinlogProof::Theorem(Theorem { name, formula, proof }))
+        Arc::new(MinlogProof::Theorem(Theorem { name, formula, proof }))
     }
     
     pub fn name(&self) -> &str {
         &self.name
     }
     
-    pub fn proof(&self) -> Rc<MinlogProof> {
+    pub fn proof(&self) -> Arc<MinlogProof> {
         self.proof.clone()
     }
     
-    pub fn formula(&self) -> Rc<MinlogPredicate> {
+    pub fn formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
 }
 
 impl ProofBody for Theorem {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Theorem(Theorem {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Theorem(Theorem {
             name: self.name.clone(),
             formula: self.formula.normalize(eta, pi),
             proof: self.proof.clone(),
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::Theorem(Theorem {
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::Theorem(Theorem {
             name: self.name.clone(),
             formula: self.formula.clone(),
             proof: self.proof.unfold(),
@@ -61,11 +61,11 @@ impl ProofBody for Theorem {
         self.proof.extracted_term()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.formula.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -77,31 +77,31 @@ impl ProofBody for Theorem {
         self.formula.get_bound_variables(&mut IndexSet::new())
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_predicate_variables(&mut IndexSet::new())
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_comprehension_terms(&mut IndexSet::new())
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_inductive_predicates(&mut IndexSet::new())
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.formula.get_prime_formulas(&mut IndexSet::new())
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
-        IndexSet::from([Rc::new(MinlogProof::Theorem(self.clone()))])
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
+        IndexSet::from([Arc::new(MinlogProof::Theorem(self.clone()))])
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_theorem() && self == from_proof.to_theorem().unwrap() {
             to.to_proof().unwrap()
         } else {
-            Rc::new(MinlogProof::Theorem(Theorem {
+            Arc::new(MinlogProof::Theorem(Theorem {
                 name: self.name.clone(),
                 formula: self.formula.substitute_with(from, to),
                 proof: self.proof.substitute(from, to),
@@ -109,7 +109,7 @@ impl ProofBody for Theorem {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(conflict) = self.formula.first_conflict_with(&other.proved_formula()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -117,11 +117,11 @@ impl ProofBody for Theorem {
         if other.is_theorem() && self == other.to_theorem().unwrap() {
             None
         } else {
-            Some((Rc::new(MinlogProof::Theorem(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::Theorem(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_theorem() {
             return MatchOutput::FailedMatch;
         }

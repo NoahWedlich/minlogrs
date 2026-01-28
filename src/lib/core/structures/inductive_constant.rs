@@ -9,21 +9,24 @@ use crate::includes::{
     }
 };
 
-#[derive(Clone, PartialEq, Eq)]
+pub type ClauseList = Arc<RwLock<Vec<(String, Arc<MinlogPredicate>)>>>;
+pub type IDPComputationalContentRef = Arc<RwLock<Option<IDPComputationalContent>>>;
+
+#[derive(Clone)]
 pub struct InductiveConstant {
     name: String,
-    arity: Rc<MinlogType>,
-    clauses: RefCell<Vec<(String, Rc<MinlogPredicate>)>>,
-    computational_content: RefCell<Option<IDPComputationalContent>>,
+    arity: Arc<MinlogType>,
+    clauses: ClauseList,
+    computational_content: IDPComputationalContentRef,
 }
 
 impl InductiveConstant {
-    pub fn create(name: String, arity: Rc<MinlogType>) -> Rc<InductiveConstant> {
-        Rc::new(InductiveConstant {
+    pub fn create(name: String, arity: Arc<MinlogType>) -> Arc<InductiveConstant> {
+        Arc::new(InductiveConstant {
             name,
             arity,
-            clauses: RefCell::new(vec![]),
-            computational_content: RefCell::new(None),
+            clauses: Arc::new(RwLock::new(vec![])),
+            computational_content: Arc::new(RwLock::new(None)),
         })
     }
     
@@ -31,12 +34,12 @@ impl InductiveConstant {
         &self.name
     }
     
-    pub fn arity(&self) -> &Rc<MinlogType> {
+    pub fn arity(&self) -> &Arc<MinlogType> {
         &self.arity
     }
     
-    pub fn add_clause(&self, clause_name: String, clause_body: Rc<MinlogPredicate>) {
-        if self.clauses.borrow().iter().any(|(n, _)| n == &clause_name) {
+    pub fn add_clause(&self, clause_name: String, clause_body: Arc<MinlogPredicate>) {
+        if self.clauses.read().unwrap().iter().any(|(n, _)| n == &clause_name) {
             panic!("Clause with name '{}' already exists in inductive constant '{}'", clause_name, self.name);
         }
 
@@ -46,26 +49,26 @@ impl InductiveConstant {
             panic!("Clause body does not contain strictly positive occurrence of inductive constant '{}'", self.name);
         }
         
-        self.clauses.borrow_mut().push((clause_name, clause_body));
+        self.clauses.write().unwrap().push((clause_name, clause_body));
     }
     
-    pub fn clauses(&self) -> Vec<(String, Rc<MinlogPredicate>)> {
-        self.clauses.borrow().clone()
+    pub fn clauses(&self) -> Vec<(String, Arc<MinlogPredicate>)> {
+        self.clauses.read().unwrap().clone()
     }
     
-    pub fn register_computational_content(&self, algebra_type: Rc<MinlogType>) {
+    pub fn register_computational_content(&self, algebra_type: Arc<MinlogType>) {
         if !algebra_type.is_algebra() {
             panic!("register_computational_content called with a non-algebra type");
         }
         
-        self.computational_content.borrow_mut().replace(IDPComputationalContent {
+        self.computational_content.write().unwrap().replace(IDPComputationalContent {
             algebra: algebra_type,
             clause_mapping: IndexMap::new(),
         });
     }
     
     pub fn make_computational(&self, existing: bool) {
-        let algebra_type = if let Some(content) = self.computational_content.borrow().clone() {
+        let algebra_type = if let Some(content) = self.computational_content.read().unwrap().clone() {
             content.algebra.clone()
         } else {
             panic!("Inductive constant '{}' has no registered computational content", self.name);
@@ -73,11 +76,11 @@ impl InductiveConstant {
         
         let algebra = algebra_type.to_algebra().unwrap();
         
-        *self.computational_content.borrow_mut() = Some(IDPComputationalContent { algebra: algebra_type.clone(), clause_mapping: IndexMap::new() });
+        *self.computational_content.write().unwrap() = Some(IDPComputationalContent { algebra: algebra_type.clone(), clause_mapping: IndexMap::new() });
         
         let mut clause_mapping = IndexMap::new();
         
-        for (name, body) in self.clauses.borrow().iter() {
+        for (name, body) in self.clauses.read().unwrap().iter() {
             let et_type = body.extracted_type_pattern();
             
             if existing {
@@ -106,46 +109,46 @@ impl InductiveConstant {
             }
         }
         
-        if let Some(ref mut content) = *self.computational_content.borrow_mut() {
+        if let Some(ref mut content) = *self.computational_content.write().unwrap() {
             content.clause_mapping = clause_mapping;
         }
     }
     
     pub fn is_computational(&self) -> bool {
-        self.computational_content.borrow().is_some()
+        self.computational_content.read().unwrap().is_some()
     }
     
     pub fn get_computational_content(&self) -> Option<IDPComputationalContent> {
-        self.computational_content.borrow().clone()
+        self.computational_content.read().unwrap().clone()
     }
     
-    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Rc<MinlogType>> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_type_variables(visited))
+    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Arc<MinlogType>> {
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_type_variables(visited))
             .chain(self.arity.get_type_variables(&mut IndexSet::new())).collect()
     }
     
     pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_free_variables(visited)).collect()
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_free_variables(visited)).collect()
     }
     
     pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<MinlogTerm> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_bound_variables(visited)).collect()
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_bound_variables(visited)).collect()
     }
     
-    pub fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current, visited)).collect()
+    pub fn get_polarized_pred_vars(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_polarized_pred_vars(current, visited)).collect()
     }
 
-    pub fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current, visited)).collect()
+    pub fn get_polarized_comp_terms(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_polarized_comp_terms(current, visited)).collect()
     }
 
-    pub fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited)).collect()
+    pub fn get_polarized_inductive_preds(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_polarized_inductive_preds(current, visited)).collect()
     }
     
-    pub fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Rc<MinlogPredicate>>> {
-        self.clauses.borrow().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current, visited)).collect()
+    pub fn get_polarized_prime_formulas(&self, current: Polarity, visited: &mut IndexSet<MinlogPredicate>) -> IndexSet<Polarized<Arc<MinlogPredicate>>> {
+        self.clauses.read().unwrap().iter().flat_map(|(_, body)| body.get_polarized_prime_formulas(current, visited)).collect()
     }
 }
 
@@ -212,7 +215,7 @@ impl PrettyPrintable for InductiveConstant {
         
         if detail {
             let clauses = PPElement::list(
-                self.clauses.borrow().iter().map(|(_, body)| body.to_pp_element(true)).collect(),
+                self.clauses.read().unwrap().iter().map(|(_, body)| body.to_pp_element(true)).collect(),
                 PPElement::break_elem(0, 0, false),
                 PPElement::text(";".to_string()),
                 PPElement::break_elem(1, 0, true),
@@ -241,9 +244,17 @@ impl Hash for InductiveConstant {
     }
 }
 
+impl PartialEq for InductiveConstant {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.arity == other.arity
+    }
+}
+
+impl Eq for InductiveConstant {}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct IDPComputationalContent {
-    pub algebra: Rc<MinlogType>,
+    pub algebra: Arc<MinlogType>,
     pub clause_mapping: IndexMap<String, String>,
 }
 

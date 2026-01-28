@@ -12,18 +12,18 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct BundledProof {
-    proof: Rc<MinlogProof>,
-    dependencies: IndexSet<Rc<MinlogProof>>,
+    proof: Arc<MinlogProof>,
+    dependencies: IndexSet<Arc<MinlogProof>>,
     name: String,
 }
 
 impl BundledProof {
-    pub fn create(proof: Rc<MinlogProof>, name: String, mut extra_dependencies: IndexSet<Rc<MinlogProof>>) -> Rc<MinlogProof> {
+    pub fn create(proof: Arc<MinlogProof>, name: String, mut extra_dependencies: IndexSet<Arc<MinlogProof>>) -> Arc<MinlogProof> {
         extra_dependencies.extend(proof.get_goals());
-        Rc::new(MinlogProof::BundledProof(BundledProof { proof, name, dependencies: extra_dependencies }))
+        Arc::new(MinlogProof::BundledProof(BundledProof { proof, name, dependencies: extra_dependencies }))
     }
     
-    pub fn proof(&self) -> &Rc<MinlogProof> {
+    pub fn proof(&self) -> &Arc<MinlogProof> {
         &self.proof
     }
     
@@ -31,13 +31,13 @@ impl BundledProof {
         &self.name
     }
     
-    pub fn dependencies(&self) -> &IndexSet<Rc<MinlogProof>> {
+    pub fn dependencies(&self) -> &IndexSet<Arc<MinlogProof>> {
         &self.dependencies
     }
 }
 
 impl ProofBody for BundledProof {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.proof.proved_formula()
     }
     
@@ -45,7 +45,7 @@ impl ProofBody for BundledProof {
         1
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
         BundledProof::create(
             self.proof.normalize(eta, pi),
             self.name.clone(),
@@ -53,7 +53,7 @@ impl ProofBody for BundledProof {
         )
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
+    fn unfold(&self) -> Arc<MinlogProof> {
         self.proof.unfold()
     }
     
@@ -61,11 +61,11 @@ impl ProofBody for BundledProof {
         self.proof.extracted_term()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.proof.get_type_variables()
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.proof.get_algebra_types()
     }
     
@@ -77,39 +77,39 @@ impl ProofBody for BundledProof {
         self.proof.get_bound_variables()
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_predicate_variables()
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_comprehension_terms()
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_inductive_predicates()
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.proof.get_prime_formulas()
     }
     
-    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_goals(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_goals()
     }
     
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_assumptions()
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_axioms()
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
         self.proof.get_theorems()
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_bundled_proof() && self == from_proof.to_bundled_proof().unwrap() {
             to.to_proof().unwrap()
         } else {
@@ -121,7 +121,7 @@ impl ProofBody for BundledProof {
         }
     }
 
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(conflict) = self.proved_formula().first_conflict_with(&other.proved_formula()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
@@ -133,7 +133,7 @@ impl ProofBody for BundledProof {
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_bundled_proof() {
             return MatchOutput::FailedMatch;
         }

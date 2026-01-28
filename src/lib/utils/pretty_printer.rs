@@ -42,7 +42,7 @@ pub trait PrettyPrintable {
     }
 }
 
-impl<T: PrettyPrintable> PrettyPrintable for Rc<T> {
+impl<T: PrettyPrintable> PrettyPrintable for Arc<T> {
     fn to_pp_element(&self, detail: bool) -> PPElement {
         self.as_ref().to_pp_element(detail)
     }

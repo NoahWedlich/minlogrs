@@ -12,7 +12,7 @@ use crate::includes::{
 pub struct KernelApplication {
     operand: MinlogTerm,
     operator: MinlogTerm,
-    minlog_type: Rc<MinlogType>,
+    minlog_type: Arc<MinlogType>,
 }
 
 impl KernelApplication {
@@ -34,7 +34,7 @@ impl KernelApplication {
         
         let minlog_type = arrow_type.value().clone();
         
-        MinlogTerm::Application(Rc::new(KernelApplication { operand, operator, minlog_type, }).into())
+        MinlogTerm::Application(Arc::new(KernelApplication { operand, operator, minlog_type, }).into())
     }
     
     pub fn operand(&self) -> &MinlogTerm {
@@ -42,7 +42,7 @@ impl KernelApplication {
     }
     
     pub fn all_operands(&self) -> Vec<MinlogTerm> {
-        let mut current = &Application::Kernel(Rc::new(self.clone()));
+        let mut current = &Application::Kernel(Arc::new(self.clone()));
         let mut operands = vec![current.operand().clone()];
         
         while let Some(next_app) = current.operator().to_application() {
@@ -77,8 +77,8 @@ impl KernelApplication {
 }
 
 impl TermBody for KernelApplication {
-    fn minlog_type(&self) -> Rc<MinlogType> {
-        Rc::clone(&self.minlog_type)
+    fn minlog_type(&self) -> Arc<MinlogType> {
+        self.minlog_type.clone()
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm {
@@ -136,11 +136,11 @@ impl TermBody for KernelApplication {
         self.operator.is_constructor() && self.operand.constructor_pattern()
     }
     
-    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_type_variables(&mut IndexSet::new())
     }
     
-    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.minlog_type.get_algebra_types(&mut IndexSet::new())
     }
     
@@ -183,7 +183,7 @@ impl TermBody for KernelApplication {
     }
 
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
-        if let Some(tm) = from.to_term() && tm.is_application() && Application::Kernel(Rc::new(self.clone())) == *tm.to_application().unwrap() {
+        if let Some(tm) = from.to_term() && tm.is_application() && Application::Kernel(Arc::new(self.clone())) == *tm.to_application().unwrap() {
             to.to_term().unwrap()
         } else {
             let operator = self.operator.substitute(from, to);
@@ -198,7 +198,7 @@ impl TermBody for KernelApplication {
         }
         
         if !other.is_application() {
-            return Some((MinlogTerm::Application(Rc::new(self.clone()).into()).into(), other.clone().into()));
+            return Some((MinlogTerm::Application(Arc::new(self.clone()).into()).into(), other.clone().into()));
         }
         
         let other_app = other.to_application().unwrap();
@@ -278,12 +278,12 @@ pub trait NativeApplication: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum Application {
-        Kernel(kernel: Rc<KernelApplication>),
-        Native(native: Rc<dyn NativeApplication>),
+        Kernel(kernel: Arc<KernelApplication>),
+        Native(native: Arc<dyn NativeApplication>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -297,9 +297,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -358,10 +358,10 @@ impl Application {
         current_operator
     }
     
-    pub fn into_kernel_application(self) -> Rc<KernelApplication> {
+    pub fn into_kernel_application(self) -> Arc<KernelApplication> {
         match self {
             Application::Kernel(k) => k,
-            Application::Native(n) => Rc::new(n.to_kernel()),
+            Application::Native(n) => Arc::new(n.to_kernel()),
         }
     }
 }
@@ -388,26 +388,26 @@ impl PartialEq for Application {
 
 impl Eq for Application {}
 
-impl From<Rc<KernelApplication>> for Application {
-    fn from(k: Rc<KernelApplication>) -> Self {
+impl From<Arc<KernelApplication>> for Application {
+    fn from(k: Arc<KernelApplication>) -> Self {
         Application::Kernel(k)
     }
 }
 
-impl From<&Rc<KernelApplication>> for Application {
-    fn from(k: &Rc<KernelApplication>) -> Self {
+impl From<&Arc<KernelApplication>> for Application {
+    fn from(k: &Arc<KernelApplication>) -> Self {
         Application::Kernel(k.clone())
     }
 }
 
-impl From<Rc<dyn NativeApplication>> for Application {
-    fn from(n: Rc<dyn NativeApplication>) -> Self {
+impl From<Arc<dyn NativeApplication>> for Application {
+    fn from(n: Arc<dyn NativeApplication>) -> Self {
         Application::Native(n)
     }
 }
 
-impl From<&Rc<dyn NativeApplication>> for Application {
-    fn from(n: &Rc<dyn NativeApplication>) -> Self {
+impl From<&Arc<dyn NativeApplication>> for Application {
+    fn from(n: &Arc<dyn NativeApplication>) -> Self {
         Application::Native(n.clone())
     }
 }

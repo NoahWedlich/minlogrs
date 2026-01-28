@@ -11,9 +11,9 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PredSubstEntry {
-    Type(Rc<MinlogType>),
+    Type(Arc<MinlogType>),
     Term(MinlogTerm),
-    Predicate(Rc<MinlogPredicate>),
+    Predicate(Arc<MinlogPredicate>),
 }
 
 impl PredSubstEntry {
@@ -33,7 +33,7 @@ impl PredSubstEntry {
         matches!(self, PredSubstEntry::Type(_) | PredSubstEntry::Term(_))
     }
 
-    pub fn to_type(&self) -> Option<Rc<MinlogType>> {
+    pub fn to_type(&self) -> Option<Arc<MinlogType>> {
         if let PredSubstEntry::Type(t) = self {
             Some(t.clone())
         } else {
@@ -49,7 +49,7 @@ impl PredSubstEntry {
         }
     }
     
-    pub fn to_predicate(&self) -> Option<Rc<MinlogPredicate>> {
+    pub fn to_predicate(&self) -> Option<Arc<MinlogPredicate>> {
         if let PredSubstEntry::Predicate(p) = self {
             Some(p.clone())
         } else {
@@ -173,15 +173,15 @@ impl PrettyPrintable for PredSubstEntry {
     }
 }
 
-impl From<Rc<MinlogType>> for PredSubstEntry {
-    fn from(t: Rc<MinlogType>) -> Self {
+impl From<Arc<MinlogType>> for PredSubstEntry {
+    fn from(t: Arc<MinlogType>) -> Self {
         PredSubstEntry::Type(t)
     }
 }
 
-impl From<&Rc<MinlogType>> for PredSubstEntry {
-    fn from(t: &Rc<MinlogType>) -> Self {
-        PredSubstEntry::Type(Rc::clone(t))
+impl From<&Arc<MinlogType>> for PredSubstEntry {
+    fn from(t: &Arc<MinlogType>) -> Self {
+        PredSubstEntry::Type(t.clone())
     }
 }
 
@@ -197,15 +197,15 @@ impl From<&MinlogTerm> for PredSubstEntry {
     }
 }
 
-impl From<Rc<MinlogPredicate>> for PredSubstEntry {
-    fn from(p: Rc<MinlogPredicate>) -> Self {
+impl From<Arc<MinlogPredicate>> for PredSubstEntry {
+    fn from(p: Arc<MinlogPredicate>) -> Self {
         PredSubstEntry::Predicate(p)
     }
 }
 
-impl From<&Rc<MinlogPredicate>> for PredSubstEntry {
-    fn from(p: &Rc<MinlogPredicate>) -> Self {
-        PredSubstEntry::Predicate(Rc::clone(p))
+impl From<&Arc<MinlogPredicate>> for PredSubstEntry {
+    fn from(p: &Arc<MinlogPredicate>) -> Self {
+        PredSubstEntry::Predicate(p.clone())
     }
 }
 
@@ -244,7 +244,7 @@ impl PredicateSubstitution {
         true
     }
     
-    pub fn admissible(&self, predicate: &Rc<MinlogPredicate>) -> bool {
+    pub fn admissible(&self, predicate: &Arc<MinlogPredicate>) -> bool {
         for pred_var in predicate.get_predicate_variables(&mut IndexSet::new()) {
             let substituted = self.substitute(&PredSubstEntry::Predicate(pred_var.clone()));
             if let PredSubstEntry::Predicate(p) = substituted {
@@ -259,7 +259,7 @@ impl PredicateSubstitution {
     }
 }
 
-impl SubstitutableWith<PredSubstEntry> for Rc<MinlogPredicate> {
+impl SubstitutableWith<PredSubstEntry> for Arc<MinlogPredicate> {
     fn substitute_with(&self, from: &PredSubstEntry, to: &PredSubstEntry) -> Self {
         self.substitute(from, to)
     }

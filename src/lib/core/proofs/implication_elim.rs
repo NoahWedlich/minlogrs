@@ -12,13 +12,13 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImplicationElim {
-    premise: Rc<MinlogProof>,
-    implication: Rc<MinlogProof>,
-    formula: Rc<MinlogPredicate>,
+    premise: Arc<MinlogProof>,
+    implication: Arc<MinlogProof>,
+    formula: Arc<MinlogPredicate>,
 }
 
 impl ImplicationElim {
-    pub fn create(implication: Rc<MinlogProof>, proof_premise: Rc<MinlogProof>) -> Rc<MinlogProof> {
+    pub fn create(implication: Arc<MinlogProof>, proof_premise: Arc<MinlogProof>) -> Arc<MinlogProof> {
         let implication_formula = implication.proved_formula();
         if !implication_formula.is_implication() {
             panic!("ImplicationElim::create called with a non-implication proof as implication");
@@ -34,37 +34,37 @@ impl ImplicationElim {
         
         let formula = conclusion.clone();
         
-        Rc::new(MinlogProof::ImplicationElim(ImplicationElim {
+        Arc::new(MinlogProof::ImplicationElim(ImplicationElim {
             premise: proof_premise,
             implication,
             formula,
         }))
     }
     
-    pub fn premise(&self) -> Rc<MinlogProof> {
+    pub fn premise(&self) -> Arc<MinlogProof> {
         self.premise.clone()
     }
     
-    pub fn implication(&self) -> Rc<MinlogProof> {
+    pub fn implication(&self) -> Arc<MinlogProof> {
         self.implication.clone()
     }
 }
 
 impl ProofBody for ImplicationElim {
-    fn proved_formula(&self) -> Rc<MinlogPredicate> {
+    fn proved_formula(&self) -> Arc<MinlogPredicate> {
         self.formula.clone()
     }
     
-    fn normalize(&self, eta: bool, pi: bool) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::ImplicationElim(ImplicationElim {
+    fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::ImplicationElim(ImplicationElim {
             premise: self.premise.normalize(eta, pi),
             implication: self.implication.normalize(eta, pi),
             formula: self.formula.normalize(eta, pi),
         }))
     }
     
-    fn unfold(&self) -> Rc<MinlogProof> {
-        Rc::new(MinlogProof::ImplicationElim(ImplicationElim {
+    fn unfold(&self) -> Arc<MinlogProof> {
+        Arc::new(MinlogProof::ImplicationElim(ImplicationElim {
             premise: self.premise.unfold(),
             implication: self.implication.unfold(),
             formula: self.formula.clone(),
@@ -84,13 +84,13 @@ impl ProofBody for ImplicationElim {
         })?.remove_nulls()
     }
     
-    fn get_type_variables(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_type_variables(&self) -> IndexSet<Arc<MinlogType>> {
         self.premise.get_type_variables()
             .union(&self.implication.get_type_variables())
             .cloned().collect()
     }
     
-    fn get_algebra_types(&self) -> IndexSet<Rc<MinlogType>> {
+    fn get_algebra_types(&self) -> IndexSet<Arc<MinlogType>> {
         self.premise.get_algebra_types()
             .union(&self.implication.get_algebra_types())
             .cloned().collect()
@@ -108,56 +108,56 @@ impl ProofBody for ImplicationElim {
             .cloned().collect()
     }
     
-    fn get_predicate_variables(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_predicate_variables(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.premise.get_predicate_variables()
             .union(&self.implication.get_predicate_variables())
             .cloned().collect()
     }
     
-    fn get_comprehension_terms(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_comprehension_terms(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.premise.get_comprehension_terms()
             .union(&self.implication.get_comprehension_terms())
             .cloned().collect()
     }
     
-    fn get_inductive_predicates(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_inductive_predicates(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.premise.get_inductive_predicates()
             .union(&self.implication.get_inductive_predicates())
             .cloned().collect()
     }
     
-    fn get_prime_formulas(&self) -> IndexSet<Rc<MinlogPredicate>> {
+    fn get_prime_formulas(&self) -> IndexSet<Arc<MinlogPredicate>> {
         self.premise.get_prime_formulas()
             .union(&self.implication.get_prime_formulas())
             .cloned().collect()
     }
 
-    fn get_goals(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_goals(&self) -> IndexSet<Arc<MinlogProof>> {
         self.premise.get_goals()
             .union(&self.implication.get_goals())
             .cloned().collect()
     }
     
 
-    fn get_assumptions(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_assumptions(&self) -> IndexSet<Arc<MinlogProof>> {
         self.premise.get_assumptions()
             .union(&self.implication.get_assumptions())
             .cloned().collect()
     }
     
-    fn get_axioms(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_axioms(&self) -> IndexSet<Arc<MinlogProof>> {
         self.premise.get_axioms()
             .union(&self.implication.get_axioms())
             .cloned().collect()
     }
     
-    fn get_theorems(&self) -> IndexSet<Rc<MinlogProof>> {
+    fn get_theorems(&self) -> IndexSet<Arc<MinlogProof>> {
         self.premise.get_theorems()
             .union(&self.implication.get_theorems())
             .cloned().collect()
     }
     
-    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Rc<MinlogProof> {
+    fn substitute(&self, from: &ProofSubstEntry, to: &ProofSubstEntry) -> Arc<MinlogProof> {
         if let ProofSubstEntry::Proof(from_proof) = from && from_proof.is_implication_elim() && self == from_proof.to_implication_elim().unwrap() {
             to.to_proof().unwrap()
         } else {
@@ -168,7 +168,7 @@ impl ProofBody for ImplicationElim {
         }
     }
     
-    fn first_conflict_with(&self, other: &Rc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
+    fn first_conflict_with(&self, other: &Arc<MinlogProof>) -> Option<(ProofSubstEntry, ProofSubstEntry)> {
         if let Some(imp_elim) = other.to_implication_elim() {
             if let Some(conflict) = self.implication.first_conflict_with(&imp_elim.implication) {
                 return Some(conflict);
@@ -180,11 +180,11 @@ impl ProofBody for ImplicationElim {
             
             None
         } else {
-            Some((Rc::new(MinlogProof::ImplicationElim(self.clone())).into(), other.clone().into()))
+            Some((Arc::new(MinlogProof::ImplicationElim(self.clone())).into(), other.clone().into()))
         }
     }
     
-    fn match_with(&self, instance: &Rc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
+    fn match_with(&self, instance: &Arc<MinlogProof>) -> MatchOutput<ProofSubstEntry> {
         if !instance.is_implication_elim() {
             return MatchOutput::FailedMatch;
         }

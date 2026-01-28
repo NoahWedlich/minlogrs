@@ -16,7 +16,7 @@ pub struct RewriteRule {
 
 // TODO: Deprecate this in a favor of a system more like MatchTerm
 impl RewriteRule {
-    pub fn create(pattern: MinlogTerm, result: MinlogTerm) -> Rc<RewriteRule> {
+    pub fn create(pattern: MinlogTerm, result: MinlogTerm) -> Arc<RewriteRule> {
         if let Some(pc) = pattern.to_program_term() {
             if pc.minlog_type().arity() != 0 {
                 panic!("Rewrite rule pattern must be a full application of a program constant, found {}", pattern.debug_string());
@@ -44,7 +44,7 @@ impl RewriteRule {
             panic!("Rewrite rule must either be a program constant or a full application of a program constant: found {}", pattern.debug_string());
         }
         
-        Rc::new(RewriteRule { pattern, result })
+        Arc::new(RewriteRule { pattern, result })
     }
     
     pub fn pattern(&self) -> MinlogTerm {
@@ -55,7 +55,7 @@ impl RewriteRule {
         self.result.clone()
     }
     
-    pub fn program_constant(&self) -> Rc<ProgramConstant> {
+    pub fn program_constant(&self) -> Arc<ProgramConstant> {
         if let Some(pc) = self.pattern.to_program_term() {
             pc.pconst().clone()
         } else if let Some(app) = self.pattern.to_application() {
@@ -112,11 +112,11 @@ impl RewriteRule {
         }
     }
     
-    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.result.get_type_variables(visited).union(&self.pattern.get_type_variables(visited)).cloned().collect()
     }
 
-    pub fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
+    pub fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
         self.result.get_algebra_types(visited).union(&self.pattern.get_algebra_types(visited)).cloned().collect()
     }
 
@@ -139,7 +139,7 @@ impl RewriteRule {
     }
 }
 
-impl SubstitutableWith<TermSubstEntry> for Rc<RewriteRule> {
+impl SubstitutableWith<TermSubstEntry> for Arc<RewriteRule> {
     fn substitute_with(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> Self {
         RewriteRule::create(
             self.pattern.substitute(from, to),
@@ -165,21 +165,21 @@ impl PrettyPrintable for RewriteRule {
 }
 
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct ProgramConstant {
     name: String,
-    minlog_type: Rc<MinlogType>,
-    computation_rules: RefCell<Vec<Rc<RewriteRule>>>,
-    rewrite_rules: RefCell<Vec<Rc<RewriteRule>>>,
+    minlog_type: Arc<MinlogType>,
+    computation_rules: Arc<RwLock<Vec<Arc<RewriteRule>>>>,
+    rewrite_rules: Arc<RwLock<Vec<Arc<RewriteRule>>>>,
 }
-
+    
 impl ProgramConstant {
-    pub fn create(name: String, minlog_type: Rc<MinlogType>) -> Rc<ProgramConstant> {
-        Rc::new(ProgramConstant {
+    pub fn create(name: String, minlog_type: Arc<MinlogType>) -> Arc<ProgramConstant> {
+        Arc::new(ProgramConstant {
             name,
             minlog_type,
-            computation_rules: RefCell::new(vec![]),
-            rewrite_rules: RefCell::new(vec![]),
+            computation_rules: Arc::new(RwLock::new(vec![])),
+            rewrite_rules: Arc::new(RwLock::new(vec![])),
         })
     }
     
@@ -187,15 +187,15 @@ impl ProgramConstant {
         &self.name
     }
     
-    pub fn minlog_type(&self) -> Rc<MinlogType> {
+    pub fn minlog_type(&self) -> Arc<MinlogType> {
         self.minlog_type.clone()
     }
     
-    pub fn computation_rules(&self) -> Vec<Rc<RewriteRule>> {
-        self.computation_rules.borrow().iter().cloned().collect()
+    pub fn computation_rules(&self) -> Vec<Arc<RewriteRule>> {
+        self.computation_rules.read().unwrap().iter().cloned().collect()
     }
     
-    pub fn add_computation_rule(&self, rule: Rc<RewriteRule>) {
+    pub fn add_computation_rule(&self, rule: Arc<RewriteRule>) {
         if rule.program_constant().as_ref() != self {
             panic!("Attempted to add a rewrite rule for a different program constant");
         }
@@ -204,7 +204,7 @@ impl ProgramConstant {
             panic!("Attempted to add a non-computation rule as a computation rule");
         }
         
-        for rule in self.computation_rules.borrow().iter() {
+        for rule in self.computation_rules.read().unwrap().iter() {
             let unifier = TermSubstitution::unify(&rule.pattern().into(), &rule.pattern().into());
             if let Some(unifier) = unifier {
                 let existing = unifier.substitute::<TermSubstEntry>(&rule.result().into());
@@ -216,35 +216,35 @@ impl ProgramConstant {
             }
         }
         
-        self.computation_rules.borrow_mut().push(rule);
+        self.computation_rules.write().unwrap().push(rule);
     }
     
-    pub fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>> {
-        self.rewrite_rules.borrow().iter().cloned().collect()
+    pub fn rewrite_rules(&self) -> Vec<Arc<RewriteRule>> {
+        self.rewrite_rules.read().unwrap().iter().cloned().collect()
     }
     
-    pub fn add_rewrite_rule(&self, rule: Rc<RewriteRule>) {
+    pub fn add_rewrite_rule(&self, rule: Arc<RewriteRule>) {
         if rule.program_constant().as_ref() != self {
             panic!("Attempted to add a rewrite rule for a different program constant");
         }
         
-        self.rewrite_rules.borrow_mut().push(rule);
+        self.rewrite_rules.write().unwrap().push(rule);
     }
     
-    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
-        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+    pub fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
+        self.computation_rules.read().unwrap().iter().chain(self.rewrite_rules.read().unwrap().iter())
             .flat_map(|r| r.get_type_variables(visited))
             .collect()
     }
     
     pub fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+        self.computation_rules.read().unwrap().iter().chain(self.rewrite_rules.read().unwrap().iter())
             .flat_map(|r| r.get_free_variables(visited))
             .collect()
     }
     
     pub fn get_bound_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        self.computation_rules.borrow().iter().chain(self.rewrite_rules.borrow().iter())
+        self.computation_rules.read().unwrap().iter().chain(self.rewrite_rules.read().unwrap().iter())
             .flat_map(|r| r.get_bound_variables(visited))
             .collect()
     }
@@ -300,8 +300,8 @@ impl PrettyPrintable for ProgramConstant {
         };
         
         if detail {
-            let comp_rules = self.computation_rules.borrow();
-            let rewrite_rules = self.rewrite_rules.borrow();
+            let comp_rules = self.computation_rules.read().unwrap();
+            let rewrite_rules = self.rewrite_rules.read().unwrap();
             
             let has_comp_rules = !comp_rules.is_empty();
             let has_rewrite_rules = !rewrite_rules.is_empty();
@@ -365,3 +365,11 @@ impl Hash for ProgramConstant {
         self.minlog_type.hash(state);
     }
 }
+
+impl PartialEq for ProgramConstant {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.minlog_type == other.minlog_type
+    }
+}
+
+impl Eq for ProgramConstant {}

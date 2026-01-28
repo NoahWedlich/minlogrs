@@ -11,22 +11,22 @@ use crate::includes::{
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelProgramTerm {
-    pconst: Rc<ProgramConstant>,
+    pconst: Arc<ProgramConstant>,
     parameters: TermSubstitution,
 }
 
 impl KernelProgramTerm {
-    pub fn create(pconst: Rc<ProgramConstant>, mut parameters: TermSubstitution) -> MinlogTerm {
+    pub fn create(pconst: Arc<ProgramConstant>, mut parameters: TermSubstitution) -> MinlogTerm {
         let pconst_vars: Vec<TermSubstEntry> = pconst.get_type_variables(&mut IndexSet::new()).into_iter().map(|tv| tv.into())
             .chain(pconst.get_free_variables(&mut IndexSet::new()).into_iter().map(|fv| fv.into()))
             .collect::<Vec<_>>();
         
         parameters.restrict(|from| pconst_vars.contains(from));
         
-        MinlogTerm::ProgramTerm(Rc::new(KernelProgramTerm { pconst, parameters }).into())
+        MinlogTerm::ProgramTerm(Arc::new(KernelProgramTerm { pconst, parameters }).into())
     }
     
-    pub fn pconst(&self) -> &Rc<ProgramConstant> {
+    pub fn pconst(&self) -> &Arc<ProgramConstant> {
         &self.pconst
     }
     
@@ -34,13 +34,13 @@ impl KernelProgramTerm {
         self.pconst.name()
     }
     
-    pub fn computation_rules(&self) -> Vec<Rc<RewriteRule>> {
+    pub fn computation_rules(&self) -> Vec<Arc<RewriteRule>> {
         self.pconst.computation_rules().iter()
             .map(|r| self.parameters.substitute(r))
             .collect()
     }
     
-    pub fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>> {
+    pub fn rewrite_rules(&self) -> Vec<Arc<RewriteRule>> {
         self.pconst.rewrite_rules().iter()
             .map(|r| self.parameters.substitute(r))
             .collect()
@@ -52,7 +52,7 @@ impl KernelProgramTerm {
 }
 
 impl TermBody for KernelProgramTerm {
-    fn minlog_type(&self) -> Rc<MinlogType> {
+    fn minlog_type(&self) -> Arc<MinlogType> {
         let pc_type = self.pconst.minlog_type();
         self.parameters.substitute::<TermSubstEntry>(&pc_type.into()).to_type().unwrap()
     }
@@ -101,11 +101,11 @@ impl TermBody for KernelProgramTerm {
         0
     }
     
-    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogTerm::ProgramTerm(Rc::new(self.clone()).into())) {
+    fn get_type_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::ProgramTerm(Arc::new(self.clone()).into()));
             
             self.computation_rules().iter().chain(self.rewrite_rules().iter())
                 .flat_map(|r| r.get_type_variables(visited))
@@ -113,11 +113,11 @@ impl TermBody for KernelProgramTerm {
         }
     }
     
-    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>> {
-        if visited.contains(&MinlogTerm::ProgramTerm(Rc::new(self.clone()).into())) {
+    fn get_algebra_types(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
+        if visited.contains(&MinlogTerm::ProgramTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::ProgramTerm(Arc::new(self.clone()).into()));
             
             self.computation_rules().iter().chain(self.rewrite_rules().iter())
                 .flat_map(|r| r.get_algebra_types(visited))
@@ -126,10 +126,10 @@ impl TermBody for KernelProgramTerm {
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        if visited.contains(&MinlogTerm::ProgramTerm(Rc::new(self.clone()).into())) {
+        if visited.contains(&MinlogTerm::ProgramTerm(Arc::new(self.clone()).into())) {
             IndexSet::new()
         } else {
-            visited.insert(MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()));
+            visited.insert(MinlogTerm::ProgramTerm(Arc::new(self.clone()).into()));
             
             self.computation_rules().iter().chain(self.rewrite_rules().iter())
                 .flat_map(|r| r.get_free_variables(visited))
@@ -138,7 +138,7 @@ impl TermBody for KernelProgramTerm {
     }
     
     fn get_program_terms(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
-        IndexSet::from([MinlogTerm::ProgramTerm(Rc::new(self.clone()).into())])
+        IndexSet::from([MinlogTerm::ProgramTerm(Arc::new(self.clone()).into())])
     }
     
     fn alpha_equivalent(&self, other: &MinlogTerm,
@@ -153,7 +153,7 @@ impl TermBody for KernelProgramTerm {
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
-        if let Some(tm) = from.to_term() && tm.is_program_term() && ProgramTerm::Kernel(Rc::new(self.clone())) == *tm.to_program_term().unwrap() {
+        if let Some(tm) = from.to_term() && tm.is_program_term() && ProgramTerm::Kernel(Arc::new(self.clone())) == *tm.to_program_term().unwrap() {
             to.to_term().unwrap()
         } else {
             let mut new_params = self.parameters.clone();
@@ -171,7 +171,7 @@ impl TermBody for KernelProgramTerm {
         let other_pterm = other.to_program_term().unwrap();
         
         if self.pconst != *other_pterm.pconst() {
-            return Some((MinlogTerm::ProgramTerm(Rc::new(self.clone()).into()).into(), other.clone().into()));
+            return Some((MinlogTerm::ProgramTerm(Arc::new(self.clone()).into()).into(), other.clone().into()));
         }
         
         for (from, to) in self.parameters.pairs().iter() {
@@ -309,13 +309,13 @@ impl PrettyPrintable for KernelProgramTerm {
 }
 
 pub trait NativeProgramTerm: NativeTermBody {
-    fn pconst(&self) -> &Rc<ProgramConstant>;
+    fn pconst(&self) -> &Arc<ProgramConstant>;
     
     fn name(&self) -> &str;
     
-    fn computation_rules(&self) -> Vec<Rc<RewriteRule>>;
+    fn computation_rules(&self) -> Vec<Arc<RewriteRule>>;
     
-    fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>>;
+    fn rewrite_rules(&self) -> Vec<Arc<RewriteRule>>;
     
     fn parameters(&self) -> &TermSubstitution;
     
@@ -330,12 +330,12 @@ pub trait NativeProgramTerm: NativeTermBody {
 wrapper_enum::wrapper_enum! {
     #[derive(Clone)]
     pub enum ProgramTerm {
-        Kernel(kernel: Rc<KernelProgramTerm>),
-        Native(native: Rc<dyn NativeProgramTerm>),
+        Kernel(kernel: Arc<KernelProgramTerm>),
+        Native(native: Arc<dyn NativeProgramTerm>),
     }
     
     ext trait TermBody: PrettyPrintable {
-        fwd fn minlog_type(&self) -> Rc<MinlogType>
+        fwd fn minlog_type(&self) -> Arc<MinlogType>
     
         fwd fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm
     
@@ -349,9 +349,9 @@ wrapper_enum::wrapper_enum! {
     
         fwd fn constructor_pattern(&self) -> bool
     
-        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
-        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Rc<MinlogType>>
+        fwd fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>>
 
         fwd fn get_free_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm>
     
@@ -373,13 +373,13 @@ wrapper_enum::wrapper_enum! {
     }
     
     fwd trait VariableForwards {
-        pub fwd fn pconst(&self) -> &Rc<ProgramConstant>
+        pub fwd fn pconst(&self) -> &Arc<ProgramConstant>
         
         pub fwd fn name(&self) -> &str
         
-        pub fwd fn computation_rules(&self) -> Vec<Rc<RewriteRule>>
+        pub fwd fn computation_rules(&self) -> Vec<Arc<RewriteRule>>
         
-        pub fwd fn rewrite_rules(&self) -> Vec<Rc<RewriteRule>>
+        pub fwd fn rewrite_rules(&self) -> Vec<Arc<RewriteRule>>
         
         pub fwd fn parameters(&self) -> &TermSubstitution
     }
@@ -396,14 +396,14 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl ProgramTerm {
-    pub fn create(pconst: Rc<ProgramConstant>, parameters: TermSubstitution) -> MinlogTerm {
+    pub fn create(pconst: Arc<ProgramConstant>, parameters: TermSubstitution) -> MinlogTerm {
         KernelProgramTerm::create(pconst, parameters)
     }
     
-    pub fn into_kernel_program_term(self) -> Rc<KernelProgramTerm> {
+    pub fn into_kernel_program_term(self) -> Arc<KernelProgramTerm> {
         match self {
             ProgramTerm::Kernel(kp) => kp,
-            ProgramTerm::Native(np) => Rc::new(np.to_kernel()),
+            ProgramTerm::Native(np) => Arc::new(np.to_kernel()),
         }
     }
 }
@@ -430,26 +430,26 @@ impl PartialEq for ProgramTerm {
 
 impl Eq for ProgramTerm {}
 
-impl From<Rc<KernelProgramTerm>> for ProgramTerm {
-    fn from(kp: Rc<KernelProgramTerm>) -> Self {
+impl From<Arc<KernelProgramTerm>> for ProgramTerm {
+    fn from(kp: Arc<KernelProgramTerm>) -> Self {
         ProgramTerm::Kernel(kp)
     }
 }
 
-impl From<&Rc<KernelProgramTerm>> for ProgramTerm {
-    fn from(kp: &Rc<KernelProgramTerm>) -> Self {
+impl From<&Arc<KernelProgramTerm>> for ProgramTerm {
+    fn from(kp: &Arc<KernelProgramTerm>) -> Self {
         ProgramTerm::Kernel(kp.clone())
     }
 }
 
-impl From<Rc<dyn NativeProgramTerm>> for ProgramTerm {
-    fn from(np: Rc<dyn NativeProgramTerm>) -> Self {
+impl From<Arc<dyn NativeProgramTerm>> for ProgramTerm {
+    fn from(np: Arc<dyn NativeProgramTerm>) -> Self {
         ProgramTerm::Native(np)
     }
 }
 
-impl From<&Rc<dyn NativeProgramTerm>> for ProgramTerm {
-    fn from(np: &Rc<dyn NativeProgramTerm>) -> Self {
+impl From<&Arc<dyn NativeProgramTerm>> for ProgramTerm {
+    fn from(np: &Arc<dyn NativeProgramTerm>) -> Self {
         ProgramTerm::Native(np.clone())
     }
 }
