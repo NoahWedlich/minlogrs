@@ -134,10 +134,32 @@ pub mod runtime {
     }
 }
 
+pub mod frontend {
+    pub mod source_management {
+        pub use crate::frontend::source_management::{
+            source_provider::*,
+            file_source::*,
+        };
+    }
+    
+    pub mod lexing {
+        pub use crate::frontend::lexing::{
+            token::*,
+            source_span::*,
+            lexer::*,
+        };
+    }
+    
+    pub mod all {
+        pub use super::source_management::*;
+        pub use super::lexing::*;
+    }
+}
 
 pub mod all {
     pub use super::essential::*;
     pub use super::kernel::all::*;
     pub use super::runtime::all::*;
+    pub use super::frontend::all::*;
     pub use super::utils::*;
 }

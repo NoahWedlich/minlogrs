@@ -6,6 +6,7 @@
 
 pub mod kernel;
 pub mod runtime;
+pub mod frontend;
 pub mod utils;
 
 pub mod includes;
