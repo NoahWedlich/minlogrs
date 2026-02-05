@@ -150,9 +150,17 @@ pub mod frontend {
         };
     }
     
+    pub mod parsing {
+        pub use crate::frontend::parsing::{
+            command::*,
+            parser::*,
+        };
+    }
+    
     pub mod all {
         pub use super::source_management::*;
         pub use super::lexing::*;
+        pub use super::parsing::*;
     }
 }
 
