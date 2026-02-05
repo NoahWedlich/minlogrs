@@ -17,8 +17,8 @@ pub mod utils {
     };
 }
 
-pub mod core {
-    pub use crate::core::{
+pub mod kernel {
+    pub use crate::kernel::{
         substitution::*,
         polarity::*,
     };
@@ -26,7 +26,7 @@ pub mod core {
     pub mod structures {
         pub use super::*;
         
-        pub use crate::core::structures::{
+        pub use crate::kernel::structures::{
             algebra::*,
             program_constant::*,
             inductive_constant::*,
@@ -36,7 +36,7 @@ pub mod core {
     pub mod types {
         pub use super::*;
         
-        pub use crate::core::types::{
+        pub use crate::kernel::types::{
             minlog_type::*,
             type_constant::*,
             type_variable::*,
@@ -50,7 +50,7 @@ pub mod core {
     pub mod terms {
         pub use super::*;
         
-        pub use crate::core::terms::{
+        pub use crate::kernel::terms::{
             minlog_term::*,
             term_wildcard::*,
             term_variable::*,
@@ -68,7 +68,7 @@ pub mod core {
     pub mod predicates {
         pub use super::*;
         
-        pub use crate::core::predicates::{
+        pub use crate::kernel::predicates::{
             minlog_predicate::*,
             predicate_wildcard::*,
             predicate_variable::*,
@@ -84,7 +84,7 @@ pub mod core {
     pub mod proofs {
         pub use super::*;
         
-        pub use crate::core::proofs::{
+        pub use crate::kernel::proofs::{
             minlog_proof::*,
             proof_wildcard::*,
             goal::*,
@@ -111,26 +111,33 @@ pub mod core {
     }
 }
 
-pub mod proof_generation {
-    pub use crate::proof_generation::{
-        by_assume::*,
-        by_intro::*,
-        by_elim::*,
-        by_use::*,
-    };
+pub mod runtime {
+    pub mod semantics {
+        pub use crate::runtime::semantics::{
+            elimination::*,
+            totality::*,
+        };
+    }
+    
+    pub mod proof_construction {
+        pub use crate::runtime::proof_construction::{
+            by_assume::*,
+            by_intro::*,
+            by_elim::*,
+            by_use::*,
+        };
+    }
+    
+    pub mod all {
+        pub use super::semantics::*;
+        pub use super::proof_construction::*;
+    }
 }
 
-pub mod builtin {
-    pub use crate::builtin::{
-        elimination::*,
-        totality::*,
-    };
-}
 
 pub mod all {
     pub use super::essential::*;
+    pub use super::kernel::all::*;
+    pub use super::runtime::all::*;
     pub use super::utils::*;
-    pub use super::core::all::*;
-    pub use super::proof_generation::*;
-    pub use super::builtin::*;
 }
