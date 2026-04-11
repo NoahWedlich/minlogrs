@@ -46,7 +46,7 @@ wrapper_enum::wrapper_enum! {
         Variable(variable: TypeVariable),
         Algebra(algebra: AlgebraType),
         Arrow(arrow: ArrowType),
-        Tuple(tuple: TupleType),
+        Pair(pair: PairType),
     }
     
     ext bnd trait PrettyPrintable {

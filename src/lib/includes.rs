@@ -42,7 +42,7 @@ pub mod core {
             type_variable::*,
             algebra_type::*,
             arrow_type::*,
-            tuple_type::*,
+            pair_type::*,
             type_substitution::*,
         };
     }
@@ -58,7 +58,7 @@ pub mod core {
             program_term::*,
             abstraction::*,
             application::*,
-            tuple::*,
+            pair::*,
             projection::*,
             match_term::*,
             term_substitution::*,

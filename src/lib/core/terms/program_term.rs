@@ -372,7 +372,7 @@ wrapper_enum::wrapper_enum! {
         fwd fn match_with(&self, instance: &MinlogTerm) -> MatchOutput<TermSubstEntry>
     }
     
-    fwd trait VariableForwards {
+    fwd trait ProgramTermForwards {
         pub fwd fn pconst(&self) -> &Arc<ProgramConstant>
         
         pub fwd fn name(&self) -> &str

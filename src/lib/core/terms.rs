@@ -7,7 +7,7 @@ pub mod constructor;
 pub mod program_term;
 pub mod abstraction;
 pub mod application;
-pub mod tuple;
+pub mod pair;
 pub mod projection;
 pub mod match_term;
 

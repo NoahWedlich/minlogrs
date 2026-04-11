@@ -75,7 +75,7 @@ wrapper_enum::wrapper_enum! {
         ProgramTerm(program_term: ProgramTerm),
         Abstraction(abstraction: Abstraction),
         Application(application: Application),
-        Tuple(tuple: Tuple),
+        Pair(pair: Pair),
         Projection(projection: Projection),
         MatchTerm(match_term: MatchTerm),
     }

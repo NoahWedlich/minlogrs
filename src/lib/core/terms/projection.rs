@@ -11,68 +11,72 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct KernelProjection {
     term: MinlogTerm,
-    index: usize,
-    minlog_type: Arc<MinlogType>,
+    left: bool,
 }
 
 impl KernelProjection {
-    pub fn create(term: MinlogTerm, index: usize) -> MinlogTerm {
-        if !term.minlog_type().is_tuple() {
-            panic!("Tried to create projection from non-tuple term.");
+    pub fn create(term: MinlogTerm, left: bool) -> MinlogTerm {
+        if !term.minlog_type().is_pair() {
+            panic!("Tried to create projection from non-pair term.");
         }
         
-        if index >= term.minlog_type().to_tuple().unwrap().types().len() {
-            panic!("Tried to create projection with out-of-bounds index.");
-        }
-        
-        let minlog_type = term.minlog_type().to_tuple().unwrap().type_at(index).unwrap().clone();
-        MinlogTerm::Projection(Arc::new(KernelProjection { term, index, minlog_type }).into())
+        MinlogTerm::Projection(Arc::new(KernelProjection { term, left }).into())
     }
     
     pub fn term(&self) -> &MinlogTerm {
         &self.term
     }
     
-    pub fn index(&self) -> usize {
-        self.index
+    pub fn left(&self) -> bool {
+        self.left
+    }
+    
+    pub fn right(&self) -> bool {
+        !self.left
     }
 }
 
 impl TermBody for KernelProjection {
     fn minlog_type(&self) -> Arc<MinlogType> {
-        self.minlog_type.clone()
+        let term_type = self.term.minlog_type();
+        let pair_type = term_type.to_pair().unwrap();
+        
+        if self.left {
+            pair_type.left().clone()
+        } else {
+            pair_type.right().clone()
+        }
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm {
-        if self.term.is_tuple() {
-            let tuple = self.term.to_tuple().unwrap();
-            if self.index < tuple.elements().len() {
-                return tuple.element(self.index).unwrap().normalize(eta, pi);
+        if let Some(pair) = self.term.to_pair() {
+            if self.left {
+                return pair.left().normalize(eta, pi);
             } else {
-                panic!("Projection index out of bounds in normalization.");
+                return pair.right().normalize(eta, pi);
             }
         }
         
         let new_term = self.term.normalize(eta, pi);
-        Projection::create(new_term, self.index)
+        Projection::create(new_term, self.left)
     }
     
     fn remove_nulls(&self) -> Option<MinlogTerm> {
-        if let Some(tuple) = self.term.to_tuple() {
-            let mut new_index = self.index;
-            
-            for i in 0..self.index {
-                if tuple.element(i).unwrap().remove_nulls().is_none() {
-                    new_index -= 1;
-                }
+        if let Some(pair) = self.term.to_pair() {
+            if let Some(new_term) = self.term.remove_nulls() && new_term.is_pair() {
+                Some(Projection::create(new_term, self.left))
+            } else {
+                let element = if self.left {
+                    pair.left()
+                } else {
+                    pair.right()
+                };
+                
+                element.remove_nulls()
             }
-            
-            self.term.remove_nulls().map(|new_term| {
-                Projection::create(new_term, new_index)
-            })
         } else {
             self.term.remove_nulls().map(|new_term| {
-                Projection::create(new_term, self.index)
+                Projection::create(new_term, self.left)
             })
         }
     }
@@ -86,11 +90,11 @@ impl TermBody for KernelProjection {
     }
     
     fn get_type_variables(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
-        self.minlog_type.get_type_variables(&mut IndexSet::new())
+        self.minlog_type().get_type_variables(&mut IndexSet::new())
     }
     
     fn get_algebra_types(&self, _visited: &mut IndexSet<MinlogTerm>) -> IndexSet<Arc<MinlogType>> {
-        self.minlog_type.get_algebra_types(&mut IndexSet::new())
+        self.minlog_type().get_algebra_types(&mut IndexSet::new())
     }
     
     fn get_free_variables(&self, visited: &mut IndexSet<MinlogTerm>) -> IndexSet<MinlogTerm> {
@@ -119,7 +123,7 @@ impl TermBody for KernelProjection {
         
         let other = other.to_projection().unwrap();
         
-        self.index == other.index() && self.term.alpha_equivalent(other.term(), forward, backward)
+        self.left == other.left() && self.term.alpha_equivalent(other.term(), forward, backward)
     }
     
     fn substitute(&self, from: &TermSubstEntry, to: &TermSubstEntry) -> MinlogTerm {
@@ -127,23 +131,23 @@ impl TermBody for KernelProjection {
             to.to_term().unwrap()
         } else {
             let new_term = self.term.substitute(from, to);
-            Projection::create(new_term, self.index)
+            Projection::create(new_term, self.left)
         }
     }
     
     fn first_conflict_with(&self, other: &MinlogTerm) -> Option<(TermSubstEntry, TermSubstEntry)> {
-        if let Some(conflict) = self.minlog_type.first_conflict_with(&other.minlog_type()) {
+        if let Some(conflict) = self.minlog_type().first_conflict_with(&other.minlog_type()) {
             return Some((conflict.0.into(), conflict.1.into()));
         }
         
         if !other.is_projection() {
-            return Some((Projection::create(self.term.clone(), self.index).into(), other.clone().into()));
+            return Some((Projection::create(self.term.clone(), self.left).into(), other.clone().into()));
         }
         
         let other_proj = other.to_projection().unwrap();
         
-        if self.index != other_proj.index() {
-            return Some((Projection::create(self.term.clone(), self.index).into(), other.clone().into()));
+        if self.left != other_proj.left() {
+            return Some((Projection::create(self.term.clone(), self.left).into(), other.clone().into()));
         }
         
         self.term.first_conflict_with(other_proj.term())
@@ -156,7 +160,7 @@ impl TermBody for KernelProjection {
         
         let proj_instance = instance.to_projection().unwrap();
         
-        if self.index != proj_instance.index() {
+        if self.left != proj_instance.left() {
             return MatchOutput::FailedMatch;
         }
         
@@ -173,7 +177,7 @@ impl PrettyPrintable for KernelProjection {
             PPElement::break_elem(0, 0, false),
             PPElement::text("_".to_string()),
             PPElement::break_elem(0, 0, false),
-            PPElement::text(self.index.to_string()),
+            PPElement::text(self.left.to_string()),
         ], BreakType::Flexible, 0)
     }
     
@@ -193,13 +197,16 @@ impl PrettyPrintable for KernelProjection {
 pub trait NativeProjection: NativeTermBody {
     fn term(&self) -> &MinlogTerm;
     
-    fn index(&self) -> usize;
+    fn left(&self) -> bool;
+    
+    fn right(&self) -> bool {
+        !self.left()
+    }
     
     fn to_kernel(&self) -> KernelProjection {
         KernelProjection {
             term: self.term().clone(),
-            index: self.index(),
-            minlog_type: self.minlog_type(),
+            left: self.left(),
         }
     }
 }
@@ -252,7 +259,7 @@ wrapper_enum::wrapper_enum! {
     fwd trait ProjectionForwards {
         pub fwd fn term(&self) -> &MinlogTerm
         
-        pub fwd fn index(&self) -> usize
+        pub fwd fn left(&self) -> bool
     }
     
     ext trait PrettyPrintable {
@@ -267,8 +274,8 @@ wrapper_enum::wrapper_enum! {
 }
 
 impl Projection {
-    pub fn create(term: MinlogTerm, index: usize) -> MinlogTerm {
-        KernelProjection::create(term, index)
+    pub fn create(term: MinlogTerm, left: bool) -> MinlogTerm {
+        KernelProjection::create(term, left)
     }
     
     pub fn into_kernel_projection(self) -> Arc<KernelProjection> {

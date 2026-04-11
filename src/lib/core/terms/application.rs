@@ -82,7 +82,7 @@ impl TermBody for KernelApplication {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> MinlogTerm {
-        if pi && (self.operand.is_tuple() || self.operand.is_match_term()) {
+        if pi && (self.operand.is_pair() || self.operand.is_match_term()) {
             println!("Warning: Pi-normalization for Applications is not implemented yet.");
         }
         

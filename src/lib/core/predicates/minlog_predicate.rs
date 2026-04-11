@@ -86,10 +86,12 @@ wrapper_enum::wrapper_enum! {
 
 impl MinlogPredicate {
     pub fn unpacked_arity(&self) -> Vec<Arc<MinlogType>> {
-        if let Some(tuple_type) = self.arity().to_tuple() {
-            tuple_type.types().clone()
-        } else {
+        if let Some(pair_type) = self.arity().to_pair() {
+            pair_type.nested_types().clone()
+        } else if !self.arity().is_unit() {
             vec![self.arity().clone()]
+        } else {
+            vec![]
         }
     }
     

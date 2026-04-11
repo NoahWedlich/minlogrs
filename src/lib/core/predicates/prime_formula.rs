@@ -18,10 +18,6 @@ pub struct PrimeFormula {
 
 impl PrimeFormula {
     pub fn create(body: Arc<MinlogPredicate>, argument: MinlogTerm) -> Arc<MinlogPredicate> {
-        if argument.is_tuple() && argument.to_tuple().unwrap().elements().is_empty() {
-            return body;
-        }
-        
         let unpacked_arity = body.unpacked_arity();
         
         if unpacked_arity.is_empty() {
@@ -36,9 +32,9 @@ impl PrimeFormula {
         }
         
         let arity = if unpacked_arity.len() == 1 {
-            TupleType::create_unit()
+            TypeConstant::create_unit()
         } else {
-            TupleType::create(unpacked_arity[1..].to_vec())
+            PairType::create_nested(unpacked_arity[1..].to_vec())
         };
 
         Arc::new(MinlogPredicate::Prime(PrimeFormula { body, argument, arity }))
@@ -99,7 +95,7 @@ impl PredicateBody for PrimeFormula {
     }
     
     fn normalize(&self, eta: bool, pi: bool) -> Arc<MinlogPredicate> {
-        if pi && (self.argument.is_tuple() || self.argument.is_match_term()) {
+        if pi && (self.argument.is_pair() || self.argument.is_match_term()) {
             println!("Warning: Pi-normalization of Prime Formulas is not implemented yet.");
         }
         

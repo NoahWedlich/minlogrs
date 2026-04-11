@@ -5,7 +5,7 @@ fn main() {
     let tvar = TypeVariable::create("T".to_string());
     let tmvar = TermVariable::create("x".to_string(), tvar.clone());
     
-    let eq_def = InductiveConstant::create("Eq".to_string(), TupleType::create(vec![tvar.clone(), tvar.clone()]));
+    let eq_def = InductiveConstant::create("Eq".to_string(), PairType::create(tvar.clone(), tvar.clone()));
     let eq_pred = InductivePredicate::create(eq_def.clone(), PredicateSubstitution::make_empty());
     
     println!("Equality Predicate:");
@@ -57,7 +57,7 @@ fn main() {
     println!("Algebra:");
     println!("{}", bool.debug_string());
     
-    let atom_def = InductiveConstant::create("Atom".to_string(), TupleType::create(vec![bool_type.clone()]));
+    let atom_def = InductiveConstant::create("Atom".to_string(), bool_type.clone());
     let atom_pred = InductivePredicate::create(atom_def.clone(), PredicateSubstitution::make_empty());
     
     println!("Atom Predicate:");
@@ -198,10 +198,10 @@ fn main() {
     println!("Nat Tree Totality Elimination Proof:");
     println!("{}", nat_tree_total_elim_proof.render_proof_tree());
     
-    let even_const = InductiveConstant::create("Even".to_string(), TupleType::create(vec![nat_type.clone()]));
+    let even_const = InductiveConstant::create("Even".to_string(), nat_type.clone());
     let even_pred = InductivePredicate::create(even_const.clone(), PredicateSubstitution::make_empty());
     
-    let odd_const = InductiveConstant::create("Odd".to_string(), TupleType::create(vec![nat_type.clone()]));
+    let odd_const = InductiveConstant::create("Odd".to_string(), nat_type.clone());
     let odd_pred = InductivePredicate::create(odd_const.clone(), PredicateSubstitution::make_empty());
     
     let zero_even = PrimeFormula::create(even_pred.clone(), zero.clone());

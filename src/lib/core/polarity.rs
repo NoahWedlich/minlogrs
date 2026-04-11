@@ -90,8 +90,8 @@ impl<T: PrettyPrintable + Clone + PartialEq + Eq> PrettyPrintable for Polarized<
 }
 
 impl<T: PrettyPrintable + Clone + PartialEq + Eq> From<(Polarity, T)> for Polarized<T> {
-    fn from(tuple: (Polarity, T)) -> Self {
-        Polarized::new(tuple.0, tuple.1)
+    fn from(pair: (Polarity, T)) -> Self {
+        Polarized::new(pair.0, pair.1)
     }
 }
 

@@ -18,10 +18,6 @@ pub struct ComprehensionTerm {
 
 impl ComprehensionTerm {
     pub fn create(var: MinlogTerm, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
-        if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
-            return body;
-        }
-        
         if !var.is_variable() {
             panic!("Tried to create comprehension term with non-variable bound term");
         }
@@ -30,7 +26,7 @@ impl ComprehensionTerm {
         let mut var_types = vec![var.minlog_type().clone()];
         var_types.extend(unpacked_arity);
         
-        let arity = TupleType::create(var_types);
+        let arity = PairType::create_nested(var_types);
         Arc::new(MinlogPredicate::Comprehension(ComprehensionTerm { var, body, arity }))
     }
     

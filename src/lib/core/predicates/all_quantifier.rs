@@ -17,10 +17,6 @@ pub struct AllQuantifier {
 
 impl AllQuantifier {
     pub fn create(var: MinlogTerm, body: Arc<MinlogPredicate>) -> Arc<MinlogPredicate> {
-        if var.is_tuple() && var.to_tuple().unwrap().elements().is_empty() {
-            return body;
-        }
-        
         if !var.is_variable() {
             panic!("AllQuantifier can only quantify over variable terms");
         }
