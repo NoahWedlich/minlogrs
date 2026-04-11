@@ -41,9 +41,7 @@ wrapper_enum::wrapper_enum! {
     #[derive(PartialEq, Eq, Hash)]
     pub enum MinlogType {
         NullType(null: TypeConstant),
-        Atomic(atomic: TypeConstant),
-        Existential(existential: TypeConstant),
-        Proposition(proposition: TypeConstant),
+        UnitType(unit: TypeConstant),
         Wildcard(wildcard: TypeConstant),
         Variable(variable: TypeVariable),
         Algebra(algebra: AlgebraType),
@@ -65,17 +63,8 @@ wrapper_enum::wrapper_enum! {
 impl MinlogType {
     pub fn is_constant(&self) -> bool {
         matches!(self, MinlogType::NullType(_)
-            | MinlogType::Atomic(_)
-            | MinlogType::Existential(_)
-            | MinlogType::Proposition(_))
-    }
-    
-    pub fn is_unit(&self) -> bool {
-        if let MinlogType::Tuple(tup) = self {
-            tup.types().is_empty()
-        } else {
-            false
-        }
+            | MinlogType::UnitType(_)
+            | MinlogType::Wildcard(_))
     }
     
     pub fn is_ground_type(&self) -> bool {

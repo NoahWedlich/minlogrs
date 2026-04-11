@@ -10,9 +10,7 @@ use crate::includes::{
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum TypeConstant {
     NullType,
-    Atomic,
-    Existential,
-    Proposition,
+    UnitType,
     Wildcard,
 }
 
@@ -21,16 +19,8 @@ impl TypeConstant {
         Arc::new(MinlogType::NullType(TypeConstant::NullType))
     }
     
-    pub fn create_atomic() -> Arc<MinlogType> {
-        Arc::new(MinlogType::Atomic(TypeConstant::Atomic))
-    }
-    
-    pub fn create_existential() -> Arc<MinlogType> {
-        Arc::new(MinlogType::Existential(TypeConstant::Existential))
-    }
-    
-    pub fn create_proposition() -> Arc<MinlogType> {
-        Arc::new(MinlogType::Proposition(TypeConstant::Proposition))
+    pub fn create_unit() -> Arc<MinlogType> {
+        Arc::new(MinlogType::UnitType(TypeConstant::UnitType))
     }
     
     pub fn create_wildcard() -> Arc<MinlogType> {
@@ -42,25 +32,20 @@ impl TypeBody for TypeConstant {
     fn remove_nulls(&self) -> Option<Arc<MinlogType>> {
         match self {
             TypeConstant::NullType => None,
-            TypeConstant::Atomic => Some(TypeConstant::create_atomic()),
-            TypeConstant::Existential => Some(TypeConstant::create_existential()),
-            TypeConstant::Proposition => Some(TypeConstant::create_proposition()),
+            TypeConstant::UnitType => Some(TypeConstant::create_unit()),
             TypeConstant::Wildcard => Some(TypeConstant::create_wildcard()),
         }
     }
     
     fn substitute(&self, from: &Arc<MinlogType>, to: &Arc<MinlogType>) -> Arc<MinlogType> {
         if (from.is_null() && matches!(self, TypeConstant::NullType)) ||
-              (from.is_atomic() && matches!(self, TypeConstant::Atomic)) ||
-              (from.is_existential() && matches!(self, TypeConstant::Existential)) ||
-              (from.is_proposition() && matches!(self, TypeConstant::Proposition)) {
+              (from.is_unit() && matches!(self, TypeConstant::UnitType)) ||
+              (from.is_wildcard() && matches!(self, TypeConstant::Wildcard)) {
             to.clone()
         } else {
             match self {
                 TypeConstant::NullType => TypeConstant::create_null(),
-                TypeConstant::Atomic => TypeConstant::create_atomic(),
-                TypeConstant::Existential => TypeConstant::create_existential(),
-                TypeConstant::Proposition => TypeConstant::create_proposition(),
+                TypeConstant::UnitType => TypeConstant::create_unit(),
                 TypeConstant::Wildcard => TypeConstant::create_wildcard(),
             }
         }
@@ -73,20 +58,10 @@ impl TypeBody for TypeConstant {
             } else {
                 Some((TypeConstant::create_null(), other.clone()))
             },
-            TypeConstant::Atomic => if other.is_atomic() {
+            TypeConstant::UnitType => if other.is_unit() {
                 None
             } else {
-                Some((TypeConstant::create_atomic(), other.clone()))
-            },
-            TypeConstant::Existential => if other.is_existential() {
-                None
-            } else {
-                Some((TypeConstant::create_existential(), other.clone()))
-            },
-            TypeConstant::Proposition => if other.is_proposition() {
-                None
-            } else {
-                Some((TypeConstant::create_proposition(), other.clone()))
+                Some((TypeConstant::create_unit(), other.clone()))
             },
             TypeConstant::Wildcard => None,
         }
@@ -100,13 +75,7 @@ impl TypeBody for TypeConstant {
             (TypeConstant::NullType, t) if t.is_null() => {
                 MatchOutput::Matched(IndexMap::new())
             },
-            (TypeConstant::Atomic, t) if t.is_atomic() => {
-                MatchOutput::Matched(IndexMap::new())
-            },
-            (TypeConstant::Existential, t) if t.is_existential() => {
-                MatchOutput::Matched(IndexMap::new())
-            },
-            (TypeConstant::Proposition, t) if t.is_proposition() => {
+            (TypeConstant::UnitType, t) if t.is_unit() => {
                 MatchOutput::Matched(IndexMap::new())
             },
             _ => MatchOutput::FailedMatch,
@@ -118,9 +87,7 @@ impl PrettyPrintable for TypeConstant {
     fn to_pp_element(&self, _detail: bool) -> PPElement {
         match self {
             TypeConstant::NullType => PPElement::text("null".to_string()),
-            TypeConstant::Atomic => PPElement::text("atomic".to_string()),
-            TypeConstant::Existential => PPElement::text("existential".to_string()),
-            TypeConstant::Proposition => PPElement::text("proposition".to_string()),
+            TypeConstant::UnitType => PPElement::text("unit".to_string()),
             TypeConstant::Wildcard => PPElement::text("_".to_string()),
         }
     }
